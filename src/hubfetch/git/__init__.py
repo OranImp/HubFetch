@@ -1,1 +1,1 @@
-"""HubFetch system Git integration: bounded process execution and probing."""
+"""HubFetch system Git integration: readiness probing and contained clones."""
