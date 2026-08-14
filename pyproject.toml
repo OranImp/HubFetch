@@ -62,6 +62,7 @@ exclude = [
     "artifacts",
     "build",
     "dist",
+    "package",
 ]
 
 [tool.ruff.lint]

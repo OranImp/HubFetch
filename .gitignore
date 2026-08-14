@@ -1,4 +1,6 @@
 .omo/
+# omo/oh-my-openagent tooling output
+package/
 .venv/
 .codegraph/
 Webfatch_Fail2Suc/
