@@ -1,22 +1,28 @@
+# noqa: SIZE_OK - one fixture module must serve the full Hub surface (repo-info,
+# tree, resolve with download ranges/errors/auth) shared by planning and download
+# tests.
+# pyright: reportPrivateUsage = false
 """HTTP routing for the Hub-compatible wire fixture.
 
-The handler mirrors the exact endpoints the pinned ``huggingface_hub``
-1.27.0 library calls during dry-run planning: repo-info, tree, and
-file-resolve. JSON shapes and failure specs come from
-:mod:`tests.hub.fixture_payloads`; this module owns the request routing and
-the wire responses.
+The handler mirrors the exact endpoints the pinned ``huggingface_hub`` 1.27.0
+library calls: repo-info, tree, and file-resolve, plus download GETs with
+range/error/auth behavior. JSON shapes and failure specs come from
+:mod:`tests.hub.fixture_payloads`. The ``reportPrivateUsage`` directive allows
+importing the shared range parser from ``tests.helpers.http_server``.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, override
 from urllib.parse import unquote, urlsplit
 
+from tests.helpers.http_server import _parse_range
+
 from .fixture_payloads import (
     DEFAULT_COMMIT,
-    DEFAULT_ETAG,
     DEFAULT_REVISION_NAME,
     PLURAL,
     RESOLVE_PREFIX,
@@ -30,19 +36,43 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-class FixtureConfig:
-    """Immutable per-server fixture behavior read by every request."""
+def _file_etag(filename: str) -> str:
+    """Return a deterministic per-file ETag giving each file a unique blob.
 
-    repo_type: RepoType = "model"
-    repo_id: str = "org/repo"
-    commit: str = DEFAULT_COMMIT
-    files: tuple[tuple[str, int], ...] = ()
-    revisions: tuple[str, ...] = (DEFAULT_REVISION_NAME,)
-    error: FixtureError = "none"
-    expect_token: str | None = None
-    forbid_token: bool = False
-    gated: bool = False
-    private: bool = False
+    The library names the cache blob after the ETag, so a constant ETag would
+    make every file collide on one blob slot and later files appear already
+    cached; hashing the filename keeps it filesystem-safe for nested paths.
+    """
+    digest = hashlib.sha256(filename.encode("utf-8")).hexdigest()[:32]
+    return f'"fixture-{digest}"'
+
+
+class FixtureConfig:
+    """Per-server fixture behavior, initialized fresh on every instance.
+
+    ``content`` maps a filename to the bytes served for a download GET (sizes
+    in ``files`` must match); ``download_error`` maps a filename to a behavior
+    tag (``"truncate_once"`` forces byte-range resume, ``"checksum"`` fails the
+    library's consistency check); ``request_log`` records every resolve request
+    for assertions. Every field is an instance attribute so concurrent fixtures
+    never share mutable state.
+    """
+
+    def __init__(self) -> None:
+        self.repo_type: RepoType = "model"
+        self.repo_id: str = "org/repo"
+        self.commit: str = DEFAULT_COMMIT
+        self.files: tuple[tuple[str, int], ...] = ()
+        self.revisions: tuple[str, ...] = (DEFAULT_REVISION_NAME,)
+        self.error: FixtureError = "none"
+        self.expect_token: str | None = None
+        self.forbid_token: bool = False
+        self.gated: bool = False
+        self.private: bool = False
+        self.content: dict[str, bytes] = {}
+        self.download_error: dict[str, str] = {}
+        self.truncated_files: set[str] = set()
+        self.request_log: list[dict[str, str | None]] = []
 
 
 class FixtureServer(ThreadingHTTPServer):
@@ -51,6 +81,9 @@ class FixtureServer(ThreadingHTTPServer):
 
 class HubFixtureHandler(BaseHTTPRequestHandler):
     """Serve deterministic Hub API and resolve responses."""
+
+    close_connection: bool = True
+    """Default connection behavior; the truncation path toggles it mid-response."""
 
     @property
     def _fixture(self) -> FixtureConfig:
@@ -112,12 +145,11 @@ class HubFixtureHandler(BaseHTTPRequestHandler):
             return
         failure = failure_spec(fixture.error)
         if failure is not None:
-            status, error_code, error_message = failure
             self._send_error(
-                status,
+                failure[0],
                 head_only=head_only,
-                error_code=error_code,
-                error_message=error_message,
+                error_code=failure[1],
+                error_message=failure[2],
             )
             return
         payload = repo_info_payload(
@@ -164,13 +196,76 @@ class HubFixtureHandler(BaseHTTPRequestHandler):
         if size is None:
             self._send_error(404, head_only=head_only, error_code="EntryNotFound")
             return
+        fixture.request_log.append(
+            {
+                "method": "HEAD" if head_only else "GET",
+                "filename": filename,
+                "range": self.headers.get("Range"),
+            }
+        )
+        if head_only:
+            self._send_resolve_head(filename, size)
+            return
+        self._send_resolve_body(filename, size)
+
+    def _send_resolve_head(self, filename: str, size: int) -> None:
+        """Serve the resolve metadata the library's HEAD call consumes."""
         headers = {
-            "X-Repo-Commit": fixture.commit,
+            "X-Repo-Commit": self._fixture.commit,
             "X-Linked-Size": str(size),
-            "ETag": DEFAULT_ETAG,
+            "ETag": _file_etag(filename),
             "Content-Length": str(size),
         }
-        self._send(200, b"", headers, head_only=head_only)
+        self._send(200, b"", headers, head_only=True)
+
+    def _send_resolve_body(self, filename: str, declared_size: int) -> None:
+        """Serve the file bytes for a download GET, honoring range and errors."""
+        fixture = self._fixture
+        behavior = fixture.download_error.get(filename)
+        body = fixture.content.get(filename, b"")
+        if behavior == "checksum":
+            # Serve fewer bytes than the HEAD declared so the library's
+            # size-consistency check fails after the body is consumed.
+            body = body[: max(0, len(body) - 3)]
+        range_header = self.headers.get("Range")
+        range_result = _parse_range(range_header, len(body)) if range_header else None
+        if behavior == "truncate_once" and filename not in fixture.truncated_files:
+            fixture.truncated_files.add(filename)
+            self._send_truncated_body(body, declared_size, filename)
+            return
+        headers = {
+            "X-Repo-Commit": fixture.commit,
+            "ETag": _file_etag(filename),
+        }
+        if range_result is None:
+            headers["Accept-Ranges"] = "bytes"
+            headers["Content-Length"] = str(len(body))
+            self._send(200, body, headers)
+            return
+        start, end = range_result
+        headers["Accept-Ranges"] = "bytes"
+        headers["Content-Range"] = f"bytes {start}-{end}/{len(body)}"
+        self._send(206, body[start : end + 1], headers)
+
+    def _send_truncated_body(
+        self, body: bytes, declared_size: int, filename: str
+    ) -> None:
+        """Write one full 10 MiB chunk, then close the connection mid-body.
+
+        The client yields the chunk (advancing its resume position) and then
+        observes a peer close, so the pinned library's ``http_get`` retry resumes
+        with a ``Range`` header; truncating before a full chunk would make the
+        transport raise before yielding any bytes and no resume could be seen.
+        """
+        chunk_size = 10 * 1024 * 1024
+        _ = self.send_response(200)
+        self.send_header("Content-Length", str(declared_size))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("ETag", _file_etag(filename))
+        self.send_header("X-Repo-Commit", self._fixture.commit)
+        _ = self.end_headers()
+        _ = self.wfile.write(body[:chunk_size])
+        self.close_connection = True
 
     def _revision_from_path(self, path: str) -> str | None:
         fixture = self._fixture

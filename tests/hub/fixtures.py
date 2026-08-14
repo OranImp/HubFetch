@@ -46,6 +46,8 @@ class HubFixtureServer:
         forbid_token: bool = False,
         gated: bool = False,
         private: bool = False,
+        content: dict[str, bytes] | None = None,
+        download_error: dict[str, str] | None = None,
     ) -> None:
         config = FixtureConfig()
         config.repo_id = repo_id
@@ -58,6 +60,12 @@ class HubFixtureServer:
         config.forbid_token = forbid_token
         config.gated = gated
         config.private = private
+        config.content = dict(content) if content is not None else {}
+        config.download_error = (
+            dict(download_error) if download_error is not None else {}
+        )
+        config.truncated_files = set()
+        config.request_log = []
         self._server = FixtureServer(("127.0.0.1", 0), HubFixtureHandler)
         self._server.config = config
         started = Event()
@@ -77,6 +85,11 @@ class HubFixtureServer:
     def endpoint(self) -> str:
         """Return the fixture endpoint URL for the pinned adapter."""
         return f"http://127.0.0.1:{self.port}"
+
+    @property
+    def request_log(self) -> list[dict[str, str | None]]:
+        """Return every resolve request observed by this fixture."""
+        return self._server.config.request_log
 
     def close(self) -> None:
         """Stop the server thread within a bound."""
@@ -102,6 +115,8 @@ def hub_fixture(  # noqa: PLR0913 - mirrors the fixture server's config bundle
     forbid_token: bool = False,
     gated: bool = False,
     private: bool = False,
+    content: dict[str, bytes] | None = None,
+    download_error: dict[str, str] | None = None,
 ) -> Generator[HubFixtureServer, None, None]:
     """Create a Hub-compatible fixture with guaranteed shutdown."""
     server = HubFixtureServer(
@@ -115,6 +130,8 @@ def hub_fixture(  # noqa: PLR0913 - mirrors the fixture server's config bundle
         forbid_token=forbid_token,
         gated=gated,
         private=private,
+        content=content,
+        download_error=download_error,
     )
     try:
         yield server
