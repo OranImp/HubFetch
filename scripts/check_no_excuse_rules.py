@@ -30,6 +30,7 @@ EXCLUDED_DIRS: Final = frozenset(
         "build",
         "dist",
         "node_modules",
+        "package",
     }
 )
 IGNORE_PATTERN: Final = re.compile(r"#\s*(type|pyright)\s*:\s*ignore\b")
