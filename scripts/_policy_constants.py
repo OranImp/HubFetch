@@ -21,6 +21,7 @@ GPL_ONLY_QT_MODULES: Final = frozenset(
         "PySide6.QtPdf",
         "PySide6.QtPdfWidgets",
         "PySide6.QtWebEngineCore",
+        "PySide6.QtWebEngineQuick",
         "PySide6.QtWebEngineWidgets",
         "PySide6.QtWebEngine",
         "PySide6.QtWebView",
@@ -34,9 +35,31 @@ GPL_ONLY_QT_MODULES: Final = frozenset(
     }
 )
 
+
+def _qt_module_dll(module: str) -> str:
+    """Map ``PySide6.QtCharts`` to its Qt6 DLL basename ``Qt6Charts.dll``."""
+    return "Qt6" + module.removeprefix("PySide6.Qt") + ".dll"
+
+
+# DLL basenames that must never appear anywhere in the packaged artifact.
+GPL_ONLY_QT_DLLS: Final = frozenset(
+    _qt_module_dll(module) for module in GPL_ONLY_QT_MODULES
+).union(
+    {
+        "Qt6ChartsQml.dll",
+        "Qt6DataVisualizationQml.dll",
+        "Qt6VirtualKeyboardQml.dll",
+        "Qt6VirtualKeyboardSettings.dll",
+        "Qt6WebEngineQuickDelegatesQml.dll",
+        "Qt6WebViewQuick.dll",
+    }
+)
+
 REQUIRED_RESOURCES: Final = frozenset(
     {
         ("PySide6/plugins/platforms", "qwindows.dll"),
+        ("PySide6/plugins/platforms", "qminimal.dll"),
+        ("PySide6/plugins/platforms", "qoffscreen.dll"),
         ("PySide6/plugins/tls", "qschannelbackend.dll"),
         ("PySide6/plugins/imageformats", "qico.dll"),
         ("PySide6/translations", "qtbase_zh_CN.qm"),
@@ -55,8 +78,38 @@ REQUIRED_RESOURCES: Final = frozenset(
 )
 
 REQUIRED_QT_DLLS: Final = frozenset(
-    {"Qt6Core.dll", "Qt6Gui.dll", "Qt6Widgets.dll", "shiboken6.abi3.dll"}
+    {
+        "Qt6Core.dll",
+        "Qt6Gui.dll",
+        "Qt6Widgets.dll",
+        "Qt6OpenGL.dll",
+        "Qt6Xml.dll",
+        "Qt6DBus.dll",
+        "Qt6Network.dll",
+        "Qt6Svg.dll",
+        "pyside6.abi3.dll",
+        "shiboken6.abi3.dll",
+    }
 )
+
+# Microsoft VC++ runtime DLLs that bindepend resolves next to the Qt DLLs;
+# legitimate dependencies, never GPL-only, and permitted inside PySide6/.
+VC_RUNTIME_DLLS: Final = frozenset(
+    {
+        "concrt140.dll",
+        "msvcp140.dll",
+        "msvcp140_1.dll",
+        "msvcp140_2.dll",
+        "msvcp140_codecvt_ids.dll",
+        "vcamp140.dll",
+        "vccorlib140.dll",
+        "vcomp140.dll",
+        "vcruntime140.dll",
+        "vcruntime140_1.dll",
+    }
+)
+
+QT_RUNTIME_SUPPORT_DLLS: Final = frozenset({"opengl32sw.dll"})
 
 BANNED_BINARY: Final = re.compile(
     r"(?:^|[-_.])(?:git|xet|hf)(?:-credential)?(?:-[a-z0-9]+)?\.exe$|^xet(?:\.exe)?$",
