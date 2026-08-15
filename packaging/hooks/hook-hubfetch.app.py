@@ -17,6 +17,7 @@ excludedimports = [
     "PySide6.QtPdf",
     "PySide6.QtPdfWidgets",
     "PySide6.QtWebEngineCore",
+    "PySide6.QtWebEngineQuick",
     "PySide6.QtWebEngineWidgets",
     "PySide6.QtWebEngine",
     "PySide6.QtWebView",

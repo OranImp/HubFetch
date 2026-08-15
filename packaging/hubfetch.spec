@@ -1,4 +1,3 @@
-# -*- mode: python ; coding: utf-8 -*-
 """HubFetch Windows one-folder package policy (Todo 29).
 
 Two executables share one COLLECT tree under dist/HubFetch/: the GUI
@@ -6,18 +5,25 @@ Two executables share one COLLECT tree under dist/HubFetch/: the GUI
 PySide6 DLLs and plugins are copied as loose, dynamically replaceable files.
 UPX, one-file mode, static Qt, bundled Git/Git-Xet/hf CLIs, and GPL-only Qt
 modules are prohibited; scripts/check_package_policy.py enforces this policy
-declaratively without executing the spec.
+declaratively and against the built artifact without executing the spec. The stock
+PySide6 hooks and runtime hook remain active; the GUI TOC is trimmed only after
+Analysis has collected those runtime dependencies.
 """
 
+import sys
 import sysconfig
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_dynamic_libs
-
 SPEC_DIR = Path(SPECPATH)
 REPO_ROOT = SPEC_DIR.parent
+sys.path[:] = [
+    entry
+    for entry in sys.path
+    if entry and Path(entry).resolve() != REPO_ROOT.resolve()
+]
 SITE_PACKAGES = Path(sysconfig.get_paths()["purelib"])
 PYSIDE6 = SITE_PACKAGES / "PySide6"
+SHIBOKEN = SITE_PACKAGES / "shiboken6"
 
 # ---------------------------------------------------------------------------
 # Declarative policy constants — validated by scripts/check_package_policy.py.
@@ -31,6 +37,8 @@ PYSIDE6 = SITE_PACKAGES / "PySide6"
 RESOURCE_PLAN = (
     # Qt platform plugins (replaceable loose DLLs under PySide6/plugins/).
     ("PySide6/plugins/platforms", "qwindows.dll"),
+    ("PySide6/plugins/platforms", "qminimal.dll"),
+    ("PySide6/plugins/platforms", "qoffscreen.dll"),
     ("PySide6/plugins/imageformats", "qgif.dll"),
     ("PySide6/plugins/imageformats", "qico.dll"),
     ("PySide6/plugins/imageformats", "qjpeg.dll"),
@@ -86,19 +94,24 @@ RESOURCE_PLAN = (
     ("docs", "help_url_template.conf"),
 )
 
-# Qt/PySide6 DLLs shipped as loose, replaceable files (collected dynamically;
-# this inventory is asserted by the policy checker).
+# Qt/PySide6 DLLs shipped as loose, replaceable files. This is the required
+# link-time closure of the imported PySide6 extension modules plus the Qt
+# Network library carried by the release policy. The stock PySide6 hooks add
+# runtime support files, and _trim_gui_qt_toc removes unrelated Qt modules only
+# after those hooks have run. The built dist/ is asserted by
+# scripts/check_package_policy.py --dist.
+
 EXPECTED_QT_DLLS = (
     "Qt6Core.dll",
     "Qt6Gui.dll",
     "Qt6Widgets.dll",
-    "Qt6Svg.dll",
-    "Qt6Network.dll",
     "Qt6OpenGL.dll",
     "Qt6Xml.dll",
     "Qt6DBus.dll",
-    "shiboken6.abi3.dll",
+    "Qt6Network.dll",
+    "Qt6Svg.dll",
     "pyside6.abi3.dll",
+    "shiboken6.abi3.dll",
 )
 
 # GPL-only Qt modules must never enter the MIT/LGPL build, plus heavy modules
@@ -111,6 +124,7 @@ EXCLUDES = (
     "PySide6.QtPdf",
     "PySide6.QtPdfWidgets",
     "PySide6.QtWebEngineCore",
+    "PySide6.QtWebEngineQuick",
     "PySide6.QtWebEngineWidgets",
     "PySide6.QtWebEngine",
     "PySide6.QtWebView",
@@ -148,6 +162,12 @@ EXCLUDES = (
 )
 
 HIDDEN_IMPORTS = (
+    # PySide6 runtime support: shiboken6 is the binding runtime, inspect is a
+    # stock-hook hiddenimport, and PySide6.support.deprecated powers the Qt
+    # flag ``|``/``&`` operators (PySide6 >= 6.4).
+    "shiboken6",
+    "inspect",
+    "PySide6.support.deprecated",
     "hubfetch.app",
     "hubfetch.askpass.main",
     "hubfetch.ui.showcase",
@@ -168,7 +188,10 @@ def _resolve_resource(destination, filename):
     if destination == "hubfetch/i18n":
         return (str(REPO_ROOT / "resources" / "i18n" / filename), destination)
     if destination == "hubfetch/persistence/sql":
-        return (str(REPO_ROOT / "src" / "hubfetch" / "persistence" / "sql" / filename), destination)
+        return (
+            str(REPO_ROOT / "src" / "hubfetch" / "persistence" / "sql" / filename),
+            destination,
+        )
     if destination == "resources/fonts":
         return (str(REPO_ROOT / "resources" / "fonts" / filename), destination)
     if destination == "resources/icons":
@@ -183,11 +206,105 @@ def _resolve_resource(destination, filename):
 
 
 def _collect_datas():
-    return [_resolve_resource(destination, filename) for destination, filename in RESOURCE_PLAN]
+    return [
+        _resolve_resource(destination, filename)
+        for destination, filename in RESOURCE_PLAN
+    ]
+
+
+# (source_basename, destination_dir_under__internal). Qt6* and the pyside6
+# ABI DLL live in the PySide6 package dir; shiboken6.abi3.dll lives in the
+# shiboken6 package dir and must ship next to Shiboken.pyd.
+_QT_BINARY_PLAN = (
+    ("Qt6Core.dll", "PySide6"),
+    ("Qt6Gui.dll", "PySide6"),
+    ("Qt6Widgets.dll", "PySide6"),
+    ("Qt6Network.dll", "PySide6"),
+    ("Qt6OpenGL.dll", "PySide6"),
+    ("Qt6Xml.dll", "PySide6"),
+    ("Qt6DBus.dll", "PySide6"),
+    ("Qt6Svg.dll", "PySide6"),
+    ("pyside6.abi3.dll", "PySide6"),
+    ("shiboken6.abi3.dll", "shiboken6"),
+)
+
+
+def _collect_qt_binaries():
+    """Resolve the targeted Qt/PySide6 DLL plan into ``(source, dest)`` pairs.
+
+    Never use ``collect_dynamic_libs("PySide6")`` here: it copies every DLL
+    under the PySide6 package — including GPL-only modules (QtCharts,
+    QtDataVisualization, QtVirtualKeyboard, QtNetworkAuth, QtWebEngine) and
+    heavy modules HubFetch never imports (Qt3D*, QtMultimedia, QtQuick3D, the
+    QML tree) — into the artifact. This allowlist ships exactly the required
+    DLLs and fails the build when any of them is missing.
+    """
+    binaries = []
+    for basename, destination in _QT_BINARY_PLAN:
+        base = PYSIDE6 if destination == "PySide6" else SHIBOKEN
+        source = base / basename
+        if not source.is_file():
+            raise FileNotFoundError(f"required Qt binary missing: {source}")
+        binaries.append((str(source), destination))
+    return binaries
+
+
+_QT_PLUGIN_DESTINATIONS = frozenset(
+    destination + chr(47) + filename
+    for destination, filename in RESOURCE_PLAN
+    if destination.startswith("PySide6/plugins/")
+)
+_QT_TRANSLATION_DESTINATIONS = frozenset(
+    destination + chr(47) + filename
+    for destination, filename in RESOURCE_PLAN
+    if destination == "PySide6/translations"
+)
+_QT_RUNTIME_SUPPORT_DLLS = frozenset({"opengl32sw.dll"})
+
+
+def _toc_destination(entry):
+    """Return one PyInstaller TOC destination with normalized separators."""
+    return str(entry[0]).replace(chr(92), chr(47))
+
+
+def _keep_gui_qt_binary(entry):
+    """Keep stock runtime support and the explicit Qt binary allowlist."""
+    destination = _toc_destination(entry)
+    if destination.startswith("PySide6/plugins/"):
+        return destination in _QT_PLUGIN_DESTINATIONS
+    if destination.startswith("PySide6/"):
+        basename = Path(destination).name.casefold()
+        required = {name.casefold() for name in EXPECTED_QT_DLLS}
+        support = {name.casefold() for name in _QT_RUNTIME_SUPPORT_DLLS}
+        if basename in required or basename in support:
+            return True
+        return not basename.startswith("qt6")
+    if destination.startswith("shiboken6/"):
+        basename = Path(destination).name.casefold()
+        return not basename.endswith(".dll") or basename == "shiboken6.abi3.dll"
+    return True
+
+
+def _keep_gui_qt_data(entry):
+    """Keep only the replaceable plugin and locale resources from stock hooks."""
+    destination = _toc_destination(entry)
+    if destination.startswith("PySide6/plugins/"):
+        return destination in _QT_PLUGIN_DESTINATIONS
+    if destination.startswith("PySide6/translations/"):
+        return destination in _QT_TRANSLATION_DESTINATIONS
+    return not destination.startswith("PySide6/qml/")
+
+
+def _trim_gui_qt_toc(analysis):
+    """Trim stock Qt collection without touching its runtime hooks."""
+    analysis.binaries = [
+        entry for entry in analysis.binaries if _keep_gui_qt_binary(entry)
+    ]
+    analysis.datas = [entry for entry in analysis.datas if _keep_gui_qt_data(entry)]
 
 
 # PySide6 DLLs as loose binaries inside _internal/PySide6 (replaceable).
-qt_binaries = collect_dynamic_libs("PySide6")
+qt_binaries = _collect_qt_binaries()
 
 a_gui = Analysis(
     [str(REPO_ROOT / "src" / "hubfetch" / "app.py")],
@@ -199,6 +316,8 @@ a_gui = Analysis(
     hookspath=[str(SPEC_DIR / "hooks")],
     noarchive=False,
 )
+
+_trim_gui_qt_toc(a_gui)
 
 a_ask = Analysis(
     [str(SPEC_DIR / "askpass_entry.py")],
