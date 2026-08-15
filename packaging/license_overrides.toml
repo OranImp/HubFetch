@@ -1,0 +1,103 @@
+# Curated third-party license map for the HubFetch portable package.
+#
+# scripts/generate_notices.py derives the Windows runtime dependency closure
+# from the frozen uv.lock and looks up every component in [licenses]. A package
+# without an entry fails the policy as `missing-license`; a license outside
+# [allowed] fails as `unknown-license`; a license in [disallowed] fails as
+# `disallowed-license` (and `gpl-only-qt` for Qt packages). GPL-only Qt
+# *modules* (QtCharts, QtWebEngine, ...) are additionally blocked at the spec
+# level by scripts/check_package_policy.py and must never enter the build.
+#
+# Every runtime package is listed explicitly so that adding a dependency
+# without updating this file makes the build gate fail.
+
+[project]
+name = "hubfetch"
+version = "0.1.0"
+license = "MIT"
+
+[licenses]
+# Qt for Python components are licensed LGPL-3.0-only (or GPL-3.0-only /
+# commercial); HubFetch uses the LGPL option. shiboken6 is the CPython binding
+# generator runtime and carries the same license.
+pyside6 = "LGPL-3.0-only"
+pyside6-addons = "LGPL-3.0-only"
+pyside6-essentials = "LGPL-3.0-only"
+shiboken6 = "LGPL-3.0-only"
+# huggingface_hub and the native xet client are Apache-2.0.
+huggingface-hub = "Apache-2.0"
+hf-xet = "Apache-2.0"
+# packaging is dual-licensed Apache-2.0 OR BSD-2-Clause; BSD-2-Clause selected.
+packaging = "BSD-2-Clause"
+# tqdm is dual-licensed MPL-2.0 OR MIT; MPL-2.0 selected.
+tqdm = "MPL-2.0"
+# filelock is released under The Unlicense (public domain dedication).
+filelock = "Unlicense"
+pydantic = "MIT"
+pydantic-core = "MIT"
+annotated-types = "MIT"
+typing-inspection = "MIT"
+typing-extensions = "PSF-2.0"
+httpx = "BSD-3-Clause"
+httpcore = "BSD-3-Clause"
+h11 = "MIT"
+anyio = "MIT"
+certifi = "MPL-2.0"
+idna = "BSD-3-Clause"
+click = "BSD-3-Clause"
+colorama = "BSD-3-Clause"
+fsspec = "BSD-3-Clause"
+pyyaml = "MIT"
+keyring = "MIT"
+jaraco-classes = "MIT"
+jaraco-context = "MIT"
+jaraco-functools = "MIT"
+more-itertools = "MIT"
+pywin32-ctypes = "BSD-3-Clause"
+
+[homepages]
+annotated-types = "https://github.com/annotated-types/annotated-types"
+anyio = "https://github.com/agronholm/anyio"
+certifi = "https://github.com/certifi/python-certifi"
+click = "https://github.com/pallets/click"
+colorama = "https://github.com/tartley/colorama"
+filelock = "https://github.com/tox-dev/py-filelock"
+fsspec = "https://github.com/fsspec/filesystem_spec"
+h11 = "https://github.com/python-hyper/h11"
+hf-xet = "https://github.com/huggingface/xet"
+httpcore = "https://github.com/encode/httpcore"
+httpx = "https://github.com/encode/httpx"
+huggingface-hub = "https://github.com/huggingface/huggingface_hub"
+idna = "https://github.com/kjd/idna"
+jaraco-classes = "https://github.com/jaraco/jaraco.classes"
+jaraco-context = "https://github.com/jaraco/jaraco.context"
+jaraco-functools = "https://github.com/jaraco/jaraco.functools"
+keyring = "https://github.com/jaraco/keyring"
+more-itertools = "https://github.com/more-itertools/more-itertools"
+packaging = "https://github.com/pypa/packaging"
+pydantic = "https://github.com/pydantic/pydantic"
+pydantic-core = "https://github.com/pydantic/pydantic-core"
+pyside6 = "https://www.qt.io/qt-for-python"
+pyside6-addons = "https://www.qt.io/qt-for-python"
+pyside6-essentials = "https://www.qt.io/qt-for-python"
+pywin32-ctypes = "https://github.com/enthought/pywin32-ctypes"
+pyyaml = "https://pyyaml.org/"
+shiboken6 = "https://www.qt.io/qt-for-python"
+tqdm = "https://github.com/tqdm/tqdm"
+typing-extensions = "https://github.com/python/typing_extensions"
+typing-inspection = "https://github.com/typeddjango/typing-inspection"
+
+[allowed]
+MIT = true
+Apache-2.0 = true
+BSD-2-Clause = true
+BSD-3-Clause = true
+MPL-2.0 = true
+LGPL-3.0-only = true
+Unlicense = true
+PSF-2.0 = true
+
+[disallowed]
+GPL-2.0-only = true
+GPL-3.0-only = true
+AGPL-3.0-only = true
