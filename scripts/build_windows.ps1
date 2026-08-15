@@ -56,18 +56,18 @@ function Invoke-PythonCheck([string]$Label, [string]$Script) {
 }
 
 function Invoke-Basepyright([string]$Label) {
-    # basedpyright 1.39.x exits nonzero when the project's pre-existing warning
-    # set is present even with zero errors; the repository's accepted gate is
-    # "0 errors" (the type rules themselves are unchanged). Any error is fatal.
+    # Strict gate: basedpyright exits nonzero on any warning or error. The
+    # repository ships a clean, warning-free type-check, so any nonzero exit
+    # is a real gate failure and aborts the build.
     $output = & uv run --frozen --offline basedpyright 2>&1
     $code = $LASTEXITCODE
     $summary = ($output | Select-String -Pattern "^\d+ errors, \d+ warnings" | Select-Object -Last 1).Line
     Write-Step "$Label`n$($output | Out-String)"
     Write-Step "$Label summary: $summary"
-    if ($summary -notmatch "^0 errors,") {
-        throw "$Label reported type errors: $summary (exit code $code)"
+    if ($code -ne 0) {
+        throw "$Label exited nonzero (exit code $code): $summary"
     }
-    Write-Step "$Label accepted: 0 type errors (exit code $code; pre-existing warnings present)"
+    Write-Step "$Label passed: clean exit 0"
 }
 
 # ---------------------------------------------------------------------------

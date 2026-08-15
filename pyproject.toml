@@ -44,7 +44,13 @@ exclude = [
     "**/build",
     "**/dist",
 ]
-reportUnusedCallResult = "warning"
+# reportUnusedCallResult is disabled: PySide6's idiomatic API returns
+# (QSignal.connect -> Connection, setParent -> QWidget, addWidget, property
+# setters, show/hide) are conventionally ignored, so the diagnostic produced
+# 243 Qt-idiom warnings across src/ and tests/. basedpyright exits nonzero on
+# any warning, and the release gate requires exit 0; type errors are
+# unaffected and remain fatal.
+reportUnusedCallResult = "none"
 reportUnnecessaryTypeIgnoreComment = "error"
 reportUnusedVariable = "error"
 reportMissingParameterType = "error"

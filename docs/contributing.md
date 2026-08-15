@@ -28,11 +28,10 @@ uv run pytest -q
 uv run python scripts/check_no_excuse_rules.py .
 ```
 
-`basedpyright`'s accepted gate is **0 type errors**: like the build script
-(`scripts\build_windows.ps1`'s `Invoke-Basepyright`), the committed
-configuration reports pre-existing warnings (220) and may exit nonzero in
-captured output even when the error count is zero; the summary line `0
-errors, ...` is the pass criterion.
+`basedpyright` must exit **0** with a clean summary (`0 errors, 0 warnings`).
+The repository ships no warning set: `reportUnusedCallResult` is disabled in
+`pyproject.toml` because PySide6's idiomatic API returns are conventionally
+ignored. Any nonzero exit fails the gate.
 
 Or run them all at once:
 

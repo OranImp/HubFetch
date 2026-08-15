@@ -81,7 +81,9 @@ function Invoke-Check([string]$Label, [string[]]$Arguments) {
 }
 
 function Invoke-Basepyright([string]$Label) {
-    # Accept "0 errors" even with the accepted pre-existing warning set.
+    # Strict gate: basedpyright exits nonzero on any warning or error. The
+    # repository ships a clean, warning-free type-check, so any nonzero exit
+    # is a real gate failure and must fail the release.
     $previousEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
@@ -98,10 +100,10 @@ function Invoke-Basepyright([string]$Label) {
         summary = $summary
     })
     Write-Step "$Label summary: $summary"
-    if ($summary -notmatch "^0 errors,") {
-        Add-Failure "$Label reported type errors: $summary"
+    if ($code -ne 0) {
+        Add-Failure "$Label exited nonzero (exit code $code): $summary"
     } else {
-        Write-Step "$Label accepted: 0 type errors"
+        Write-Step "$Label passed: clean exit 0"
     }
 }
 
