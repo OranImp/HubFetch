@@ -34,6 +34,7 @@ $sentinelFiles = New-Object System.Collections.Generic.List[string]
 $forbiddenEntries = New-Object System.Collections.Generic.List[string]
 $missingEntries = New-Object System.Collections.Generic.List[string]
 $orphans = New-Object System.Collections.Generic.List[string]
+$policyEntries = New-Object System.Collections.Generic.List[string]
 
 function Add-Failure([string]$Message) {
     $failures.Add($Message)
@@ -133,6 +134,14 @@ Write-Host "PE: HubFetch=$($peResults.hubfetch) HubFetchAskPass=$($peResults.ask
 $relativePaths = @(Get-ChildItem -Path $appRoot -Recurse -File | ForEach-Object {
         $_.FullName.Substring($appRoot.Length + 1) -replace "\\", "/"
     })
+$runtimeRoot = Join-Path $appRoot "_internal"
+if (-not (Test-Path $runtimeRoot)) {
+    $runtimeRoot = $appRoot
+}
+$runtimeRelativePaths = @(Get-ChildItem -Path $runtimeRoot -Recurse -File | ForEach-Object {
+        $_.FullName.Substring($runtimeRoot.Length + 1) -replace "\\", "/"
+    })
+
 $required = @(
     "HubFetch.exe",
     "HubFetchAskPass.exe",
@@ -148,6 +157,8 @@ $required = @(
     "resources/icons/LICENSE.md",
     "hubfetch/persistence/sql/001_initial.sql",
     "PySide6/plugins/platforms/qwindows.dll",
+    "PySide6/plugins/platforms/qminimal.dll",
+    "PySide6/plugins/platforms/qoffscreen.dll",
     "PySide6/plugins/imageformats/qgif.dll",
     "PySide6/plugins/imageformats/qico.dll",
     "PySide6/plugins/imageformats/qjpeg.dll",
@@ -161,11 +172,11 @@ $required = @(
     "PySide6/Qt6Core.dll",
     "PySide6/Qt6Gui.dll",
     "PySide6/Qt6Widgets.dll",
-    "PySide6/Qt6Svg.dll",
-    "PySide6/Qt6Network.dll",
     "PySide6/Qt6OpenGL.dll",
     "PySide6/Qt6Xml.dll",
     "PySide6/Qt6DBus.dll",
+    "PySide6/Qt6Svg.dll",
+    "PySide6/Qt6Network.dll",
     "PySide6/pyside6.abi3.dll",
     "shiboken6/shiboken6.abi3.dll"
 )
@@ -195,6 +206,76 @@ foreach ($relative in $relativePaths) {
     if ($isForbidden) {
         $forbiddenEntries.Add($relative)
         Add-Failure "forbidden packaged entry: $relative"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# GPL-only Qt modules must never ship in the MIT/LGPL build. The DLL blocklist
+# mirrors scripts/_policy_constants.py GPL_ONLY_QT_DLLS.
+# ---------------------------------------------------------------------------
+$gplOnlyQtDlls = @(
+    "qt6charts.dll",
+    "qt6chartsqml.dll",
+    "qt6datavisualization.dll",
+    "qt6datavisualizationqml.dll",
+    "qt6virtualkeyboard.dll",
+    "qt6virtualkeyboardqml.dll",
+    "qt6virtualkeyboardsettings.dll",
+    "qt6networkauth.dll",
+    "qt6webenginecore.dll",
+    "qt6webengine.dll",
+    "qt6webenginequickdelegatesqml.dll",
+    "qt6webenginewidgets.dll",
+    "qt6webenginequick.dll",
+    "qt6webview.dll",
+    "qt6webviewquick.dll",
+    "qt6pdf.dll",
+    "qt6pdfwidgets.dll",
+    "qt6quick3d.dll",
+    "qt6sensors.dll",
+    "qt6sensorsquick.dll",
+    "qt6serialbus.dll",
+    "qt6serialport.dll",
+    "qt6graphs.dll",
+    "qt6graphswidgets.dll"
+)
+foreach ($relative in $runtimeRelativePaths) {
+    $lowered = $relative.ToLowerInvariant()
+    $basename = $lowered.Substring($lowered.LastIndexOf("/") + 1)
+    if ($gplOnlyQtDlls -contains $basename) {
+        $policyEntries.Add($relative)
+        Add-Failure "GPL-only Qt DLL packaged: $relative"
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Qt plugin/translation trimming — only the RESOURCE_PLAN allowlist may ship,
+# and the QML tree must not exist.
+# ---------------------------------------------------------------------------
+$allowedQtPlugins = @(
+    "PySide6/plugins/platforms/qwindows.dll",
+    "PySide6/plugins/platforms/qminimal.dll",
+    "PySide6/plugins/platforms/qoffscreen.dll",
+    "PySide6/plugins/imageformats/qgif.dll",
+    "PySide6/plugins/imageformats/qico.dll",
+    "PySide6/plugins/imageformats/qjpeg.dll",
+    "PySide6/plugins/imageformats/qsvg.dll",
+    "PySide6/plugins/tls/qschannelbackend.dll",
+    "PySide6/plugins/iconengines/qsvgicon.dll",
+    "PySide6/plugins/styles/qmodernwindowsstyle.dll"
+)
+foreach ($relative in $runtimeRelativePaths) {
+    if ($relative.StartsWith("PySide6/plugins/") -and ($allowedQtPlugins -notcontains $relative)) {
+        $policyEntries.Add($relative)
+        Add-Failure "unexpected Qt plugin packaged: $relative"
+    }
+    if ($relative.StartsWith("PySide6/translations/") -and ($relative -ne "PySide6/translations/qtbase_zh_CN.qm")) {
+        $policyEntries.Add($relative)
+        Add-Failure "unexpected Qt translation packaged: $relative"
+    }
+    if ($relative.StartsWith("PySide6/qml/")) {
+        $policyEntries.Add($relative)
+        Add-Failure "QML tree packaged: $relative"
     }
 }
 
@@ -316,6 +397,7 @@ $aggregate = [ordered]@{
     pe_architecture = $peResults
     required_entry_missing = @($missingEntries)
     forbidden_entries = @($forbiddenEntries)
+    policy_entries = @($policyEntries)
     sentinel_files = @($sentinelFiles)
     smoke_exit = $smokeExit
     capture_exit = $captureExit
