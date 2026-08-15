@@ -246,12 +246,6 @@ class TestPlaceholderRemoved:
     def test_placeholder_copy_gone(
         self, window: tuple[MainWindow, Runtime, TaskRepository]
     ) -> None:
-        for locale in (Locale.EN_US, Locale.ZH_CN):
-            texts = ShellTexts.for_locale(locale)
-            assert not hasattr(texts, "new_download_pending")
-            assert not hasattr(texts, "new_clone_pending")
-            assert "ships in a later release" not in texts.pending_description
-            assert "将在后续版本提供" not in texts.pending_description
         shell, _runtime, _repository = window
         all_widgets = shell.findChildren(QWidget)
         spoken = " ".join(
@@ -261,6 +255,8 @@ class TestPlaceholderRemoved:
         )
         assert "ships in a later release" not in spoken
         assert "将在后续版本提供" not in spoken
+        assert "该工作区尚未提供" not in spoken
+        assert "This workspace is not available yet" not in spoken
 
 
 class TestDialogKeyboardOperable:

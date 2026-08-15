@@ -24,7 +24,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QAbstractButton, QLabel, QWidget
 
 from hubfetch.application.runtime import Runtime, RuntimeConfig
-from hubfetch.config.settings import Locale, Settings
+from hubfetch.config.settings import CachePathOverrides, Locale, Settings
 from hubfetch.domain.ids import parse_attempt_id, parse_repository_id, parse_task_id
 from hubfetch.domain.repository import ModelRepository, RepositoryRef
 from hubfetch.domain.task_spec import AuthSource, GitCloneSpec, ProxyMode
@@ -195,14 +195,78 @@ def test_cache_navigation_routes_destination(harness: ShellHarness) -> None:
     harness.window.navigation_pane().primary_items()[1].click()
     assert harness.window.current_destination() is Destination.CACHE
     assert received == [Destination.CACHE.value]
-    assert harness.window.detail_pane().is_showing_pending()
+    assert harness.window.content_stack().currentWidget() is harness.window.cache_view()
+    assert harness.window.cache_view().isVisible()
+    assert not harness.window.detail_pane().is_showing_pending()
+
+
+def test_cache_destination_renders_real_readout(qtbot: QtBot, tmp_path: Path) -> None:
+    """Given a hermetic cache override, When Cache activates, Then real paths render."""
+    runtime, _repository, _clock = build_runtime(tmp_path)
+    window = _make_window(
+        qtbot,
+        runtime,
+        settings=Settings(
+            cache_path_overrides=CachePathOverrides(
+                hub_cache=tmp_path / "hub", xet_cache=tmp_path / "xet"
+            )
+        ),
+    )
+    try:
+        window.navigation_pane().primary_items()[1].click()
+        assert window.current_destination() is Destination.CACHE
+        readout = window.cache_view().readout()
+        assert readout is not None
+        assert readout.environment.hub_cache == tmp_path / "hub"
+        assert readout.environment.xet_cache == tmp_path / "xet"
+        assert not window.detail_pane().is_showing_pending()
+    finally:
+        window.close()
+        _ = runtime.shutdown()
+        runtime.close()
 
 
 def test_settings_footer_item_routes_destination(harness: ShellHarness) -> None:
     """Given the shell, When footer Settings is activated, Then it routes too."""
     harness.window.navigation_pane().footer_items()[0].click()
     assert harness.window.current_destination() is Destination.SETTINGS
-    assert harness.window.detail_pane().is_showing_pending()
+    assert (
+        harness.window.content_stack().currentWidget() is harness.window.settings_view()
+    )
+    assert harness.window.settings_view().isVisible()
+    assert not harness.window.detail_pane().is_showing_pending()
+
+
+def test_diagnostics_destination_renders_real_view(harness: ShellHarness) -> None:
+    """Given the shell, When Diagnostics activates, Then its real view renders."""
+    harness.window.navigation_pane().primary_items()[2].click()
+    assert harness.window.current_destination() is Destination.DIAGNOSTICS
+    assert (
+        harness.window.content_stack().currentWidget()
+        is harness.window.diagnostics_view()
+    )
+    assert harness.window.diagnostics_view().isVisible()
+    assert harness.window.diagnostics_view().recheck_button().isVisible()
+    assert not harness.window.detail_pane().is_showing_pending()
+
+
+def test_no_destination_shows_pending_placeholder(harness: ShellHarness) -> None:
+    """Given the shell, every destination renders without the placeholder."""
+    window = harness.window
+    spoken = " ".join(
+        widget.text()
+        for widget in window.findChildren(QWidget)
+        if isinstance(widget, (QAbstractButton, QLabel))
+    )
+    assert "该工作区尚未提供" not in spoken
+    assert "This workspace is not available yet" not in spoken
+    assert "ships in a later release" not in spoken
+    window.navigation_pane().primary_items()[1].click()
+    assert not window.detail_pane().is_showing_pending()
+    window.navigation_pane().primary_items()[2].click()
+    assert not window.detail_pane().is_showing_pending()
+    window.navigation_pane().footer_items()[0].click()
+    assert not window.detail_pane().is_showing_pending()
 
 
 def test_task_list_renders_fifo_snapshot_rows(

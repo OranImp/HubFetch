@@ -87,6 +87,7 @@ class CreateTexts:
     plan_button: str
     plan_loading: str
     replan_button: str
+    cancel_command: str
     confirm_download: str
     confirm_clone: str
     planning_label: str
@@ -174,6 +175,7 @@ class CreateTexts:
                 plan_button="Plan",
                 plan_loading="Planning\u2026",
                 replan_button="Re-plan",
+                cancel_command="Cancel",
                 confirm_download="Confirm download",
                 confirm_clone="Confirm clone",
                 planning_label="Planning\u2026",
@@ -301,6 +303,7 @@ class CreateTexts:
             plan_button="规划",
             plan_loading="规划中…",
             replan_button="重新规划",
+            cancel_command="取消",
             confirm_download="确认下载",
             confirm_clone="确认克隆",
             planning_label="规划中…",

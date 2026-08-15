@@ -1,17 +1,19 @@
 """Responsive application shell composing the runtime, navigation, and panes.
 
-# noqa: SIZE_OK - one window must own the whole shell composition: the three
+# noqa: SIZE_OK - one window must own the whole shell composition: the four
+# destination work surfaces (Tasks, Cache, Diagnostics, Settings), the three
 # responsive modes, the native menu, the detail pane, geometry persistence and
 # clamping, and the runtime wiring; splitting it would scatter one cohesive
-# surface across modules before Todo 26/27 attach their work surfaces.
+# surface across modules.
 
 Todo 24 composes the desktop shell from Todo 21's immutable snapshots/commands
-and Todo 23's primitives (DESIGN.md Section 8). The window keeps exactly three
-navigation destinations plus footer Settings, reflows at 760/1180 effective
-pixels, gives each list/detail region one scroll owner, persists its geometry
-clamped to the current screens, and exposes the native New Download / New
-Clone / Settings / Refresh / optional Help commands. Every transfer stays out
-of the GUI thread; the runtime's snapshot commands are the only reads.
+and Todo 23's primitives (DESIGN.md Section 8). The window routes the four
+closed destinations to their real work surfaces (Tasks restores the queue,
+Cache/Diagnostics/Settings show their composed views), reflows at 760/1180
+effective pixels, gives each list/detail region one scroll owner, persists its
+geometry clamped to the current screens, and exposes the native New Download /
+New Clone / Settings / Refresh / optional Help commands. Every transfer stays
+out of the GUI thread; the runtime's snapshot commands are the only reads.
 """
 
 from __future__ import annotations
@@ -45,6 +47,8 @@ from hubfetch.domain.events import TransferProgressedEvent
 from hubfetch.domain.ids import TaskId, parse_task_id
 from hubfetch.persistence.records import TaskNotFoundError
 from hubfetch.ui import fonts, tokens
+from hubfetch.ui.cache.texts import CacheViewTexts
+from hubfetch.ui.cache.view import CacheView
 from hubfetch.ui.create import (
     CloneCreateService,
     CloneDialog,
@@ -53,12 +57,16 @@ from hubfetch.ui.create import (
     DownloadDialog,
 )
 from hubfetch.ui.create.services import RuntimeCloneService, RuntimeDownloadService
+from hubfetch.ui.diagnostics.texts import DiagnosticsViewTexts
+from hubfetch.ui.diagnostics.view import DiagnosticsView
 from hubfetch.ui.navigation import (
     Destination,
     NavigationModel,
     NavigationPane,
     ShellTexts,
 )
+from hubfetch.ui.settings.texts import SettingsViewTexts
+from hubfetch.ui.settings.view import SettingsView
 from hubfetch.ui.task_list import TaskListPane
 from hubfetch.ui.task_selection import TaskSelection, make_back_button, restore_focus
 from hubfetch.ui.widgets.blocks import EmptyBlock
@@ -369,11 +377,14 @@ class MainWindow(QMainWindow):
     """Emitted when the configured Help command opens its URL."""
 
     __slots__: Final = (
+        "_cache_view",
         "_clone_dialog",
         "_clone_service",
+        "_content_stack",
         "_create_texts",
         "_degraded",
         "_detail",
+        "_diagnostics_view",
         "_download_dialog",
         "_download_service",
         "_help_action",
@@ -389,6 +400,8 @@ class MainWindow(QMainWindow):
         "_selection",
         "_settings",
         "_settings_action",
+        "_settings_view",
+        "_tasks_page",
         "_texts",
     )
     _runtime: Runtime
@@ -406,6 +419,11 @@ class MainWindow(QMainWindow):
     _nav: NavigationPane
     _list: TaskListPane
     _detail: TaskDetailPane
+    _tasks_page: QWidget
+    _content_stack: QStackedWidget
+    _cache_view: CacheView
+    _diagnostics_view: DiagnosticsView
+    _settings_view: SettingsView
     _mode: ShellMode
     _new_download_action: QAction
     _new_clone_action: QAction
@@ -442,6 +460,17 @@ class MainWindow(QMainWindow):
         self._nav = NavigationPane(self._model)
         self._list = TaskListPane(texts)
         self._detail = TaskDetailPane(texts)
+        self._cache_view = CacheView(
+            CacheViewTexts.for_locale(settings.locale), settings=settings
+        )
+        self._diagnostics_view = DiagnosticsView(
+            DiagnosticsViewTexts.for_locale(settings.locale), settings=settings
+        )
+        self._settings_view = SettingsView(
+            SettingsViewTexts.for_locale(settings.locale),
+            settings=settings,
+            save_settings=save_settings,
+        )
         self._build_menu()
         self._build_central()
         self._connect()
@@ -468,6 +497,22 @@ class MainWindow(QMainWindow):
     def detail_pane(self) -> TaskDetailPane:
         """Return the flexible detail pane."""
         return self._detail
+
+    def cache_view(self) -> CacheView:
+        """Return the Cache work surface shown by the Cache destination."""
+        return self._cache_view
+
+    def diagnostics_view(self) -> DiagnosticsView:
+        """Return the Diagnostics work surface shown by its destination."""
+        return self._diagnostics_view
+
+    def settings_view(self) -> SettingsView:
+        """Return the Settings work surface shown by its destination."""
+        return self._settings_view
+
+    def content_stack(self) -> QStackedWidget:
+        """Return the four-destination content stack for routing assertions."""
+        return self._content_stack
 
     def task_selection(self) -> TaskSelection:
         """Return the selection/back model."""
@@ -512,11 +557,14 @@ class MainWindow(QMainWindow):
         selected = self._selection.selected_task_id()
         if selected is not None:
             self._refresh_detail(selected)
-        elif self._detail.is_showing_pending():
-            return
         else:
             self._detail.clear()
-        if self._mode is not ShellMode.NARROW:
+        # Focus only owns the visible Tasks surface; Cache/Diagnostics/Settings
+        # keep the focus they restored when they were routed to.
+        if (
+            self._mode is not ShellMode.NARROW
+            and self.current_destination() is Destination.TASKS
+        ):
             self._list.focus_selection()
 
     @override
@@ -585,14 +633,24 @@ class MainWindow(QMainWindow):
             self._help_action.triggered.connect(self._on_help)
 
     def _build_central(self) -> None:
-        """Compose the fixed navigation, task list, and flexible detail panes."""
+        """Compose the fixed navigation rail and the four-destination stack."""
+        self._tasks_page = QWidget(self)
+        tasks_layout = QHBoxLayout(self._tasks_page)
+        tasks_layout.setContentsMargins(0, 0, 0, 0)
+        tasks_layout.setSpacing(0)
+        tasks_layout.addWidget(self._list, stretch=1)
+        tasks_layout.addWidget(self._detail, stretch=1)
         central = QWidget(self)
         shell = QHBoxLayout(central)
         shell.setContentsMargins(0, 0, 0, 0)
         shell.setSpacing(0)
         shell.addWidget(self._nav)
-        shell.addWidget(self._list, stretch=1)
-        shell.addWidget(self._detail, stretch=1)
+        self._content_stack = QStackedWidget(central)
+        self._content_stack.addWidget(self._tasks_page)
+        self._content_stack.addWidget(self._cache_view)
+        self._content_stack.addWidget(self._diagnostics_view)
+        self._content_stack.addWidget(self._settings_view)
+        shell.addWidget(self._content_stack, stretch=1)
         self.setCentralWidget(central)
         self._apply_mode()
 
@@ -608,22 +666,41 @@ class MainWindow(QMainWindow):
         self.create_clone_requested.connect(self._open_clone_dialog)
 
     def _on_destination_changed(self, value: str) -> None:
-        """Route one destination: Tasks restores the queue; others show pending."""
+        """Route one destination to its real work surface in the content stack."""
         destination = Destination(value)
-        if destination is Destination.TASKS:
-            self._selection.show_list()
-            self._apply_mode()
-            selected = self._selection.selected_task_id()
-            if selected is not None:
-                self._refresh_detail(selected)
-            self._list.focus_selection()
-            return
-        self._detail.show_pending(
-            self._texts.nav_label(destination), self._texts.pending_description
-        )
-        self._selection.show_detail()
-        self._apply_mode()
-        self._detail.restore_focus()
+        match destination:
+            case Destination.TASKS:
+                self._content_stack.setCurrentWidget(self._tasks_page)
+                self._selection.show_list()
+                self._apply_mode()
+                selected = self._selection.selected_task_id()
+                if selected is not None:
+                    self._refresh_detail(selected)
+                self._list.focus_selection()
+            case Destination.CACHE:
+                self._content_stack.setCurrentWidget(self._cache_view)
+                if self._cache_view.readout() is None:
+                    self._cache_view.refresh()
+                self._apply_mode()
+                self._restore_view_focus(self._cache_view)
+            case Destination.DIAGNOSTICS:
+                self._content_stack.setCurrentWidget(self._diagnostics_view)
+                self._apply_mode()
+                self._restore_view_focus(self._diagnostics_view)
+            case Destination.SETTINGS:
+                self._content_stack.setCurrentWidget(self._settings_view)
+                self._apply_mode()
+                self._restore_view_focus(self._settings_view)
+
+    def _restore_view_focus(self, view: QWidget) -> None:
+        """Give keyboard focus to the first strong-focus control of one surface."""
+        for candidate in view.findChildren(QWidget):
+            if candidate.focusPolicy() not in (
+                Qt.FocusPolicy.NoFocus,
+                Qt.FocusPolicy.ClickFocus,
+            ):
+                candidate.setFocus(Qt.FocusReason.TabFocusReason)
+                return
 
     def _on_task_selected(self, raw: str) -> None:
         """Show the selected task's detail and, in narrow mode, own the pane."""
@@ -717,15 +794,16 @@ class MainWindow(QMainWindow):
         mode = _mode_for_width(self.width())
         self._mode = mode
         showing_detail = self._selection.is_showing_detail()
+        on_tasks = self.current_destination() is Destination.TASKS
         match mode:
             case ShellMode.NARROW:
                 # Hidden panes must never drive the window's minimum size, or
                 # the shell would auto-grow past the breakpoint (DESIGN 8.2).
                 self._nav.hide()
                 self._nav.setFixedWidth(0)
-                self._detail.set_back_visible(showing_detail)
-                self._list.setVisible(not showing_detail)
-                self._detail.setVisible(showing_detail)
+                self._detail.set_back_visible(on_tasks and showing_detail)
+                self._list.setVisible(on_tasks and not showing_detail)
+                self._detail.setVisible(on_tasks and showing_detail)
                 self._list.setMinimumWidth(0)
                 self._list.setMaximumWidth(_UNBOUNDED)
             case ShellMode.MEDIUM | ShellMode.WIDE:

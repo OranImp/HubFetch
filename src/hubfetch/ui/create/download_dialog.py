@@ -70,6 +70,7 @@ class DownloadDialog(QDialog):
     task_created = Signal(object)
 
     __slots__: Final = (
+        "_cancel",
         "_closed",
         "_confirm",
         "_dispatcher",
@@ -97,6 +98,7 @@ class DownloadDialog(QDialog):
     _ids: TaskIdFactory
     _dispatcher: WorkDispatcher
     _state: CreateFlowState
+    _cancel: ActionButton
     _plan_button: ActionButton
     _confirm: ActionButton
     _status_stack: QStackedWidget
@@ -176,16 +178,29 @@ class DownloadDialog(QDialog):
         self._status_stack.addWidget(self._estimates_page)
         self._status_stack.setCurrentWidget(self._estimates_page)
         layout.addWidget(self._status_stack)
-        footer = QHBoxLayout()
-        footer.setSpacing(tokens.SPACE_SM)
+        self._cancel = ActionButton(texts.cancel_command)
         self._plan_button = ActionButton(texts.plan_button)
         self._confirm = ActionButton(texts.confirm_download, primary=True)
-        footer.addWidget(self._plan_button)
-        footer.addStretch(1)
-        footer.addWidget(self._confirm)
-        layout.addLayout(footer)
-        self._connect(close)
+        layout.addLayout(
+            self._build_footer(self._cancel, self._plan_button, self._confirm)
+        )
+        self._connect(close, self._cancel)
         self._refresh_controls()
+
+    def _build_footer(
+        self,
+        cancel: ActionButton,
+        plan: ActionButton,
+        confirm: ActionButton,
+    ) -> QHBoxLayout:
+        """Compose Cancel on the leading edge, then Plan and primary Confirm."""
+        footer = QHBoxLayout()
+        footer.setSpacing(tokens.SPACE_SM)
+        footer.addWidget(cancel)
+        footer.addWidget(plan)
+        footer.addStretch(1)
+        footer.addWidget(confirm)
+        return footer
 
     def status(self) -> CreateFlowState:
         """Return the closed state of this creation flow."""
@@ -202,6 +217,10 @@ class DownloadDialog(QDialog):
     def plan_button(self) -> ActionButton:
         """Return the Plan command."""
         return self._plan_button
+
+    def cancel_button(self) -> ActionButton:
+        """Return the Cancel command."""
+        return self._cancel
 
     def confirm_button(self) -> ActionButton:
         """Return the Confirm command."""
@@ -279,11 +298,12 @@ class DownloadDialog(QDialog):
         self.accept()
         return True
 
-    def _connect(self, close: IconButton) -> None:
+    def _connect(self, close: IconButton, cancel: ActionButton) -> None:
         """Wire commands, the form's change signal, and close handling."""
         self._plan_button.clicked.connect(self.request_plan)
         self._confirm.clicked.connect(self.confirm)
-        close.clicked.connect(self._on_closed)
+        close.clicked.connect(self.reject)
+        cancel.clicked.connect(self.reject)
         self.rejected.connect(self._on_closed)
         self._form.changed.connect(self._on_form_changed)
 

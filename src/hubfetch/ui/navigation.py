@@ -102,7 +102,6 @@ class ShellTexts:
     nav_cache: str
     nav_diagnostics: str
     nav_settings: str
-    pending_description: str
     tasks_header: str
     tasks_empty_title: str
     tasks_empty_description: str
@@ -139,7 +138,6 @@ class ShellTexts:
                 nav_cache="Cache",
                 nav_diagnostics="Diagnostics",
                 nav_settings="Settings",
-                pending_description="This workspace is not available yet",
                 tasks_header="Tasks",
                 tasks_empty_title="No tasks",
                 tasks_empty_description="Create tasks from the File menu",
@@ -184,7 +182,6 @@ class ShellTexts:
             nav_cache="缓存",
             nav_diagnostics="诊断",
             nav_settings="设置",
-            pending_description="该工作区尚未提供",
             tasks_header="任务",
             tasks_empty_title="暂无任务",
             tasks_empty_description="使用文件菜单新建下载或克隆任务",
