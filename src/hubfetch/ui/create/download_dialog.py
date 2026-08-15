@@ -191,6 +191,10 @@ class DownloadDialog(QDialog):
         """Return the closed state of this creation flow."""
         return self._state
 
+    def service(self) -> DownloadCreateService:
+        """Return the typed service seam this dialog plans and enqueues through."""
+        return self._service
+
     def form(self) -> DownloadForm:
         """Return the download form body."""
         return self._form

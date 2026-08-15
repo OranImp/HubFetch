@@ -183,6 +183,10 @@ class CloneDialog(QDialog):
         """Return the closed state of this creation flow."""
         return self._state
 
+    def service(self) -> CloneCreateService:
+        """Return the typed service seam this dialog preflights and enqueues through."""
+        return self._service
+
     def form(self) -> CloneForm:
         """Return the clone form body."""
         return self._form

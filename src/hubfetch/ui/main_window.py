@@ -31,6 +31,7 @@ from PySide6.QtGui import (
     QShowEvent,
 )
 from PySide6.QtWidgets import (
+    QDialog,
     QFrame,
     QHBoxLayout,
     QMainWindow,
@@ -44,6 +45,14 @@ from hubfetch.domain.events import TransferProgressedEvent
 from hubfetch.domain.ids import TaskId, parse_task_id
 from hubfetch.persistence.records import TaskNotFoundError
 from hubfetch.ui import fonts, tokens
+from hubfetch.ui.create import (
+    CloneCreateService,
+    CloneDialog,
+    CreateTexts,
+    DownloadCreateService,
+    DownloadDialog,
+)
+from hubfetch.ui.create.services import RuntimeCloneService, RuntimeDownloadService
 from hubfetch.ui.navigation import (
     Destination,
     NavigationModel,
@@ -348,10 +357,10 @@ class MainWindow(QMainWindow):
     """The responsive HubFetch desktop shell over one composed runtime."""
 
     create_download_requested = Signal()
-    """Emitted when the New Download command fires (dialogs arrive in Todo 25)."""
+    """Emitted when the New Download command fires; opens the download dialog."""
 
     create_clone_requested = Signal()
-    """Emitted when the New Clone command fires (dialogs arrive in Todo 25)."""
+    """Emitted when the New Clone command fires; opens the clone dialog."""
 
     refresh_requested = Signal()
     """Emitted whenever the Refresh command asks the shell to reload snapshots."""
@@ -360,8 +369,13 @@ class MainWindow(QMainWindow):
     """Emitted when the configured Help command opens its URL."""
 
     __slots__: Final = (
+        "_clone_dialog",
+        "_clone_service",
+        "_create_texts",
         "_degraded",
         "_detail",
+        "_download_dialog",
+        "_download_service",
         "_help_action",
         "_list",
         "_mode",
@@ -382,6 +396,11 @@ class MainWindow(QMainWindow):
     _texts: ShellTexts
     _save_settings: Callable[[Settings], None]
     _degraded: tuple[DegradedDiagnostic, ...]
+    _create_texts: CreateTexts
+    _download_service: DownloadCreateService
+    _clone_service: CloneCreateService
+    _download_dialog: DownloadDialog | None
+    _clone_dialog: CloneDialog | None
     _model: NavigationModel
     _selection: TaskSelection
     _nav: NavigationPane
@@ -413,6 +432,11 @@ class MainWindow(QMainWindow):
         self._mode = ShellMode.WIDE
         self.setWindowTitle(texts.window_title)
         self.setFont(fonts.ui_font(tokens.BODY_SIZE))
+        self._create_texts = CreateTexts.for_locale(settings.locale)
+        self._download_service = RuntimeDownloadService(runtime, settings)
+        self._clone_service = RuntimeCloneService(runtime)
+        self._download_dialog = None
+        self._clone_dialog = None
         self._model = NavigationModel(texts, settings.help_url)
         self._selection = TaskSelection(self)
         self._nav = NavigationPane(self._model)
@@ -472,6 +496,14 @@ class MainWindow(QMainWindow):
     def help_action(self) -> QAction | None:
         """Return the native Help action, or ``None`` when no URL is configured."""
         return self._help_action
+
+    def download_create_service(self) -> DownloadCreateService:
+        """Return the runtime-backed service wired to the download dialog."""
+        return self._download_service
+
+    def clone_create_service(self) -> CloneCreateService:
+        """Return the runtime-backed service wired to the clone dialog."""
+        return self._clone_service
 
     def refresh(self) -> None:
         """Reload the queue snapshot and the selected detail from the runtime."""
@@ -565,13 +597,15 @@ class MainWindow(QMainWindow):
         self._apply_mode()
 
     def _connect(self) -> None:
-        """Wire navigation, selection, back, and runtime snapshot signals."""
+        """Wire navigation, selection, back, runtime, and create-dialog signals."""
         self._model.destination_changed.connect(self._on_destination_changed)
         self._selection.task_selected.connect(self._on_task_selected)
         self._selection.back_requested.connect(self._on_back)
         self._detail.back_requested.connect(self._on_back)
         self._list.selection_changed.connect(self._selection.select)
         self._runtime.queue_changed.connect(self.refresh)
+        self.create_download_requested.connect(self._open_download_dialog)
+        self.create_clone_requested.connect(self._open_clone_dialog)
 
     def _on_destination_changed(self, value: str) -> None:
         """Route one destination: Tasks restores the queue; others show pending."""
@@ -607,16 +641,12 @@ class MainWindow(QMainWindow):
         self._list.focus_selection()
 
     def _on_new_download(self) -> None:
-        """Route the New Download command to its typed signal and a pending note."""
+        """Route the New Download command to the working creation dialog."""
         self.create_download_requested.emit()
-        self._show_create_pending(
-            self._texts.new_download, self._texts.new_download_pending
-        )
 
     def _on_new_clone(self) -> None:
-        """Route the New Clone command to its typed signal and a pending note."""
+        """Route the New Clone command to the working creation dialog."""
         self.create_clone_requested.emit()
-        self._show_create_pending(self._texts.new_clone, self._texts.new_clone_pending)
 
     def _on_refresh(self) -> None:
         """Announce and perform the Refresh command."""
@@ -631,12 +661,46 @@ class MainWindow(QMainWindow):
         self.help_requested.emit()
         _ = QDesktopServices.openUrl(QUrl(url))
 
-    def _show_create_pending(self, title: str, description: str) -> None:
-        """Show a creation-flow pending notice and own the narrow pane."""
-        self._detail.show_pending(title, description)
-        self._selection.show_detail()
-        self._apply_mode()
-        self._detail.restore_focus()
+    def _open_download_dialog(self) -> None:
+        """Launch the download dialog as a modal sheet over this window."""
+        current = self._download_dialog
+        if current is not None and not current.isHidden():
+            current.raise_()
+            return
+        dialog = DownloadDialog(self._download_service, self._create_texts)
+        self._wire_create_dialog(dialog, self._on_download_dialog_finished)
+        self._download_dialog = dialog
+        dialog.show()
+        dialog.raise_()
+
+    def _open_clone_dialog(self) -> None:
+        """Launch the clone dialog as a modal sheet over this window."""
+        current = self._clone_dialog
+        if current is not None and not current.isHidden():
+            current.raise_()
+            return
+        dialog = CloneDialog(self._clone_service, self._create_texts)
+        self._wire_create_dialog(dialog, self._on_clone_dialog_finished)
+        self._clone_dialog = dialog
+        dialog.show()
+        dialog.raise_()
+
+    def _wire_create_dialog(
+        self, dialog: QDialog, on_finished: Callable[[int], None]
+    ) -> None:
+        """Reparent, modalize, and auto-delete one transient creation dialog."""
+        dialog.setParent(self)
+        dialog.setModal(True)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        _ = dialog.finished.connect(on_finished)
+
+    def _on_download_dialog_finished(self, _result: int) -> None:
+        """Drop the shell's reference once the download dialog closes."""
+        self._download_dialog = None
+
+    def _on_clone_dialog_finished(self, _result: int) -> None:
+        """Drop the shell's reference once the clone dialog closes."""
+        self._clone_dialog = None
 
     def _refresh_detail(self, task_id: TaskId) -> None:
         """Render one immutable detail snapshot or clear when the task is gone."""

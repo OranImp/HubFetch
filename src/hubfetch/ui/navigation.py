@@ -103,8 +103,6 @@ class ShellTexts:
     nav_diagnostics: str
     nav_settings: str
     pending_description: str
-    new_download_pending: str
-    new_clone_pending: str
     tasks_header: str
     tasks_empty_title: str
     tasks_empty_description: str
@@ -141,9 +139,7 @@ class ShellTexts:
                 nav_cache="Cache",
                 nav_diagnostics="Diagnostics",
                 nav_settings="Settings",
-                pending_description="This workspace ships in a later release",
-                new_download_pending="The New Download flow ships in a later release",
-                new_clone_pending="The New Clone flow ships in a later release",
+                pending_description="This workspace is not available yet",
                 tasks_header="Tasks",
                 tasks_empty_title="No tasks",
                 tasks_empty_description="Create tasks from the File menu",
@@ -188,9 +184,7 @@ class ShellTexts:
             nav_cache="缓存",
             nav_diagnostics="诊断",
             nav_settings="设置",
-            pending_description="该工作区将在后续版本提供",
-            new_download_pending="新建下载流程将在后续版本提供",
-            new_clone_pending="新建克隆流程将在后续版本提供",
+            pending_description="该工作区尚未提供",
             tasks_header="任务",
             tasks_empty_title="暂无任务",
             tasks_empty_description="使用文件菜单新建下载或克隆任务",
