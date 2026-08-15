@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Final, final
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from hubfetch import smoke
 from hubfetch.application.bootstrap import (
     SystemClock,
     bootstrap_runtime,
@@ -127,6 +128,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = tuple(sys.argv[1:] if argv is None else argv)
     if showcase.is_showcase_request(args):
         return showcase.run_showcase()
+    if smoke.is_smoke_request(args):
+        return smoke.main(args)
     app = QApplication([*args])
     fonts.register_bundled_fonts()
     app.setStyle(ui_style.SHOWCASE_STYLE)

@@ -25,6 +25,9 @@ PYSIDE6 = SITE_PACKAGES / "PySide6"
 
 # (destination_relative_to__internal, source_file_basename). Sources are
 # resolved by _resolve_resource() against the appropriate base directory.
+# Runtime resources (fonts, icons, migration SQL) land under resources/ and
+# hubfetch/ so the frozen-aware resource roots in hubfetch/ui/fonts.py and
+# hubfetch/ui/icons.py (sys._MEIPASS) resolve them.
 RESOURCE_PLAN = (
     # Qt platform plugins (replaceable loose DLLs under PySide6/plugins/).
     ("PySide6/plugins/platforms", "qwindows.dll"),
@@ -34,15 +37,46 @@ RESOURCE_PLAN = (
     ("PySide6/plugins/imageformats", "qsvg.dll"),
     ("PySide6/plugins/tls", "qschannelbackend.dll"),
     ("PySide6/plugins/iconengines", "qsvgicon.dll"),
-    ("PySide6/plugins/styles", "qwindowsvistastyle.dll"),
+    ("PySide6/plugins/styles", "qmodernwindowsstyle.dll"),
     # Qt translations (Simplified Chinese is the default locale).
     ("PySide6/translations", "qtbase_zh_CN.qm"),
-    # Application resources: i18n catalogs, Cascadia Mono + OFL, icon.
+    # Application i18n catalogs (kept for license/compliance evidence).
     ("hubfetch/i18n", "hubfetch_zh_CN.qm"),
     ("hubfetch/i18n", "hubfetch_en_US.qm"),
-    ("fonts", "CascadiaMono.ttf"),
-    ("fonts", "OFL.txt"),
-    ("icons", "hubfetch.ico"),
+    # Runtime resources under resources/: Cascadia Mono + OFL, Lucide icons.
+    ("resources/fonts", "CascadiaMono.ttf"),
+    ("resources/fonts", "OFL.txt"),
+    ("resources/icons", "LICENSE.md"),
+    ("resources/icons", "activity.svg"),
+    ("resources/icons", "arrow-left.svg"),
+    ("resources/icons", "check.svg"),
+    ("resources/icons", "chevron-down.svg"),
+    ("resources/icons", "circle-alert.svg"),
+    ("resources/icons", "circle-check.svg"),
+    ("resources/icons", "circle-pause.svg"),
+    ("resources/icons", "circle-x.svg"),
+    ("resources/icons", "clock.svg"),
+    ("resources/icons", "database.svg"),
+    ("resources/icons", "download.svg"),
+    ("resources/icons", "file.svg"),
+    ("resources/icons", "folder.svg"),
+    ("resources/icons", "git-branch.svg"),
+    ("resources/icons", "globe.svg"),
+    ("resources/icons", "inbox.svg"),
+    ("resources/icons", "info.svg"),
+    ("resources/icons", "list-todo.svg"),
+    ("resources/icons", "loader-circle.svg"),
+    ("resources/icons", "lock.svg"),
+    ("resources/icons", "play.svg"),
+    ("resources/icons", "plus.svg"),
+    ("resources/icons", "rotate-cw.svg"),
+    ("resources/icons", "settings.svg"),
+    ("resources/icons", "shield.svg"),
+    ("resources/icons", "square-terminal.svg"),
+    ("resources/icons", "triangle-alert.svg"),
+    ("resources/icons", "x.svg"),
+    # SQL migrations loaded relative to hubfetch/persistence/migrations.py.
+    ("hubfetch/persistence/sql", "001_initial.sql"),
     # Licenses: project MIT, notices, Qt LGPL/GPL texts, and compliance doc.
     ("licenses", "LICENSE"),
     ("licenses", "THIRD_PARTY_NOTICES.md"),
@@ -64,7 +98,7 @@ EXPECTED_QT_DLLS = (
     "Qt6Xml.dll",
     "Qt6DBus.dll",
     "shiboken6.abi3.dll",
-    "PySide6.abi3.dll",
+    "pyside6.abi3.dll",
 )
 
 # GPL-only Qt modules must never enter the MIT/LGPL build, plus heavy modules
@@ -133,10 +167,12 @@ def _resolve_resource(destination, filename):
         return (str(PYSIDE6 / "translations" / filename), destination)
     if destination == "hubfetch/i18n":
         return (str(REPO_ROOT / "resources" / "i18n" / filename), destination)
-    if destination == "fonts":
+    if destination == "hubfetch/persistence/sql":
+        return (str(REPO_ROOT / "src" / "hubfetch" / "persistence" / "sql" / filename), destination)
+    if destination == "resources/fonts":
         return (str(REPO_ROOT / "resources" / "fonts" / filename), destination)
-    if destination == "icons":
-        return (str(SPEC_DIR / "resources" / filename), destination)
+    if destination == "resources/icons":
+        return (str(REPO_ROOT / "resources" / "icons" / filename), destination)
     if destination == "licenses":
         return (str(REPO_ROOT / filename), destination)
     if destination == "licenses/qt":
@@ -165,7 +201,7 @@ a_gui = Analysis(
 )
 
 a_ask = Analysis(
-    [str(REPO_ROOT / "src" / "hubfetch" / "askpass" / "main.py")],
+    [str(SPEC_DIR / "askpass_entry.py")],
     pathex=[str(REPO_ROOT / "src")],
     binaries=[],
     datas=[],

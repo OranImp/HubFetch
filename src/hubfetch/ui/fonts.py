@@ -8,6 +8,7 @@ Microsoft YaHei UI families and is not redistributed by HubFetch.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Final
 
@@ -15,7 +16,22 @@ from PySide6.QtGui import QFont, QFontDatabase
 
 from . import tokens
 
-FONTS_DIR: Final[Path] = Path(__file__).resolve().parents[3] / "resources" / "fonts"
+
+def _resources_dir() -> Path:
+    """Return the runtime resources root for the current deployment layout.
+
+    The development layout resolves relative to the source tree; the packaged
+    one-folder layout resolves against ``sys._MEIPASS`` so the resources the
+    PyInstaller spec ships under ``resources/`` are found without a source
+    checkout.
+    """
+    frozen = getattr(sys, "_MEIPASS", None)
+    if isinstance(frozen, str):
+        return Path(frozen).resolve()
+    return Path(__file__).resolve().parents[3]
+
+
+FONTS_DIR: Final[Path] = _resources_dir() / "resources" / "fonts"
 """Directory holding the bundled Cascadia Mono sources and their OFL license."""
 
 _CASCADE_MONO_FILE: Final[str] = "CascadiaMono.ttf"

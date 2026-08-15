@@ -10,6 +10,7 @@ and the Hugging Face logo are prohibited by the contract and absent here.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from enum import StrEnum, unique
 from pathlib import Path
@@ -19,7 +20,22 @@ from PySide6.QtCore import QByteArray
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
-ICONS_DIR: Final[Path] = Path(__file__).resolve().parents[3] / "resources" / "icons"
+
+def _resources_dir() -> Path:
+    """Return the runtime resources root for the current deployment layout.
+
+    The development layout resolves relative to the source tree; the packaged
+    one-folder layout resolves against ``sys._MEIPASS`` so the Lucide SVGs the
+    PyInstaller spec ships under ``resources/`` are found without a source
+    checkout.
+    """
+    frozen = getattr(sys, "_MEIPASS", None)
+    if isinstance(frozen, str):
+        return Path(frozen).resolve()
+    return Path(__file__).resolve().parents[3]
+
+
+ICONS_DIR: Final[Path] = _resources_dir() / "resources" / "icons"
 """Directory holding the committed Lucide SVG sources and their license."""
 
 
