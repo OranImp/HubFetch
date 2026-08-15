@@ -1,4 +1,4 @@
-.omo/
+﻿.omo/
 # omo/oh-my-openagent tooling output
 package/
 .venv/
@@ -30,3 +30,5 @@ __pycache__/
 htmlcov/
 
 *.qm
+
+reference/
