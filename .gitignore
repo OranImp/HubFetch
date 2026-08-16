@@ -24,6 +24,10 @@ release/
 coverage/
 artifacts/
 
+# node-gyp native output for the Windows Job Object addon: rebuilt by
+# `pnpm native:build`, never committed (Todo 25).
+apps/desktop/native/windows/build/
+
 # Local credentials & app data (HubFetch runtime identity)
 /.hubfetch/
 /HubFetch/

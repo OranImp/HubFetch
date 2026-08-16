@@ -46,6 +46,7 @@ import { Library } from './library'
 import { createLogCaptures, sanitizeRendererLine } from './log-capture'
 import { buildMenu } from './menu'
 import { NotificationService } from './notifications'
+import { loadHubFetchJob } from './native/hubfetch-job-loader'
 import { applyAppProxy } from './proxy'
 import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride, userDataDir } from './runtime-paths'
 import { SettingsStore } from './settings'
@@ -178,6 +179,13 @@ if (!gotLock) {
   })
 
   void app.whenReady().then(async () => {
+    // Todo 25: native Windows Job Object bridge readiness probe. The bridge is
+    // typed (ready | unavailable) and never throws — a missing/wrong-ABI addon
+    // must never crash main. Clone support stays disabled until Todo 26 lands
+    // the real Job API and Todo 27 gates the clone start on this probe.
+    const hubFetchJobBridge = loadHubFetchJob()
+    logger.info('native', `hubfetch_job bridge ${hubFetchJobBridge.status}`)
+
     const db = openDatabase()
     const settings = new SettingsStore(db)
     const i18n = new MainI18n()

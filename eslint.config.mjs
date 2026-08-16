@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      // node-gyp + esbuild QA-bundle output under the native addon tree.
+      '**/native/windows/build/**',
       // Finder-style duplicate artifacts the environment occasionally creates.
       '**/* 2.*'
     ]

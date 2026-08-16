@@ -9,6 +9,16 @@ directories:
 files:
   - out/**
 
+# Todo 25: the only native artifact the app ships beyond node_modules is the
+# Electron-ABI x64 `hubfetch_job.node` produced by `pnpm native:build`. It is
+# staged under resources/native/ OUTSIDE the asar; the main-process loader
+# resolves it via process.resourcesPath. No source, PDB/object, or toolchain
+# files are ever packaged. electron-builder fails fast if the addon is missing
+# (it must be built before packaging).
+extraResources:
+  - from: native/windows/build/Release/hubfetch_job.node
+    to: native/hubfetch_job.node
+
 asarUnpack:
   - '**/*.node'
 
