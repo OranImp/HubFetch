@@ -27,7 +27,7 @@ import {
 import { defaultCacheDir, HubApiError } from '@hubfetch/hub-api'
 import type { HubClient } from '@hubfetch/hub-api'
 import type { AuthManager } from './auth'
-import { buildHubClient } from './hub'
+import { buildHubClient, snapshotFromConfig } from './hub'
 import { captureHubSessionCookie } from './hub-session'
 import type { CacheManager } from './cache'
 import type { AppDatabase } from './db'
@@ -51,6 +51,7 @@ import {
   type SenderSnapshot,
   type TrustedOrigins
 } from './ipc-guard'
+import { redactor } from './security/log'
 
 export interface AppContext {
   db: AppDatabase
@@ -85,18 +86,28 @@ function handle<C extends IpcInvokeChannel>(
   ) => Promise<IpcResponse<C>> | IpcResponse<C>
 ): void {
   ipcMain.handle(channel, async (event, payload: unknown) => {
-    const schema = ipcRequestSchemas[channel]
-    if (schema) {
-      const parsed = schema.safeParse(payload)
-      if (!parsed.success) {
-        throw new Error(`Invalid payload for ${channel}: ${parsed.error.message}`)
+    try {
+      const schema = ipcRequestSchemas[channel]
+      if (schema) {
+        const parsed = schema.safeParse(payload)
+        if (!parsed.success) {
+          throw new Error(`Invalid payload for ${channel}: ${parsed.error.message}`)
+        }
+        return await invokeTrusted(channel, event, () =>
+          handler(parsed.data as IpcRequest<C>, event)
+        )
       }
-      return invokeTrusted(channel, event, () => handler(parsed.data as IpcRequest<C>, event))
+      if (payload !== undefined && payload !== null) {
+        throw new Error(`Channel ${channel} accepts no payload`)
+      }
+      return await invokeTrusted(channel, event, () => handler(undefined as IpcRequest<C>, event))
+    } catch (err) {
+      // Electron flattens a thrown error to its message across IPC. Redact the
+      // message here — the single boundary — so no secret-bearing error text
+      // ever reaches the renderer or its devtools, while the sentinel the
+      // renderer matches on (HUB_WEB_SESSION_REQUIRED) passes through unchanged.
+      throw new Error(redactor.redactErrorText(err))
     }
-    if (payload !== undefined && payload !== null) {
-      throw new Error(`Channel ${channel} accepts no payload`)
-    }
-    return invokeTrusted(channel, event, () => handler(undefined as IpcRequest<C>, event))
   })
 }
 
@@ -288,11 +299,34 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     return { cleared: true as const, signedOut: signOut }
   })
 
+  /** Closed-snapshot equality: same mode, same Manual endpoint when applicable. */
+  const snapshotsEqual = (a: ProxySnapshot, b: ProxySnapshot): boolean => {
+    if (a.mode !== b.mode) return false
+    switch (a.mode) {
+      case 'manual':
+        return b.mode === 'manual' && a.url === b.url
+      case 'system':
+      case 'direct':
+        return true
+    }
+  }
+
+  /**
+   * Probe errors are redacted centrally by the Todo 22 redactor before they
+   * cross IPC (URL userinfo and query credentials included).
+   */
+
   handle('network:testConnection', async (req) => {
     const applied = ctx.settings.get()
     const endpoint = req?.endpoint !== undefined ? req.endpoint : applied.hubEndpoint
-    const appliedProxyUrl = applied.proxy.mode === 'manual' ? applied.proxy.manualUrl : null
-    const proxyUrl = req?.proxyUrl !== undefined ? req.proxyUrl : appliedProxyUrl
+    const appliedSnapshot = snapshotFromConfig(applied.proxy)
+    // Draft selection is a closed mode-aware override (system/direct/manual).
+    // Omitted → probe the applied snapshot; the saved value is never touched.
+    const proxy: ProxySnapshot = req?.proxy
+      ? req.proxy.mode === 'manual'
+        ? { mode: 'manual', url: req.proxy.url }
+        : { mode: req.proxy.mode }
+      : appliedSnapshot
     // Drafts are probed on a throwaway client so the live client (and the
     // recorded applied network options) are never touched. Credentials stay
     // bound to the endpoint they belong to — the same rule Apply enforces — so
@@ -300,27 +334,23 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     // mirror endpoint. The probe (public trending search) needs no auth, so a
     // draft host receives an anonymous request; this keeps the main-process
     // token siloed even if the renderer supplies an arbitrary endpoint.
-    // A draft proxyUrl pins a Manual snapshot; absence means System (the
-    // renderer's mode-aware controls land in Todo 21).
     const endpointMatches = endpoint === applied.hubEndpoint
-    const matchesApplied = endpointMatches && proxyUrl === appliedProxyUrl
-    const proxySnapshot: ProxySnapshot = proxyUrl
-      ? { mode: 'manual', url: proxyUrl }
-      : { mode: 'system' }
+    const matchesApplied = endpointMatches && snapshotsEqual(proxy, appliedSnapshot)
     const client = matchesApplied
       ? ctx.hub
       : buildHubClient(
           endpointMatches ? () => ctx.auth.accessToken() : () => undefined,
           endpointMatches ? () => ctx.auth.sessionCookie() : () => undefined,
-          { endpoint, proxy: proxySnapshot }
+          { endpoint, proxy }
         )
+    const started = performance.now()
     try {
       await client.searchRepos({ kind: 'model', sort: 'trending', limit: 1 })
-      return { ok: true as const }
+      return { ok: true as const, latencyMs: Math.round(performance.now() - started) }
     } catch (err) {
       return {
         ok: false as const,
-        error: err instanceof Error ? err.message : String(err)
+        error: redactor.redactText(err instanceof Error ? err.message : String(err))
       }
     }
   })

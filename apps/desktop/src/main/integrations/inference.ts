@@ -5,6 +5,7 @@
 import type { InferenceClient } from '@huggingface/inference'
 import type { InferenceRequest, InferenceResult } from '@hubfetch/shared'
 import { createProxiedFetch, getHubNetworkOptions } from '../hub'
+import { redactor } from '../security/log'
 import type { InferenceDeps } from './types'
 
 /** Batching window for streamed deltas so tiny tokens don't each cost an IPC round-trip. */
@@ -37,7 +38,10 @@ export async function runInference(
     const output = res.choices?.[0]?.message?.content ?? ''
     return { ok: true, output }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    return {
+      ok: false as const,
+      error: redactor.redactText(err instanceof Error ? err.message : String(err))
+    }
   }
 }
 
@@ -89,7 +93,7 @@ export async function runInferenceStream(
     } else {
       broadcast('evt:inference', {
         id,
-        error: err instanceof Error ? err.message : String(err),
+        error: redactor.redactText(err instanceof Error ? err.message : String(err)),
         done: true
       })
     }

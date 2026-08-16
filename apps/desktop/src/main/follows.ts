@@ -8,6 +8,7 @@ import type { Follow, InboxItem, RepoKind } from '@hubfetch/shared'
 import type { HubClient } from '@hubfetch/hub-api'
 import type { Library } from './library'
 import type { NotificationService } from './notifications'
+import { logger } from './security/log'
 import type { SettingsStore } from './settings'
 
 const ROUTE_PREFIX: Record<RepoKind, string> = {
@@ -66,7 +67,7 @@ export class FollowsPoller {
           added += await this.pollOne(follow)
         } catch (err) {
           // One broken follow must not kill the whole poll cycle.
-          console.warn(`[follows] poll failed for ${follow.type}:${follow.target}`, err)
+          logger.warn('follows', `poll failed for ${follow.type}:${follow.target}`, err)
         }
       }
     } finally {

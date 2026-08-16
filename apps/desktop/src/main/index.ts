@@ -44,6 +44,8 @@ import { NotificationService } from './notifications'
 import { applyAppProxy } from './proxy'
 import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride } from './runtime-paths'
 import { SettingsStore } from './settings'
+import { logger } from './security/log'
+import { secretRegistry } from './security/secret-registry'
 import { closeDefaultTransportPool, ProxyTransportManager } from './transport'
 import { TrayManager } from './tray'
 import {
@@ -504,8 +506,9 @@ if (!gotLock) {
       const recoverRenderer = (reason: string): void => {
         if (win.isDestroyed() || isQuitting) return
         renderFailures += 1
-        console.error(
-          `[window] renderer failure (${reason}), recovery ${renderFailures}/${MAX_RENDER_RECOVERIES}`
+        logger.error(
+          'window',
+          `renderer failure (${reason}), recovery ${renderFailures}/${MAX_RENDER_RECOVERIES}`
         )
         if (renderFailures <= MAX_RENDER_RECOVERIES) {
           setTimeout(() => {
@@ -584,6 +587,10 @@ if (!gotLock) {
       // Release per-task sessions/dispatchers and the app-level fetch pool.
       void transportManager.closeAll()
       void closeDefaultTransportPool()
+      // Drop every registered secret (token, session cookie, task tokens) so
+      // no credential copy outlives the process. Runs after every owner has
+      // released its registrations.
+      secretRegistry.purge()
     })
   })
 

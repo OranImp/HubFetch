@@ -4,6 +4,7 @@ import { isAbsolute, relative, sep } from 'node:path'
 import { DEFAULT_ENDPOINT } from '@hubfetch/hub-api'
 import type { RepoKind } from '@hubfetch/shared'
 import { createProxiedFetch, getHubNetworkOptions } from '../hub'
+import { redactor } from '../security/log'
 
 const EMIT_INTERVAL_MS = 100
 const MAX_OPEN_UPLOAD_FILES = 32
@@ -62,7 +63,10 @@ export interface UploadPipelineDeps {
 }
 
 function trimError(err: unknown): string {
-  return (err instanceof Error ? err.message : String(err)).trim().slice(0, 200)
+  return redactor
+    .redactText(err instanceof Error ? err.message : String(err))
+    .trim()
+    .slice(0, 200)
 }
 
 function isInside(root: string, candidate: string): boolean {

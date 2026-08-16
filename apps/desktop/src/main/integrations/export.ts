@@ -7,6 +7,7 @@ import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { repoCachePaths } from '@hubfetch/hub-api'
 import type { ExportResult, ExportTarget, ExportTool, RepoKind } from '@hubfetch/shared'
+import { redactor } from '../security/log'
 import type { ExportDeps } from './types'
 
 const OLLAMA_TIMEOUT_MS = 15 * 60 * 1000
@@ -210,10 +211,9 @@ async function exportToOllama(
   } catch (err) {
     if (deps.signal.aborted) throw err
     const stderr = (err as { stderr?: string }).stderr
-    const detail = (stderr?.trim() || (err instanceof Error ? err.message : String(err))).slice(
-      0,
-      200
-    )
+    const detail = redactor
+      .redactText(stderr?.trim() || (err instanceof Error ? err.message : String(err)))
+      .slice(0, 200)
     return fail('export.ollamaFailed', { error: detail })
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {})
@@ -309,7 +309,9 @@ export async function runExport(
     }
   } catch (err) {
     if (deps.signal.aborted) throw err
-    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 200)
+    const detail = redactor
+      .redactText(err instanceof Error ? err.message : String(err))
+      .slice(0, 200)
     return fail('export.failed', { error: detail })
   }
 }

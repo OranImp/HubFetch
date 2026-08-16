@@ -11,6 +11,7 @@
  */
 import { pathToFileURL } from 'node:url'
 import { isAllowedExternalUrl } from '@hubfetch/shared'
+import { logger } from './security/log'
 
 export interface TrustedOrigins {
   /** Canonical `file:` URL of the packaged renderer entry — always trusted. */
@@ -117,10 +118,10 @@ export function sanitizedHost(url: string): string {
 
 /** Sanitized boundary log: decision + host only, no query strings or payloads. */
 export function logBoundary(kind: string, url: string, action: string): void {
-  console.warn(`[boundary] ${kind} ${action} target=${sanitizedHost(url)}`)
+  logger.warn('boundary', `${kind} ${action} target=${sanitizedHost(url)}`)
 }
 
 /** Sanitized IPC denial log: channel + sender id + reason, never the payload. */
 export function logIpcDenial(channel: string, webContentsId: number, reason: string): void {
-  console.warn(`[ipc-guard] denied invoke ${channel} sender=${webContentsId} reason=${reason}`)
+  logger.warn('ipc-guard', `denied invoke ${channel} sender=${webContentsId} reason=${reason}`)
 }

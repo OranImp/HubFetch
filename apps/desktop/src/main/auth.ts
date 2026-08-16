@@ -13,6 +13,8 @@ import { isForbidden, isUnauthorized } from '@hubfetch/hub-api'
 import { writeCredentialsFileAtomic } from './credential-file'
 import type { AppDatabase } from './db'
 import { credentialsFile } from './runtime-paths'
+import { logger } from './security/log'
+import { secretRegistry } from './security/secret-registry'
 
 /**
  * Credentials live under the HubFetch userData root — `<userData>\credentials.json`
@@ -82,6 +84,8 @@ export class AuthManager {
    * of resurrecting a token the user just discarded.
    */
   private epoch = 0
+  /** Values currently registered for redaction by exact value (this session). */
+  private registeredSecrets = new Set<string>()
   private client!: HubClient
 
   constructor(
@@ -95,6 +99,35 @@ export class AuthManager {
 
   getState(): AuthState {
     return this.state
+  }
+
+  /**
+   * Every token mutation goes through here so the redaction registry stays
+   * exactly in sync: on sign-in / cookie connect the access token and session
+   * cookie register for value redaction; on sign-out / revocation / external
+   * credential removal they unregister (zeroize) so no stale entry remains.
+   */
+  private setToken(token: StoredToken | null): void {
+    this.token = token
+    const next = new Set<string>()
+    if (token) {
+      if (token.accessToken) next.add(token.accessToken)
+      if (token.sessionCookie) next.add(token.sessionCookie)
+    }
+    for (const value of this.registeredSecrets) {
+      if (!next.has(value)) secretRegistry.unregister(value)
+    }
+    for (const value of next) {
+      if (!this.registeredSecrets.has(value)) {
+        try {
+          secretRegistry.register(value)
+        } catch {
+          // A token shorter than the minimum useful length is simply not
+          // registered; pattern/structural redaction still applies.
+        }
+      }
+    }
+    this.registeredSecrets = next
   }
 
   /** Called by HubClient on every request. */
@@ -138,7 +171,7 @@ export class AuthManager {
       }
       if (!safeStorage.isEncryptionAvailable()) {
         // Hard rule: never store the token unencrypted. Session stays in memory only.
-        console.warn('[auth] OS encryption unavailable; token will not be persisted')
+        logger.warn('auth', 'OS encryption unavailable; token will not be persisted')
         this.tokenOnDisk = false
         return
       }
@@ -183,7 +216,7 @@ export class AuthManager {
         const { cipher } = JSON.parse(readFileSync(file, 'utf8')) as { cipher: string }
         return JSON.parse(safeStorage.decryptString(Buffer.from(cipher, 'base64'))) as StoredToken
       } catch (err) {
-        console.warn('[auth] failed to decrypt shared credentials, discarding', err)
+        logger.warn('auth', 'failed to decrypt shared credentials, discarding', err)
         rmSync(file, { force: true })
       }
     }
@@ -195,16 +228,17 @@ export class AuthManager {
     try {
       token = JSON.parse(safeStorage.decryptString(row.token_cipher)) as StoredToken
     } catch (err) {
-      console.warn('[auth] failed to decrypt stored token, discarding', err)
+      logger.warn('auth', 'failed to decrypt stored token, discarding', err)
       this.db.prepare('DELETE FROM auth WHERE id = 1').run()
       return null
     }
-    this.token = token
+    this.setToken(token)
     try {
       this.persistToken()
     } catch (err) {
-      console.warn(
-        '[auth] migrating legacy token to the shared file failed; keeping it in memory',
+      logger.warn(
+        'auth',
+        'migrating legacy token to the shared file failed; keeping it in memory',
         err
       )
     }
@@ -256,7 +290,7 @@ export class AuthManager {
   private acceptToken(token: StoredToken | null): StoredToken | null {
     if (!token) return null
     if (token.mode === 'token' && token.accessToken) return token
-    console.warn('[auth] discarding legacy OAuth session; sign in with an access token')
+    logger.warn('auth', 'discarding legacy OAuth session; sign in with an access token')
     return null
   }
 
@@ -271,11 +305,11 @@ export class AuthManager {
     const accepted = this.acceptToken(rawShared) ?? this.acceptToken(rawLoaded)
     if ((rawShared !== null || rawLoaded !== null) && accepted === null) {
       // Legacy OAuth grant on disk — wipe it so the user pastes an access token.
-      this.token = null
+      this.setToken(null)
       this.persistToken()
       return
     }
-    this.token = accepted
+    this.setToken(accepted)
     if (!this.token) return
     try {
       this.persistToken()
@@ -293,7 +327,7 @@ export class AuthManager {
         await this.signOut()
         return
       }
-      console.warn('[auth] whoAmI failed at startup', err)
+      logger.warn('auth', 'whoAmI failed at startup', err)
       this.scheduleRetry()
     }
   }
@@ -318,7 +352,7 @@ export class AuthManager {
         this.watchDebounce.unref?.()
       })
       watcher.on('error', (err) => {
-        console.warn('[auth] credentials watch failed', err)
+        logger.warn('auth', 'credentials watch failed', err)
         watcher.close()
         if (this.credentialsWatcher === watcher) this.credentialsWatcher = null
       })
@@ -327,7 +361,7 @@ export class AuthManager {
     } catch (err) {
       // Best effort: without a watcher the delete-to-sign-out contract only
       // applies at the next startup.
-      console.warn('[auth] cannot watch shared credentials', err)
+      logger.warn('auth', 'cannot watch shared credentials', err)
     }
   }
 
@@ -338,10 +372,10 @@ export class AuthManager {
     if (existsSync(credentialsFile())) return
     // Another session (or the user) deleted the file: drop the in-memory
     // session too, without re-deleting anything.
-    console.warn('[auth] shared credentials removed externally; signing out this session')
+    logger.warn('auth', 'shared credentials removed externally; signing out this session')
     this.epoch += 1
     this.clearRetry()
-    this.token = null
+    this.setToken(null)
     this.tokenOnDisk = false
     this.client.invalidateCache()
     this.setState({ status: 'signedOut' })
@@ -376,7 +410,7 @@ export class AuthManager {
       await this.client.whoAmI()
     } catch (err) {
       if (this.epoch === startEpoch && isUnauthorized(err)) {
-        console.warn('[auth] session token was revoked; signing out')
+        logger.warn('auth', 'session token was revoked; signing out')
         await this.signOut()
         return
       }
@@ -415,12 +449,12 @@ export class AuthManager {
     }
     this.epoch += 1
     this.clearRetry()
-    this.token = {
+    this.setToken({
       accessToken,
       mode: 'token',
       tokenDisplayName: validated.tokenDisplayName,
       tokenRole: validated.tokenRole
-    }
+    })
     try {
       this.persistToken()
     } catch {
@@ -464,7 +498,11 @@ export class AuthManager {
     if (validated.user.name.toLowerCase() !== sessionUser.name.toLowerCase()) {
       return { ok: false, error: 'mismatch' }
     }
-    this.token = { ...this.token, sessionCookie: trimmed, sessionUsername: validated.user.name }
+    this.setToken({
+      ...this.token,
+      sessionCookie: trimmed,
+      sessionUsername: validated.user.name
+    })
     try {
       this.persistToken()
     } catch {
@@ -481,7 +519,7 @@ export class AuthManager {
   async disconnectHubSession(): Promise<AuthState> {
     if (this.token?.sessionCookie) {
       const { sessionCookie: _cookie, sessionUsername: _name, ...rest } = this.token
-      this.token = rest
+      this.setToken(rest)
       try {
         this.persistToken()
       } catch {
@@ -510,7 +548,7 @@ export class AuthManager {
         })
       )
     } catch (err) {
-      console.warn('[auth] refreshUser failed', err)
+      logger.warn('auth', 'refreshUser failed', err)
     }
     return this.state
   }
@@ -518,12 +556,12 @@ export class AuthManager {
   async signOut(): Promise<AuthState> {
     this.epoch += 1
     this.clearRetry()
-    this.token = null
+    this.setToken(null)
     try {
       this.persistToken()
     } catch (err) {
       // The file may linger on disk; this session still signs out cleanly.
-      console.warn('[auth] failed to remove persisted credentials', err)
+      logger.warn('auth', 'failed to remove persisted credentials', err)
     }
     this.client.invalidateCache()
     this.setState({ status: 'signedOut' })

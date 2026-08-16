@@ -19,6 +19,8 @@ import type { HubClient } from '@hubfetch/hub-api'
 import { RESOLVE_PREFIX, defaultCacheDir, repoCachePaths } from '@hubfetch/hub-api'
 import type { AppDatabase } from './db'
 import type { NotificationService } from './notifications'
+import { logger, redactor } from './security/log'
+import { secretRegistry } from './security/secret-registry'
 import type { SettingsStore } from './settings'
 import type { DownloadJob, DownloadWorkerProxy } from './workers/download-worker'
 import { ProxyTransportManager, type TaskTransport } from './transport'
@@ -235,6 +237,31 @@ export class DownloadManager {
   private readonly latestRevisionTasks = new Map<string, { sequence: number; taskId: string }>()
   private readonly speedWindow = new Map<string, { at: number; bytes: number; bps: number }>()
   private readonly dirtyTaskIds = new Set<string>()
+
+  /**
+   * Snapshot a task's auth token for its workers AND register it for value
+   * redaction. The registration lives exactly as long as the task's token slot:
+   * completion, cancel, removal, and shutdown all unregister (zeroize) it, so a
+   * task's secret is never retained past the task itself. Reference counting in
+   * the registry keeps shared tokens safe across concurrent tasks.
+   */
+  private rememberTaskToken(taskId: string): void {
+    const token = this.getAuthToken()
+    this.runtimeAuthTokens.set(taskId, token)
+    if (token) {
+      try {
+        secretRegistry.register(token)
+      } catch {
+        // Too short / capacity: pattern + structural redaction still applies.
+      }
+    }
+  }
+
+  private forgetTaskToken(taskId: string): void {
+    const token = this.runtimeAuthTokens.get(taskId)
+    this.runtimeAuthTokens.delete(taskId)
+    if (token) secretRegistry.unregister(token)
+  }
   /** Per-task transports (dedicated Chromium session partitions + dispatchers). */
   private readonly taskTransports = new Map<string, TaskTransport>()
   /** Workers mid-async-spawn (system proxy resolution) — part of the concurrency budget. */
@@ -589,7 +616,7 @@ export class DownloadManager {
     }
     this.tasks.set(task.id, task)
     this.rememberRevisionTask(task)
-    this.runtimeAuthTokens.set(task.id, this.getAuthToken())
+    this.rememberTaskToken(task.id)
     this.persist(task)
     this.pump()
     return this.list()
@@ -654,7 +681,7 @@ export class DownloadManager {
     if (!transport) return
     this.taskTransports.delete(task.id)
     void transport.close().catch((error: unknown) => {
-      console.warn('[downloads] task transport close refused', error)
+      logger.warn('downloads', 'task transport close refused', error)
     })
   }
 
@@ -677,7 +704,7 @@ export class DownloadManager {
       job = await this.buildJob(task, file, transport)
     } catch (err) {
       file.status = 'error'
-      file.error = err instanceof Error ? err.message : String(err)
+      file.error = redactor.redactText(err instanceof Error ? err.message : String(err))
       task.errorCode = 'network'
       this.settleTask(task)
       return
@@ -759,8 +786,8 @@ export class DownloadManager {
           if (file.status === 'running') file.status = 'paused'
         } else {
           file.status = 'error'
-          file.error = msg.message
           task.errorCode = classifyDownloadError(msg.message)
+          file.error = msg.message ? redactor.redactText(msg.message) : undefined
         }
         this.finishWorker(key, task)
       }
@@ -768,8 +795,8 @@ export class DownloadManager {
     worker.on('error', (err: Error) => {
       if (this.tasks.get(task.id) !== task) return
       file.status = 'error'
-      file.error = err.message
       task.errorCode = classifyDownloadError(err.message)
+      file.error = redactor.redactText(err.message)
       this.finishWorker(key, task)
     })
     worker.on('exit', () => {
@@ -882,9 +909,9 @@ export class DownloadManager {
         task.status = 'error'
         task.speedBps = 0
         task.errorCode = 'integrity'
-        task.error = err instanceof Error ? err.message : String(err)
+        task.error = redactor.redactText(err instanceof Error ? err.message : String(err))
         task.resumable = false
-        this.runtimeAuthTokens.delete(task.id)
+        this.forgetTaskToken(task.id)
         this.speedWindow.delete(task.id)
         this.persist(task)
         this.scheduleBroadcast()
@@ -898,7 +925,7 @@ export class DownloadManager {
       task.error = undefined
       task.errorCode = undefined
       task.resumable = false
-      this.runtimeAuthTokens.delete(task.id)
+      this.forgetTaskToken(task.id)
       this.notifications.show(
         'notifications.downloadComplete',
         'notifications.downloadCompleteBody',
@@ -1067,7 +1094,7 @@ export class DownloadManager {
       task.resumable = true
       task.revisionSequence = ++this.revisionSequence
       this.rememberRevisionTask(task)
-      this.runtimeAuthTokens.set(task.id, this.getAuthToken())
+      this.rememberTaskToken(task.id)
       this.persist(task)
       this.pump()
     }
@@ -1086,11 +1113,11 @@ export class DownloadManager {
       this.speedWindow.delete(task.id)
       task.resumable = false
       task.errorCode = undefined
-      this.runtimeAuthTokens.delete(task.id)
+      this.forgetTaskToken(task.id)
       // Canceled partials are never resumed — clean them once the workers exit.
       void stopped
         .then(() => this.deleteTaskPartials(task))
-        .catch((error: unknown) => console.warn('[downloads] partial cleanup refused', error))
+        .catch((error: unknown) => logger.warn('downloads', 'partial cleanup refused', error))
       this.persist(task)
       this.pump()
       this.maybeReleaseTaskTransport(task)
@@ -1104,11 +1131,11 @@ export class DownloadManager {
       if (task.status === 'running' || task.status === 'queued') this.cancel(id)
       else if (task.status !== 'completed') {
         void this.deleteTaskPartials(task).catch((error: unknown) =>
-          console.warn('[downloads] partial cleanup refused', error)
+          logger.warn('downloads', 'partial cleanup refused', error)
         )
       }
       this.tasks.delete(id)
-      this.runtimeAuthTokens.delete(id)
+      this.forgetTaskToken(id)
       this.speedWindow.delete(id)
       this.dirtyTaskIds.delete(id)
       this.db.prepare('DELETE FROM downloads WHERE id = ?').run(id)
@@ -1177,6 +1204,7 @@ export class DownloadManager {
       if (task.status === 'running' || task.status === 'queued') idsToFlush.add(task.id)
     }
     this.persistTasks(idsToFlush)
+    for (const task of this.tasks.values()) this.forgetTaskToken(task.id)
     this.runtimeAuthTokens.clear()
     this.speedWindow.clear()
     this.latestRevisionTasks.clear()

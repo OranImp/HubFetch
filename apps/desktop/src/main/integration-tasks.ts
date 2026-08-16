@@ -15,6 +15,7 @@ import type {
   UploadWarningCode
 } from '@hubfetch/shared'
 import type { NotificationService } from './notifications'
+import { redactor } from './security/log'
 import { runExport } from './integrations/export'
 import {
   createRepoAndUpload,
@@ -442,7 +443,9 @@ export class IntegrationTaskManager {
           phase: 'error',
           messageKey: 'upload.failed',
           params: {
-            error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200)
+            error: redactor
+              .redactText(err instanceof Error ? err.message : String(err))
+              .slice(0, 200)
           }
         })
       }
@@ -505,7 +508,9 @@ export class IntegrationTaskManager {
           phase: 'error',
           messageKey: 'export.failed',
           params: {
-            error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200)
+            error: redactor
+              .redactText(err instanceof Error ? err.message : String(err))
+              .slice(0, 200)
           }
         })
       }
