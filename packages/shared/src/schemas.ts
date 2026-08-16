@@ -140,7 +140,7 @@ const proxyConfig = z
   )
 
 /** Per-create proxy override for downloads:start. Closed union, no fallback. */
-const downloadProxyOverride = z.discriminatedUnion('mode', [
+export const downloadProxyOverride = z.discriminatedUnion('mode', [
   z.object({ mode: z.literal('system') }).strict(),
   z.object({ mode: z.literal('direct') }).strict(),
   z.object({ mode: z.literal('manual'), url: manualProxyUrl }).strict()
