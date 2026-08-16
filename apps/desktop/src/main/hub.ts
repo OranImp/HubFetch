@@ -1,45 +1,16 @@
 import { app, session, type Session } from 'electron'
-import { ProxyAgent, fetch as undiciFetch } from 'undici'
 import { HubClient } from '@hubfetch/hub-api'
+import type { ProxyConfig, ProxySnapshot } from '@hubfetch/shared'
+import { createTaskFetch, proxyUrlFromResolution, type ProxyResolver } from './transport'
+
+export { proxyUrlFromResolution } from './transport'
 
 export interface HubHolder {
   current: HubClient
 }
 
-type ProxyResolver = (url: string) => Promise<string>
-
 const SYSTEM_PROXY_PARTITION = 'hubfetch-system-proxy'
 let systemProxySessionPromise: Promise<Session> | null = null
-const proxyAgents = new Map<string, ProxyAgent>()
-
-/**
- * Chromium proxy resolutions use a semicolon-delimited PAC format such as
- * "PROXY 127.0.0.1:7890; DIRECT". Undici needs an absolute proxy URL.
- * SOCKS/QUIC routes are skipped because undici's ProxyAgent supports HTTP(S).
- */
-export function proxyUrlFromResolution(resolution: string): string | null {
-  for (const directive of resolution.split(';')) {
-    const [kind = '', address = ''] = directive.trim().split(/\s+/, 2)
-    const normalizedKind = kind.toUpperCase()
-    if (normalizedKind === 'DIRECT') return null
-    if (!address) continue
-    const protocol =
-      normalizedKind === 'PROXY' || normalizedKind === 'HTTP'
-        ? 'http'
-        : normalizedKind === 'HTTPS'
-          ? 'https'
-          : null
-    if (!protocol) continue
-    const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(address) ? address : `${protocol}://${address}`
-    try {
-      const parsed = new URL(candidate)
-      if (parsed.hostname) return parsed.toString().replace(/\/$/, '')
-    } catch {
-      // Ignore malformed PAC entries and continue to the next fallback.
-    }
-  }
-  return null
-}
 
 async function systemProxySession(): Promise<Session> {
   if (!systemProxySessionPromise) {
@@ -69,70 +40,58 @@ export async function resolveSystemProxyUrl(
   }
 }
 
-function proxyAgent(proxyUrl: string): ProxyAgent {
-  let agent = proxyAgents.get(proxyUrl)
-  if (!agent) {
-    agent = new ProxyAgent(proxyUrl)
-    proxyAgents.set(proxyUrl, agent)
-  }
-  return agent
-}
-
-function fetchInputUrl(input: Parameters<typeof fetch>[0]): string {
-  if (typeof input === 'string') return input
-  if (input instanceof URL) return input.toString()
-  return input.url
-}
-
 /**
- * Node fetch does not inherit Chromium/macOS proxy settings. Resolve the system
- * route explicitly when no app override is configured, then keep using undici
- * so Cookie/Set-Cookie headers needed by Hub web-session mutations remain intact.
+ * Node fetch does not inherit Chromium/macOS proxy settings. Build a
+ * snapshot-aware fetch: System resolves the OS route per request, Manual pins
+ * an Undici ProxyAgent, Direct uses an explicit direct Agent. Dispatchers are
+ * injected per fetch — never installed process-globally.
  */
 export function createProxiedFetch(
-  proxyUrl: string | null,
-  resolver: ProxyResolver = resolveSystemProxy
+  snapshot: ProxySnapshot,
+  opts: { resolver?: ProxyResolver } = {}
 ): typeof fetch {
-  const configuredAgent = proxyUrl ? proxyAgent(proxyUrl) : null
-  return (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
-    const agent =
-      configuredAgent ??
-      (proxyUrl === null
-        ? await resolveSystemProxyUrl(fetchInputUrl(input), resolver).then((url) =>
-            url ? proxyAgent(url) : null
-          )
-        : null)
-    return undiciFetch(
-      input as never,
-      {
-        ...(init as object),
-        ...(agent ? { dispatcher: agent } : {})
-      } as never
-    ) as unknown as Promise<Response>
-  }) as typeof fetch
+  const taskFetch = createTaskFetch(snapshot, {
+    resolver: (url: string) => resolveSystemProxyUrl(url, opts.resolver ?? resolveSystemProxy)
+  })
+  return taskFetch.fetchImpl
 }
 
 export interface HubNetworkOptions {
   endpoint: string | null
-  proxyUrl: string | null
+  proxy: ProxySnapshot
 }
 
-/** Endpoint + proxy last applied to the app HubClient — startup and settings
- * rebuilds both funnel through `createHubClient`. SDK-based integrations
- * (upload, inference playground) read this so their traffic rides the same
- * network path instead of the SDKs' global unproxied fetch. */
-let networkOptions: HubNetworkOptions = { endpoint: null, proxyUrl: null }
+/** Endpoint + proxy snapshot last applied to the app HubClient — startup and
+ * settings rebuilds both funnel through `createHubClient`. SDK-based
+ * integrations (upload, inference playground) read this so their traffic rides
+ * the same network path instead of the SDKs' global unproxied fetch. */
+let networkOptions: HubNetworkOptions = { endpoint: null, proxy: { mode: 'system' } }
 
 export function getHubNetworkOptions(): HubNetworkOptions {
   return networkOptions
 }
 
+/** Map the persisted settings ProxyConfig to a closed snapshot. */
+export function snapshotFromConfig(config: ProxyConfig): ProxySnapshot {
+  switch (config.mode) {
+    case 'system':
+      return { mode: 'system' }
+    case 'direct':
+      return { mode: 'direct' }
+    case 'manual':
+      return config.manualUrl ? { mode: 'manual', url: config.manualUrl } : { mode: 'system' }
+  }
+}
+
 export function createHubClient(
   getAccessToken: () => string | undefined,
   getSessionCookie: () => string | undefined,
-  options?: { endpoint?: string | null; proxyUrl?: string | null }
+  options?: { endpoint?: string | null; proxy?: ProxySnapshot }
 ): HubClient {
-  networkOptions = { endpoint: options?.endpoint ?? null, proxyUrl: options?.proxyUrl ?? null }
+  networkOptions = {
+    endpoint: options?.endpoint ?? null,
+    proxy: options?.proxy ?? { mode: 'system' }
+  }
   return buildHubClient(getAccessToken, getSessionCookie, options)
 }
 
@@ -144,11 +103,11 @@ export function createHubClient(
 export function buildHubClient(
   getAccessToken: () => string | undefined,
   getSessionCookie: () => string | undefined,
-  options?: { endpoint?: string | null; proxyUrl?: string | null }
+  options?: { endpoint?: string | null; proxy?: ProxySnapshot }
 ): HubClient {
   return new HubClient({
     endpoint: options?.endpoint ?? undefined,
-    fetchImpl: createProxiedFetch(options?.proxyUrl ?? null),
+    fetchImpl: createProxiedFetch(options?.proxy ?? { mode: 'system' }),
     userAgent: `HubFetch/${app.getVersion()} (unofficial desktop client; +https://github.com/OranImp/HubFetch)`,
     cacheTtlMs: 120_000,
     // Desktop browsing bursts (grids, file trees) get smoothed out instead of tripping
@@ -181,7 +140,7 @@ export function rebuildHubClient(
   holder: HubHolder,
   getAccessToken: () => string | undefined,
   getSessionCookie: () => string | undefined,
-  options: { endpoint: string | null; proxyUrl: string | null }
+  options: { endpoint: string | null; proxy: ProxySnapshot }
 ): void {
   holder.current = createHubClient(getAccessToken, getSessionCookie, options)
 }

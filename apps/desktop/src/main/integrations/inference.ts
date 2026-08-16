@@ -16,7 +16,7 @@ const activeStreams = new Map<string, AbortController>()
 async function createClient(accessToken: string): Promise<InferenceClient> {
   const { InferenceClient } = await import('@huggingface/inference')
   return new InferenceClient(accessToken, {
-    fetch: createProxiedFetch(getHubNetworkOptions().proxyUrl)
+    fetch: createProxiedFetch(getHubNetworkOptions().proxy)
   })
 }
 

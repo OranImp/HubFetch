@@ -417,9 +417,9 @@ export async function createRepoAndUpload(
   const { createRepo, commitIter, HubApiError } = await import('@huggingface/hub')
   const repoName = `${username}/${request.name}`
   const repo = { type: request.kind, name: repoName }
-  const { endpoint, proxyUrl } = getHubNetworkOptions()
+  const { endpoint, proxy } = getHubNetworkOptions()
   const hubUrl = resolveHubUrl(endpoint)
-  const proxiedFetch = createProxiedFetch(proxyUrl)
+  const proxiedFetch = createProxiedFetch(proxy)
   const abortableFetch: typeof fetch = (input, init) =>
     proxiedFetch(input, { ...init, signal: combineSignal(init?.signal, signal) })
 

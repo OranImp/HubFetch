@@ -14,7 +14,8 @@ import type {
   IpcRequest,
   IpcResponse,
   NotificationRegistrationInfo,
-  ProxyConfig
+  ProxyConfig,
+  ProxySnapshot
 } from '@hubfetch/shared'
 import {
   DEFAULT_SETTINGS,
@@ -299,14 +300,19 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     // mirror endpoint. The probe (public trending search) needs no auth, so a
     // draft host receives an anonymous request; this keeps the main-process
     // token siloed even if the renderer supplies an arbitrary endpoint.
+    // A draft proxyUrl pins a Manual snapshot; absence means System (the
+    // renderer's mode-aware controls land in Todo 21).
     const endpointMatches = endpoint === applied.hubEndpoint
     const matchesApplied = endpointMatches && proxyUrl === appliedProxyUrl
+    const proxySnapshot: ProxySnapshot = proxyUrl
+      ? { mode: 'manual', url: proxyUrl }
+      : { mode: 'system' }
     const client = matchesApplied
       ? ctx.hub
       : buildHubClient(
           endpointMatches ? () => ctx.auth.accessToken() : () => undefined,
           endpointMatches ? () => ctx.auth.sessionCookie() : () => undefined,
-          { endpoint, proxyUrl }
+          { endpoint, proxy: proxySnapshot }
         )
     try {
       await client.searchRepos({ kind: 'model', sort: 'trending', limit: 1 })

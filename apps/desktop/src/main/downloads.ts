@@ -20,7 +20,8 @@ import { RESOLVE_PREFIX, defaultCacheDir, repoCachePaths } from '@hubfetch/hub-a
 import type { AppDatabase } from './db'
 import type { NotificationService } from './notifications'
 import type { SettingsStore } from './settings'
-import type { DownloadJob } from './workers/download-worker'
+import type { DownloadJob, DownloadWorkerProxy } from './workers/download-worker'
+import { ProxyTransportManager, type TaskTransport } from './transport'
 
 interface WorkerMessage {
   type: 'meta' | 'progress' | 'done' | 'error'
@@ -134,6 +135,21 @@ interface ManagedDownloadTask extends DownloadTask {
   revisionSequence?: number
 }
 
+/**
+ * Default per-task transport factory (used when the app does not inject one,
+ * e.g. in tests). Lazily creates ONE app-level transport manager so merely
+ * importing DownloadManager never touches Electron's session module, and all
+ * tasks share the same session/dispatcher pool.
+ */
+let defaultTransportManagerInstance: ProxyTransportManager | null = null
+
+function defaultTransport(taskId: string, snapshot: ProxySnapshot): TaskTransport {
+  if (!defaultTransportManagerInstance) {
+    defaultTransportManagerInstance = new ProxyTransportManager()
+  }
+  return defaultTransportManagerInstance.transportFor(taskId, snapshot)
+}
+
 interface DownloadRow {
   id: string
   repo_id: string
@@ -219,6 +235,11 @@ export class DownloadManager {
   private readonly latestRevisionTasks = new Map<string, { sequence: number; taskId: string }>()
   private readonly speedWindow = new Map<string, { at: number; bytes: number; bps: number }>()
   private readonly dirtyTaskIds = new Set<string>()
+  /** Per-task transports (dedicated Chromium session partitions + dispatchers). */
+  private readonly taskTransports = new Map<string, TaskTransport>()
+  /** Workers mid-async-spawn (system proxy resolution) — part of the concurrency budget. */
+  private readonly pendingSpawns = new Map<string, number>()
+  private pendingSpawnCount = 0
   private broadcastTimer: NodeJS.Timeout | null = null
   private persistTimer: NodeJS.Timeout | null = null
   private shuttingDown = false
@@ -231,7 +252,11 @@ export class DownloadManager {
     private readonly hub: HubClient,
     private readonly notifications: NotificationService,
     private readonly getAuthToken: () => string | undefined,
-    private readonly broadcast: (tasks: DownloadTask[]) => void
+    private readonly broadcast: (tasks: DownloadTask[]) => void,
+    private readonly transportFactory: (
+      taskId: string,
+      snapshot: ProxySnapshot
+    ) => TaskTransport = (taskId, snapshot) => defaultTransport(taskId, snapshot)
   ) {
     this.loadPersisted()
   }
@@ -571,7 +596,7 @@ export class DownloadManager {
   }
 
   private runningCount(): number {
-    return this.workers.size
+    return this.workers.size + this.pendingSpawnCount
   }
 
   private pump(): void {
@@ -583,7 +608,7 @@ export class DownloadManager {
       for (const file of task.files) {
         if (this.runningCount() >= concurrency) break
         if (file.status !== 'queued') continue
-        this.spawnWorker(task, file)
+        void this.spawnWorker(task, file)
       }
     }
     this.scheduleBroadcast()
@@ -593,7 +618,47 @@ export class DownloadManager {
     return `${taskId} ${path}`
   }
 
-  private spawnWorker(task: ManagedDownloadTask, file: DownloadFileState): void {
+  private transportFor(task: ManagedDownloadTask): TaskTransport {
+    const existing = this.taskTransports.get(task.id)
+    if (existing) return existing
+    const transport = this.transportFactory(task.id, task.environment!.proxy)
+    this.taskTransports.set(task.id, transport)
+    return transport
+  }
+
+  /**
+   * The worker's frozen transport policy. System resolves the OS route for the
+   * resolve URL at spawn time through the task's own Chromium session (worker
+   * threads cannot call Electron), Manual pins the URL, Direct is explicit.
+   */
+  private async workerProxyPolicy(
+    transport: TaskTransport,
+    snapshot: ProxySnapshot,
+    url: string
+  ): Promise<DownloadWorkerProxy> {
+    switch (snapshot.mode) {
+      case 'manual':
+        return { mode: 'manual', url: snapshot.url }
+      case 'direct':
+        return { mode: 'direct' }
+      case 'system':
+        return { mode: 'system', url: await transport.resolveProxyFor(url) }
+    }
+  }
+
+  /** Release a task's transport once no worker and no pending spawn needs it. */
+  private maybeReleaseTaskTransport(task: ManagedDownloadTask): void {
+    if ((this.pendingSpawns.get(task.id) ?? 0) > 0) return
+    if (task.files.some((f) => f.status === 'running' || f.status === 'queued')) return
+    const transport = this.taskTransports.get(task.id)
+    if (!transport) return
+    this.taskTransports.delete(task.id)
+    void transport.close().catch((error: unknown) => {
+      console.warn('[downloads] task transport close refused', error)
+    })
+  }
+
+  private async spawnWorker(task: ManagedDownloadTask, file: DownloadFileState): Promise<void> {
     if (!task.environment || !isResolvedCommit(task.resolvedCommit)) {
       file.status = 'error'
       file.error = 'legacy-task'
@@ -604,30 +669,62 @@ export class DownloadManager {
       this.persist(task)
       return
     }
-    const paths = repoCachePaths(task.environment.cacheDir, task.kind, task.repoId)
-    const job: DownloadJob = {
+    const transport = this.transportFor(task)
+    this.pendingSpawns.set(task.id, (this.pendingSpawns.get(task.id) ?? 0) + 1)
+    this.pendingSpawnCount += 1
+    let job: DownloadJob
+    try {
+      job = await this.buildJob(task, file, transport)
+    } catch (err) {
+      file.status = 'error'
+      file.error = err instanceof Error ? err.message : String(err)
+      task.errorCode = 'network'
+      this.settleTask(task)
+      return
+    } finally {
+      const remaining = (this.pendingSpawns.get(task.id) ?? 1) - 1
+      if (remaining <= 0) this.pendingSpawns.delete(task.id)
+      else this.pendingSpawns.set(task.id, remaining)
+      this.pendingSpawnCount = Math.max(0, this.pendingSpawnCount - 1)
+    }
+    this.spawnWorkerWithJob(task, file, job)
+  }
+
+  private async buildJob(
+    task: ManagedDownloadTask,
+    file: DownloadFileState,
+    transport: TaskTransport
+  ): Promise<DownloadJob> {
+    const environment = task.environment!
+    const paths = repoCachePaths(environment.cacheDir, task.kind, task.repoId)
+    const url = buildFrozenResolveUrl(
+      environment.endpoint,
+      task.kind,
+      task.repoId,
+      task.resolvedCommit!,
+      file.path
+    )
+    return {
       taskId: task.id,
-      url: buildFrozenResolveUrl(
-        task.environment.endpoint,
-        task.kind,
-        task.repoId,
-        task.resolvedCommit,
-        file.path
-      ),
+      url,
       repoDir: paths.repoDir,
-      cacheDir: task.environment.cacheDir,
+      cacheDir: environment.cacheDir,
       path: file.path,
-      expectedCommit: task.resolvedCommit,
+      expectedCommit: task.resolvedCommit!,
       authToken: this.runtimeAuthTokens.get(task.id),
       // Each worker gets a share of the limit so the cap holds in aggregate.
       speedLimitBps: computeSpeedShare(this.settings.get().speedLimitBps, this.workers.size + 1),
       userAgent: `HubFetch/${app.getVersion()} (unofficial desktop client)`,
-      // Worker threads use Node/undici and cannot see Electron's system proxy.
-      // Manual snapshots pin the normalized URL; system/direct snapshots carry
-      // no endpoint (the transport work resolves the system route at request
-      // execution), so the worker gets null and downloads directly.
-      proxyUrl: task.environment.proxy.mode === 'manual' ? task.environment.proxy.url : null
+      // The frozen per-task transport policy — never the live settings.
+      proxy: await this.workerProxyPolicy(transport, environment.proxy, url)
     }
+  }
+
+  private spawnWorkerWithJob(
+    task: ManagedDownloadTask,
+    file: DownloadFileState,
+    job: DownloadJob
+  ): void {
     const worker = new Worker(join(__dirname, 'download-worker.mjs'), { workerData: job })
     const key = this.workerKey(task.id, file.path)
     this.workers.set(key, worker)
@@ -792,6 +889,7 @@ export class DownloadManager {
         this.persist(task)
         this.scheduleBroadcast()
         this.pump()
+        this.maybeReleaseTaskTransport(task)
         return
       }
       task.status = 'completed'
@@ -827,6 +925,7 @@ export class DownloadManager {
     this.persist(task)
     if (task.status !== 'running' && task.status !== 'queued') this.speedWindow.delete(task.id)
     this.pump()
+    this.maybeReleaseTaskTransport(task)
   }
 
   /** Abort and terminate this task's workers; resolves once they have exited. */
@@ -935,6 +1034,7 @@ export class DownloadManager {
       task.resumable = this.canResume(task)
       this.persist(task)
       this.pump()
+      this.maybeReleaseTaskTransport(task)
     }
     return this.list()
   }
@@ -993,6 +1093,7 @@ export class DownloadManager {
         .catch((error: unknown) => console.warn('[downloads] partial cleanup refused', error))
       this.persist(task)
       this.pump()
+      this.maybeReleaseTaskTransport(task)
     }
     return this.list()
   }
@@ -1012,6 +1113,7 @@ export class DownloadManager {
       this.dirtyTaskIds.delete(id)
       this.db.prepare('DELETE FROM downloads WHERE id = ?').run(id)
       this.scheduleBroadcast()
+      this.maybeReleaseTaskTransport(task)
     }
     return this.list()
   }
@@ -1078,5 +1180,11 @@ export class DownloadManager {
     this.runtimeAuthTokens.clear()
     this.speedWindow.clear()
     this.latestRevisionTasks.clear()
+    for (const transport of this.taskTransports.values()) {
+      void transport.close().catch(() => undefined)
+    }
+    this.taskTransports.clear()
+    this.pendingSpawns.clear()
+    this.pendingSpawnCount = 0
   }
 }

@@ -26,8 +26,16 @@ import {
 } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { parentPort, workerData } from 'node:worker_threads'
-import { ProxyAgent, fetch as undiciFetch } from 'undici'
+import { ProxyAgent, fetch as undiciFetch, type Dispatcher } from 'undici'
 
+/**
+ * The worker's frozen per-task transport policy (the resolved ProxySnapshot).
+ * `system` carries the concrete proxy URL the main process resolved for the
+ * task at spawn time (null = direct fallback); worker threads cannot call
+ * Electron, so system resolution always happens in the manager.
+ */
+export type DownloadWorkerProxy =
+  { mode: 'manual'; url: string } | { mode: 'system'; url: string | null } | { mode: 'direct' }
 export interface DownloadJob {
   /** Download-task id owning this file; keys the task-unique partial file. */
   taskId: string
@@ -45,8 +53,37 @@ export interface DownloadJob {
   /** Per-worker share of the aggregate speed limit; null/undefined = unlimited. */
   speedLimitBps?: number | null
   userAgent: string
-  /** App-level HTTP(S) proxy; null/undefined = direct Node fetch. */
-  proxyUrl?: string | null
+  /** Frozen transport policy: manual ProxyAgent / direct Agent / resolved system route. */
+  proxy: DownloadWorkerProxy
+}
+
+export interface WorkerTransport {
+  httpFetch(input: string, init?: RequestInit): Promise<Response>
+  close(): Promise<void>
+}
+
+/**
+ * Build the worker's HTTP transport from its frozen policy. Direct (and
+ * system with no resolved proxy) uses the explicit direct Agent path — never
+ * WinINET/PAC and never the process-global dispatcher.
+ */
+export function createWorkerTransport(proxy: DownloadWorkerProxy | undefined): WorkerTransport {
+  if (!proxy || proxy.mode === 'direct' || (proxy.mode === 'system' && !proxy.url)) {
+    return {
+      httpFetch: (input, init) => fetch(input, init),
+      close: async () => undefined
+    }
+  }
+  const url = proxy.mode === 'manual' ? proxy.url : (proxy.url as string)
+  const agent: Dispatcher = new ProxyAgent(url)
+  return {
+    httpFetch: (input, init) =>
+      undiciFetch(input, {
+        ...(init as object),
+        dispatcher: agent
+      }) as unknown as Promise<Response>,
+    close: () => agent.close()
+  }
 }
 
 // Guarded so tests can import Throttle/gitBlobSha1OfFile outside a worker thread.
@@ -57,14 +94,11 @@ function post(msg: object): void {
   port?.postMessage(msg)
 }
 
-const proxyAgent = job.proxyUrl ? new ProxyAgent(job.proxyUrl) : null
+let workerTransport: WorkerTransport | null = null
 
 function httpFetch(input: string, init?: RequestInit): Promise<Response> {
-  if (!proxyAgent) return fetch(input, init)
-  return undiciFetch(input, {
-    ...(init as object),
-    dispatcher: proxyAgent
-  }) as unknown as Promise<Response>
+  workerTransport ??= createWorkerTransport(job.proxy)
+  return workerTransport.httpFetch(input, init)
 }
 
 let aborted = false
@@ -400,42 +434,50 @@ async function downloadToBlob(meta: FileMetadata, blobPath: string): Promise<num
 }
 
 async function run(): Promise<void> {
-  assertSafeRepoFilePath(job.path)
-  const meta = await fetchMetadata()
-  post({ type: 'meta', commit: meta.commit, etag: meta.etag, size: meta.size, isLfs: meta.isLfs })
+  try {
+    assertSafeRepoFilePath(job.path)
+    const meta = await fetchMetadata()
+    post({ type: 'meta', commit: meta.commit, etag: meta.etag, size: meta.size, isLfs: meta.isLfs })
 
-  const { blobsDir, snapshotParent } = prepareSafeCacheDirectories(job)
-  const blobPath = join(blobsDir, meta.etag)
-  const snapshotFile = join(snapshotParent, job.path.split('/').at(-1)!)
-  assertExistingRegularFile(blobPath, blobsDir, 'blob')
+    const { blobsDir, snapshotParent } = prepareSafeCacheDirectories(job)
+    const blobPath = join(blobsDir, meta.etag)
+    const snapshotFile = join(snapshotParent, job.path.split('/').at(-1)!)
+    assertExistingRegularFile(blobPath, blobsDir, 'blob')
 
-  let verified = false
-  let haveBlob = false
-  if (existsSync(blobPath) && (meta.size === 0 || statSync(blobPath).size === meta.size)) {
-    if (meta.isLfs) {
-      // Existing caches may predate strict verification. Re-hash before reuse;
-      // a same-size corrupt blob must never be linked into a completed snapshot.
-      verified = (await sha256OfFile(blobPath)) === meta.etag
-      haveBlob = verified
-    } else if (/^[0-9a-f]{40}$/.test(meta.etag)) {
-      // Cheap for small non-LFS files; redownload if a pre-verification blob is corrupt.
-      verified = (await gitBlobSha1OfFile(blobPath)) === meta.etag
-      haveBlob = verified
-    } else {
-      haveBlob = true
+    let verified = false
+    let haveBlob = false
+    if (existsSync(blobPath) && (meta.size === 0 || statSync(blobPath).size === meta.size)) {
+      if (meta.isLfs) {
+        // Existing caches may predate strict verification. Re-hash before reuse;
+        // a same-size corrupt blob must never be linked into a completed snapshot.
+        verified = (await sha256OfFile(blobPath)) === meta.etag
+        haveBlob = verified
+      } else if (/^[0-9a-f]{40}$/.test(meta.etag)) {
+        // Cheap for small non-LFS files; redownload if a pre-verification blob is corrupt.
+        verified = (await gitBlobSha1OfFile(blobPath)) === meta.etag
+        haveBlob = verified
+      } else {
+        haveBlob = true
+      }
+    }
+    if (!haveBlob) {
+      verified = (await downloadToBlob(meta, blobPath)) === 1
+    }
+    linkSnapshot(snapshotFile, blobPath)
+
+    post({
+      type: 'done',
+      received: meta.size,
+      verified,
+      snapshotPath: snapshotFile
+    })
+  } finally {
+    // Release the proxy agent so no socket keeps the worker thread alive.
+    if (workerTransport) {
+      await workerTransport.close().catch(() => undefined)
+      workerTransport = null
     }
   }
-  if (!haveBlob) {
-    verified = (await downloadToBlob(meta, blobPath)) === 1
-  }
-  linkSnapshot(snapshotFile, blobPath)
-
-  post({
-    type: 'done',
-    received: meta.size,
-    verified,
-    snapshotPath: snapshotFile
-  })
 }
 
 if (port) {

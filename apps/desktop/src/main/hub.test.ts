@@ -4,7 +4,9 @@ const mocks = vi.hoisted(() => ({
   resolution: 'DIRECT',
   setProxy: vi.fn(async () => undefined),
   resolveProxy: vi.fn(async () => 'DIRECT'),
-  fetchCalls: [] as Array<{ input: unknown; init: Record<string, unknown> | undefined }>
+  fetchCalls: [] as Array<{ input: unknown; init: Record<string, unknown> | undefined }>,
+  agentCtor: vi.fn(),
+  proxyAgentCtor: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -18,10 +20,16 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('undici', () => ({
+  Agent: class {
+    constructor(...args: unknown[]) {
+      mocks.agentCtor(...args)
+    }
+  },
   ProxyAgent: class {
     readonly uri: string
 
     constructor(uri: string) {
+      mocks.proxyAgentCtor(uri)
       this.uri = uri
     }
   },
@@ -40,6 +48,8 @@ describe('Hub system proxy transport', () => {
     mocks.resolveProxy.mockReset()
     mocks.resolveProxy.mockImplementation(async () => mocks.resolution)
     mocks.fetchCalls.length = 0
+    mocks.agentCtor.mockClear()
+    mocks.proxyAgentCtor.mockClear()
   })
 
   it('parses Chromium HTTP(S) proxy resolution strings', () => {
@@ -51,9 +61,9 @@ describe('Hub system proxy transport', () => {
     expect(proxyUrlFromResolution('DIRECT')).toBeNull()
   })
 
-  it('routes an unconfigured client through the resolved system proxy', async () => {
+  it('routes a System snapshot through the resolved system proxy', async () => {
     mocks.resolution = 'PROXY 127.0.0.1:6152'
-    const fetchImpl = createProxiedFetch(null)
+    const fetchImpl = createProxiedFetch({ mode: 'system' })
 
     await fetchImpl('https://huggingface.co/api/models?limit=1')
 
@@ -64,9 +74,14 @@ describe('Hub system proxy transport', () => {
     )
   })
 
-  it('keeps an explicit app proxy ahead of the system resolver', async () => {
+  it('keeps a Manual snapshot ahead of the system resolver', async () => {
     const resolver = vi.fn(async () => 'PROXY 127.0.0.1:9999')
-    const fetchImpl = createProxiedFetch('http://127.0.0.1:7890', resolver)
+    const fetchImpl = createProxiedFetch(
+      { mode: 'manual', url: 'http://127.0.0.1:7890' },
+      {
+        resolver
+      }
+    )
 
     await fetchImpl('https://huggingface.co/api/models?limit=1')
 
@@ -76,7 +91,19 @@ describe('Hub system proxy transport', () => {
     )
   })
 
-  it('falls back to direct undici fetch when the OS reports DIRECT or resolution fails', async () => {
+  it('Direct snapshot uses the explicit direct agent and never consults the resolver', async () => {
+    const resolver = vi.fn(async () => 'PROXY 127.0.0.1:9999')
+    const fetchImpl = createProxiedFetch({ mode: 'direct' }, { resolver })
+
+    await fetchImpl('https://huggingface.co/api/models?limit=1')
+
+    expect(resolver).not.toHaveBeenCalled()
+    const dispatcher = mocks.fetchCalls[0]?.init?.dispatcher as { uri?: string } | undefined
+    expect(dispatcher).toBeDefined()
+    expect(dispatcher?.uri).toBeUndefined() // an Agent, not a ProxyAgent
+  })
+
+  it('falls back to direct when the OS reports DIRECT or resolution fails', async () => {
     expect(await resolveSystemProxyUrl('https://huggingface.co', async () => 'DIRECT')).toBeNull()
     expect(
       await resolveSystemProxyUrl('https://huggingface.co', async () => {
@@ -84,8 +111,15 @@ describe('Hub system proxy transport', () => {
       })
     ).toBeNull()
 
-    const fetchImpl = createProxiedFetch(null, async () => 'DIRECT')
+    const fetchImpl = createProxiedFetch(
+      { mode: 'system' },
+      {
+        resolver: async () => 'DIRECT'
+      }
+    )
     await fetchImpl('https://huggingface.co/api/models?limit=1')
-    expect(mocks.fetchCalls[0]?.init).not.toHaveProperty('dispatcher')
+    const dispatcher = mocks.fetchCalls[0]?.init?.dispatcher as { uri?: string } | undefined
+    expect(dispatcher).toBeDefined()
+    expect(dispatcher?.uri).toBeUndefined()
   })
 })

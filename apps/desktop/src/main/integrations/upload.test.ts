@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test' } }))
 vi.mock('../hub', () => ({
   createProxiedFetch: () => mocks.fetch,
-  getHubNetworkOptions: () => ({ endpoint: null, proxyUrl: null })
+  getHubNetworkOptions: () => ({ endpoint: null, proxy: { mode: 'system' } })
 }))
 vi.mock('@huggingface/hub', () => ({
   createRepo: mocks.createRepo,

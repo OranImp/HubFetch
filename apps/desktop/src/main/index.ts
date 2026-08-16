@@ -28,7 +28,13 @@ import { CacheManager } from './cache'
 import { openDatabase } from './db'
 import { DownloadManager } from './downloads'
 import { FollowsPoller } from './follows'
-import { createHubClient, createHubProxy, rebuildHubClient, type HubHolder } from './hub'
+import {
+  createHubClient,
+  createHubProxy,
+  rebuildHubClient,
+  snapshotFromConfig,
+  type HubHolder
+} from './hub'
 import { MainI18n, matchLocale } from './i18n'
 import { IntegrationTaskManager } from './integration-tasks'
 import { registerIpcHandlers } from './ipc'
@@ -38,16 +44,12 @@ import { NotificationService } from './notifications'
 import { applyAppProxy } from './proxy'
 import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride } from './runtime-paths'
 import { SettingsStore } from './settings'
+import { closeDefaultTransportPool, ProxyTransportManager } from './transport'
 import { TrayManager } from './tray'
 import {
   registerWindowsNotificationShortcut,
   removeWindowsNotificationShortcut
 } from './windows-notification-registration'
-
-/** Concrete HTTP(S) proxy URL for a config; null for system/direct. */
-function proxyUrlFromConfig(config: ProxyConfig): string | null {
-  return config.mode === 'manual' ? config.manualUrl : null
-}
 
 // One HubFetch identity everywhere: the name drives the default userData root
 // (`%APPDATA%\HubFetch`), so dev and packaged builds share one database and one
@@ -177,7 +179,7 @@ if (!gotLock) {
         () => auth.sessionCookie(),
         {
           endpoint: initial.hubEndpoint,
-          proxyUrl: proxyUrlFromConfig(initial.proxy)
+          proxy: snapshotFromConfig(initial.proxy)
         }
       )
     }
@@ -255,13 +257,17 @@ if (!gotLock) {
       readShortcutLink: shell.readShortcutLink
     })
     const notifications = new NotificationService(settings, i18n, navigate)
+    // One per-task transport manager: dedicated Chromium session partitions per
+    // download task + refcounted undici dispatchers, all closed on shutdown.
+    const transportManager = new ProxyTransportManager()
     const downloads = new DownloadManager(
       db,
       settings,
       hub,
       notifications,
       () => auth.accessToken(),
-      (tasks) => broadcast('evt:downloads', tasks)
+      (tasks) => broadcast('evt:downloads', tasks),
+      (taskId, snapshot) => transportManager.transportFor(taskId, snapshot)
     )
     // Cache cleanup must spare partials of still-resumable downloads.
     const cache = new CacheManager(
@@ -320,7 +326,7 @@ if (!gotLock) {
           () => auth.sessionCookie(),
           {
             endpoint: next.hubEndpoint,
-            proxyUrl: proxyUrlFromConfig(next.proxy)
+            proxy: snapshotFromConfig(next.proxy)
           }
         )
         auth.attachClient(hubHolder.current)
@@ -575,6 +581,9 @@ if (!gotLock) {
       integrationTasks.shutdown()
       follows.stop()
       tray.destroy()
+      // Release per-task sessions/dispatchers and the app-level fetch pool.
+      void transportManager.closeAll()
+      void closeDefaultTransportPool()
     })
   })
 
