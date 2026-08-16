@@ -8,7 +8,7 @@ import { Lightbox } from '@/components/ui/lightbox'
 
 interface NotebookViewProps {
   notebook: ParsedNotebook
-  /** Repo context so markdown-cell relative images load via omhf-file://. */
+  /** Repo context so markdown-cell relative images load via hubfetch://. */
   kind: RepoKind
   repoId: string
 }

@@ -38,4 +38,4 @@ const api: RendererApi = {
   }
 }
 
-contextBridge.exposeInMainWorld('omh', api)
+contextBridge.exposeInMainWorld('hubfetch', api)

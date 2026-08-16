@@ -54,7 +54,7 @@ export function PdfPreview({
         }
 
         // Fetch through main-process IPC: pdf.js can't reliably XHR/fetch the
-        // omhf-file:// custom scheme under the renderer CSP (connect-src 'self').
+        // hubfetch:// custom scheme under the renderer CSP (connect-src 'self').
         const bytes = await invoke('hub:fileRange', {
           kind,
           repoId,

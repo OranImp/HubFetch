@@ -124,7 +124,7 @@
     "closeHintOther": "关闭窗口时应用会隐藏到系统托盘。从托盘菜单退出才会完全关闭。",
     "closeToTray": "关闭时最小化到托盘",
     "launchAtLogin": "开机启动",
-    "launchAtLoginHint": "登录此电脑时自动启动 Oh My HuggingFace。",
+    "launchAtLoginHint": "登录此电脑时自动启动 HubFetch。",
     "title": "桌面"
   },
   "downloads": {

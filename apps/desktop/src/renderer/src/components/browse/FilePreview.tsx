@@ -341,7 +341,7 @@ export function FilePreview({
     case 'image':
       body = (
         <div className="flex h-full items-center justify-center p-6">
-          {/* Served via omhf-file:// so private/gated repo images load with
+          {/* Served via hubfetch:// so private/gated repo images load with
               the main process's auth; the copy button keeps the shareable
               https resolve URL. */}
           <img

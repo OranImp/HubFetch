@@ -124,7 +124,7 @@
     "closeHintOther": "Fermer la fenêtre masque l'application dans la zone de notification. Quittez depuis le menu de la zone de notification pour fermer complètement.",
     "closeToTray": "Réduire dans la zone de notification en fermant",
     "launchAtLogin": "Lancer au démarrage",
-    "launchAtLoginHint": "Démarrer Oh My HuggingFace lors de votre connexion à cet ordinateur.",
+    "launchAtLoginHint": "Démarrer HubFetch lors de votre connexion à cet ordinateur.",
     "title": "Bureau"
   },
   "downloads": {

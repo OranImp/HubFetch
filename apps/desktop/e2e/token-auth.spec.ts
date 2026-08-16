@@ -42,7 +42,7 @@ test('manual access-token sign-in validates against the Hub', async () => {
   })
   const endpoint = `http://127.0.0.1:${(hub.address() as AddressInfo).port}`
 
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-e2e-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-e2e-'))
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
@@ -57,22 +57,24 @@ test('manual access-token sign-in validates against the Hub', async () => {
     await window.waitForSelector('aside nav', { timeout: 30_000 })
 
     await window.evaluate(
-      (hubEndpoint) => window.omh.invoke('settings:set', { patch: { hubEndpoint } }),
+      (hubEndpoint) => window.hubfetch.invoke('settings:set', { patch: { hubEndpoint } }),
       endpoint
     )
 
     // A rejected token reports 'invalid' and never disturbs the session.
     const bad = await window.evaluate(() =>
-      window.omh.invoke('auth:signInWithToken', { token: 'hf_e2e_bad' })
+      window.hubfetch.invoke('auth:signInWithToken', { token: 'hf_e2e_bad' })
     )
     expect(bad).toEqual({ ok: false, error: 'invalid' })
-    expect(await window.evaluate(() => window.omh.invoke('auth:getState', undefined))).toEqual({
-      status: 'signedOut'
-    })
+    expect(await window.evaluate(() => window.hubfetch.invoke('auth:getState', undefined))).toEqual(
+      {
+        status: 'signedOut'
+      }
+    )
 
     // A valid token becomes a token-mode session carrying the token identity.
     const good = await window.evaluate(() =>
-      window.omh.invoke('auth:signInWithToken', { token: 'hf_e2e_good' })
+      window.hubfetch.invoke('auth:signInWithToken', { token: 'hf_e2e_good' })
     )
     expect(good).toMatchObject({
       ok: true,
@@ -117,7 +119,7 @@ test('token sign-in fails fast when the Hub never responds', async () => {
   })
   const endpoint = `http://127.0.0.1:${(hub.address() as AddressInfo).port}`
 
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-e2e-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-e2e-'))
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
@@ -132,20 +134,22 @@ test('token sign-in fails fast when the Hub never responds', async () => {
     await window.waitForSelector('aside nav', { timeout: 30_000 })
 
     await window.evaluate(
-      (hubEndpoint) => window.omh.invoke('settings:set', { patch: { hubEndpoint } }),
+      (hubEndpoint) => window.hubfetch.invoke('settings:set', { patch: { hubEndpoint } }),
       endpoint
     )
 
     const started = Date.now()
     const result = await window.evaluate(() =>
-      window.omh.invoke('auth:signInWithToken', { token: 'hf_e2e_stalled' })
+      window.hubfetch.invoke('auth:signInWithToken', { token: 'hf_e2e_stalled' })
     )
     expect(result).toEqual({ ok: false, error: 'network' })
     // Well under the spinner-forever regime (undici's default is 300s).
     expect(Date.now() - started).toBeLessThan(25_000)
-    expect(await window.evaluate(() => window.omh.invoke('auth:getState', undefined))).toEqual({
-      status: 'signedOut'
-    })
+    expect(await window.evaluate(() => window.hubfetch.invoke('auth:getState', undefined))).toEqual(
+      {
+        status: 'signedOut'
+      }
+    )
   } finally {
     await app.close()
     for (const socket of sockets) socket.destroy()

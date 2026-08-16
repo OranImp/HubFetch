@@ -689,7 +689,7 @@ export const IPC_EVENT_CHANNELS: readonly IpcEventChannel[] = [
   'evt:updater'
 ] as const
 
-/** Shape of the API exposed on `window.omh` by the preload script. */
+/** Shape of the API exposed on `window.hubfetch` by the preload script. */
 export interface RendererApi {
   invoke<C extends IpcInvokeChannel>(channel: C, req: IpcRequest<C>): Promise<IpcResponse<C>>
   /** Subscribe to a push event; returns an unsubscribe function. */

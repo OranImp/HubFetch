@@ -124,7 +124,7 @@
     "closeHintOther": "Beim Schließen des Fensters wird die App in das System-Tray ausgeblendet. Beenden Sie sie über das Tray-Menü, um sie vollständig zu beenden.",
     "closeToTray": "In den Tray schließen",
     "launchAtLogin": "Beim Anmelden starten",
-    "launchAtLoginHint": "Oh My HuggingFace starten, wenn Sie sich an diesem Computer anmelden.",
+    "launchAtLoginHint": "HubFetch starten, wenn Sie sich an diesem Computer anmelden.",
     "title": "Desktop"
   },
   "downloads": {

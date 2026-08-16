@@ -40,7 +40,7 @@ export function markdownCodeLanguage(className: string | undefined): string | un
 }
 
 /**
- * URL for a repo file served through the app's omhf-file:// protocol: the
+ * URL for a repo file served through the app's hubfetch:// protocol: the
  * main process fetches the Hub resolve URL with the hub client's auth and
  * proxy, so images in private/gated repos render (a direct https resolve URL
  * carries no Authorization header and 401s). Public repos pass through the
@@ -60,7 +60,7 @@ export function repoFileUrl(
     path,
     endpoint: normalizeHubEndpoint(endpoint)
   })
-  return `omhf-file://repo/?${query.toString()}`
+  return `hubfetch://repo/?${query.toString()}`
 }
 
 /** Resolve a repo-relative Markdown link while preserving its URL suffix. */
@@ -115,7 +115,7 @@ export function MarkdownView({
       // into part of the file name or double-encoding `%20`.
       return repoMarkdownLinkUrl(kind, repoId, revision, clean, endpoint)
     }
-    // Repo-relative images go through the authenticated omhf-file protocol so
+    // Repo-relative images go through the authenticated hubfetch protocol so
     // private/gated repo assets render. Markdown srcs are URL references:
     // drop any query/fragment and percent-decode into the raw repo path
     // (a stray '%' that is not an escape keeps the original string).

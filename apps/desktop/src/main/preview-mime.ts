@@ -1,4 +1,4 @@
-/** MIME fallback when Hub returns missing / generic Content-Type for omhf-file. */
+/** MIME fallback when Hub returns missing / generic Content-Type for hubfetch. */
 const MIME_BY_EXTENSION: Record<string, string> = {
   wav: 'audio/wav',
   mp3: 'audio/mpeg',
@@ -29,7 +29,7 @@ function extensionOf(path: string): string {
 }
 
 /**
- * Best-effort Content-Type for omhf-file streaming. Prefer a concrete Hub
+ * Best-effort Content-Type for hubfetch streaming. Prefer a concrete Hub
  * header; fall back by path extension when it is missing or generic.
  */
 export function mimeForOmhfFile(

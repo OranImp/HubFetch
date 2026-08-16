@@ -124,7 +124,7 @@
     "closeHintOther": "Al cerrar la ventana, la aplicación se oculta en la bandeja del sistema. Salga desde el menú de la bandeja para cerrarla por completo.",
     "closeToTray": "Cerrar a la bandeja",
     "launchAtLogin": "Iniciar automáticamente al iniciar sesión",
-    "launchAtLoginHint": "Inicie Oh My HuggingFace al iniciar sesión en este equipo.",
+    "launchAtLoginHint": "Inicie HubFetch al iniciar sesión en este equipo.",
     "title": "Escritorio"
   },
   "downloads": {

@@ -203,7 +203,7 @@ export function registerIpcHandlers(ctx: AppContext): void {
 
   handle('settings:export', async () => {
     const result = await dialog.showSaveDialog({
-      defaultPath: 'ohmyhf-settings.json',
+      defaultPath: 'hubfetch-settings.json',
       filters: [{ name: 'JSON', extensions: ['json'] }]
     })
     if (result.canceled || !result.filePath) return { canceled: true as const }

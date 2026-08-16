@@ -479,7 +479,7 @@ export async function createRepoAndUpload(
         )
       })),
       accessToken,
-      title: 'Upload from Oh My HuggingFace',
+      title: 'Upload from HubFetch',
       hubUrl,
       fetch: abortableFetch,
       abortSignal: signal

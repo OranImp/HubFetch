@@ -124,7 +124,7 @@
     "closeHintOther": "關閉視窗會將應用程式隱藏到系統匣。請從系統匣選單結束以完全退出。",
     "closeToTray": "關閉時縮小到系統匣",
     "launchAtLogin": "登入時啟動",
-    "launchAtLoginHint": "在您登入這台電腦時自動啟動 Oh My HuggingFace。",
+    "launchAtLoginHint": "在您登入這台電腦時自動啟動 HubFetch。",
     "title": "桌面"
   },
   "downloads": {

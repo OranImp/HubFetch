@@ -124,7 +124,7 @@
     "closeHintOther": "Closing the window hides the app to the system tray. Quit from the tray menu to exit fully.",
     "closeToTray": "Close to tray",
     "launchAtLogin": "Launch at login",
-    "launchAtLoginHint": "Start Oh My HuggingFace when you sign in to this computer.",
+    "launchAtLoginHint": "Start HubFetch when you sign in to this computer.",
     "title": "Desktop"
   },
   "downloads": {

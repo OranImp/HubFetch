@@ -37,13 +37,13 @@ if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID)
 // Repo images (file previews, README images) load through this custom scheme
 // so the hub client's auth + proxy apply — a renderer <img> pointing straight
 // at https://huggingface.co/…/resolve/… carries no Authorization header and
-// 401s on private/gated repos. bypassCSP lets omhf-file: subresources load
+// 401s on private/gated repos. bypassCSP lets hubfetch: subresources load
 // under the renderer CSP (img-src 'self' https: data:) without widening it
 // for every scheme; the handler only ever proxies Hub resolve URLs. Must run
 // before app ready.
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: 'omhf-file',
+    scheme: 'hubfetch',
     privileges: { standard: true, secure: true, stream: true, bypassCSP: true }
   }
 ])
@@ -143,12 +143,12 @@ if (!gotLock) {
     await applyAppProxy(initial.proxyUrl)
     app.setLoginItemSettings({ openAtLogin: initial.launchAtLogin })
 
-    // omhf-file://repo/?kind=…&repoId=…&revision=…&path=… → authenticated
+    // hubfetch://repo/?kind=…&repoId=…&revision=…&path=… → authenticated
     // fetch of the Hub resolve URL through the live hub client (token + proxy
     // + endpoint rebuilds all apply; the token never reaches the renderer).
     // The upstream response streams through; failures map to plain status
     // responses so a broken image stays a broken image.
-    protocol.handle('omhf-file', async (request) => {
+    protocol.handle('hubfetch', async (request) => {
       const params = new URL(request.url).searchParams
       const kindParam = params.get('kind')
       const kind =
@@ -157,7 +157,7 @@ if (!gotLock) {
       const path = params.get('path')
       const revision = params.get('revision') ?? 'main'
       if (!kind || !repoId || !path) {
-        return new Response('invalid omhf-file URL', { status: 400 })
+        return new Response('invalid hubfetch URL', { status: 400 })
       }
       // The token rides this request, so refuse anything that could redirect it
       // off the addressed repo: a malformed repoId (unencoded in the resolve
@@ -166,7 +166,7 @@ if (!gotLock) {
       // resolveUrl, so its separators can't traverse and it needs no guard.
       const segments = path.split('/')
       if (!isValidRepoId(repoId) || segments.some((s) => s === '..' || s === '.' || s === '')) {
-        return new Response('invalid omhf-file URL', { status: 400 })
+        return new Response('invalid hubfetch URL', { status: 400 })
       }
       try {
         const upstream = await hub.fetchFileResponse(kind, repoId, path, revision)

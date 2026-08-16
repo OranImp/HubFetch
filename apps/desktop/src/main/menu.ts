@@ -2,7 +2,7 @@ import { Menu, app, dialog, shell, type MenuItemConstructorOptions } from 'elect
 import { NAVIGATION_SHORTCUTS } from '@hubfetch/shared'
 import type { MainI18n } from './i18n'
 
-const REPO_URL = 'https://github.com/oh-my-hf/ohmyhf'
+const REPO_URL = 'https://github.com/OranImp/HubFetch'
 
 /** Fully localized native application menu. Rebuilt whenever the locale changes. */
 export function buildMenu(i18n: MainI18n, navigate: (route: string) => void): void {

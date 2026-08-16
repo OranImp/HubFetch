@@ -39,7 +39,7 @@ async function shot(page: Page, name: string): Promise<void> {
 // before re-navigating and shooting.
 async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
   await page.evaluate(async (t) => {
-    await window.omh.invoke('settings:set', { patch: { theme: t } })
+    await window.hubfetch.invoke('settings:set', { patch: { theme: t } })
   }, theme)
   await page.evaluate(() => window.location.reload()).catch(() => undefined)
   await settle(page, 500)
@@ -52,7 +52,7 @@ test('capture docs screenshots', async () => {
     'Set CAPTURE_SCREENSHOTS=1 to regenerate docs/screenshots'
   )
   test.setTimeout(10 * 60_000)
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-shots-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-shots-'))
   const env = { ...process.env }
   delete env.ELECTRON_RUN_AS_NODE
   env.HUBFETCH_USER_DATA_DIR = userDataDir
@@ -82,7 +82,7 @@ test('capture docs screenshots', async () => {
 
     // Force English + light for consistent docs shots.
     await page.evaluate(async () => {
-      await window.omh.invoke('settings:set', { patch: { locale: 'en', theme: 'light' } })
+      await window.hubfetch.invoke('settings:set', { patch: { locale: 'en', theme: 'light' } })
     })
     await settle(page, 600)
 

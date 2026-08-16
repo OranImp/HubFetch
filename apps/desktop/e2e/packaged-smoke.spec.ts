@@ -21,12 +21,12 @@ function packagedExecutable(): string {
   const match = files.find((path) => {
     const name = basename(path)
     if (process.platform === 'darwin') {
-      return path.includes('.app/Contents/MacOS/') && name === 'Oh My HuggingFace'
+      return path.includes('.app/Contents/MacOS/') && name === 'HubFetch'
     }
     if (process.platform === 'win32') {
-      return path.includes('win-unpacked') && name === 'Oh My HuggingFace.exe'
+      return path.includes('win-unpacked') && name === 'HubFetch.exe'
     }
-    return path.includes('linux-unpacked') && name === 'oh-my-huggingface'
+    return path.includes('linux-unpacked') && name === 'hubfetch'
   })
 
   if (!match) throw new Error(`No packaged executable found under ${RELEASE_DIR}`)
@@ -34,7 +34,7 @@ function packagedExecutable(): string {
 }
 
 test('packaged application boots with an isolated profile', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-packaged-smoke-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-packaged-smoke-'))
   const app = await electron.launch({
     executablePath: packagedExecutable(),
     // Ad-hoc local builds do not share the release certificate's Keychain ACL.
@@ -49,7 +49,7 @@ test('packaged application boots with an isolated profile', async () => {
 
   try {
     const window = await app.firstWindow()
-    await expect(window).toHaveTitle('Oh My HuggingFace')
+    await expect(window).toHaveTitle('HubFetch')
     await expect(window.locator('aside nav')).toBeVisible({ timeout: 30_000 })
     await expect(window.locator('main')).toBeVisible()
   } finally {

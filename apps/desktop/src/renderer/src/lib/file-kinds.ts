@@ -146,7 +146,7 @@ const TEXT_BASENAMES = new Set([
   'cmakelists.txt'
 ])
 
-/** MIME fallback when Hub returns missing / generic Content-Type for omhf-file. */
+/** MIME fallback when Hub returns missing / generic Content-Type for hubfetch. */
 const MIME_BY_EXTENSION: Record<string, string> = {
   wav: 'audio/wav',
   mp3: 'audio/mpeg',

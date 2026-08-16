@@ -1009,7 +1009,7 @@ export class HubClient {
 
   /**
    * Raw authenticated GET of a repo file via its resolve URL, returning the
-   * streaming Response. Backs the desktop app's omhf-file:// protocol so
+   * streaming Response. Backs the desktop app's hubfetch:// protocol so
    * private/gated repo images render in-app — a direct <img> pointing at the
    * https resolve URL carries no Authorization header and 401s. Same
    * limiter/retry/auth policy as every other request; the caller consumes

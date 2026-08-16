@@ -24,7 +24,7 @@ vi.mock('electron', () => ({
 const roots: string[] = []
 
 async function tempRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'omhf-integration-task-'))
+  const root = await mkdtemp(join(tmpdir(), 'hubfetch-integration-task-'))
   roots.push(root)
   return root
 }

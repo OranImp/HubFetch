@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { _electron as electron, expect, test } from '@playwright/test'
 
 test('sidebar and History remain keyboard reachable with no serious axe violations', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-a11y-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-a11y-'))
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),

@@ -1,9 +1,9 @@
 {
   "app": {
-    "name": "Oh My HuggingFace"
+    "name": "HubFetch"
   },
   "tray": {
-    "show": "Mostrar Oh My HuggingFace",
+    "show": "Mostrar HubFetch",
     "quit": "Sair"
   },
   "menu": {
@@ -13,10 +13,10 @@
     "go": "Ir",
     "window": "Janela",
     "help": "Ajuda",
-    "about": "Sobre o Oh My HuggingFace",
+    "about": "Sobre o HubFetch",
     "settings": "Configurações…",
-    "quit": "Sair do Oh My HuggingFace",
-    "hide": "Ocultar Oh My HuggingFace",
+    "quit": "Sair do HubFetch",
+    "hide": "Ocultar HubFetch",
     "hideOthers": "Ocultar outros",
     "showAll": "Mostrar todos",
     "undo": "Desfazer",

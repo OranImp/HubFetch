@@ -89,7 +89,7 @@ interface AppState {
   setShortcutsOpen: (open: boolean) => void
 }
 
-const SIDEBAR_COLLAPSED_KEY = 'omh:sidebarCollapsed'
+const SIDEBAR_COLLAPSED_KEY = 'hubfetch:sidebarCollapsed'
 
 /** One-time migrate legacy localStorage sidebar flag into AppSettings. */
 function migrateSidebarCollapsed(settings: AppSettings): AppSettings {

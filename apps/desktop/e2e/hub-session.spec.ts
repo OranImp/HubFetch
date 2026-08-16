@@ -65,7 +65,7 @@ test('connecting a Hub web session captures and validates the login cookie', asy
   })
   const endpoint = `http://127.0.0.1:${(hub.address() as AddressInfo).port}`
 
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-e2e-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-e2e-'))
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
@@ -80,31 +80,31 @@ test('connecting a Hub web session captures and validates the login cookie', asy
     await window.waitForSelector('aside nav', { timeout: 30_000 })
 
     await window.evaluate(
-      (hubEndpoint) => window.omh.invoke('settings:set', { patch: { hubEndpoint } }),
+      (hubEndpoint) => window.hubfetch.invoke('settings:set', { patch: { hubEndpoint } }),
       endpoint
     )
 
     // Web sessions supplement a token session; without one, connect refuses.
     const signedOut = await window.evaluate(() =>
-      window.omh.invoke('auth:connectHubSession', undefined)
+      window.hubfetch.invoke('auth:connectHubSession', undefined)
     )
     expect(signedOut).toEqual({ ok: false, error: 'invalid' })
 
     const signIn = await window.evaluate(() =>
-      window.omh.invoke('auth:signInWithToken', { token: 'hf_e2e_good' })
+      window.hubfetch.invoke('auth:signInWithToken', { token: 'hf_e2e_good' })
     )
     expect(signIn).toMatchObject({ ok: true, state: { hubSession: false } })
 
     // The login window opens, the mock /login sets the cookie, capture + whoami succeed.
     const connected = await window.evaluate(() =>
-      window.omh.invoke('auth:connectHubSession', undefined)
+      window.hubfetch.invoke('auth:connectHubSession', undefined)
     )
     expect(connected).toMatchObject({
       ok: true,
       state: { status: 'signedIn', hubSession: true, user: { name: 'e2e-user' } }
     })
     expect(
-      await window.evaluate(() => window.omh.invoke('auth:getState', undefined))
+      await window.evaluate(() => window.hubfetch.invoke('auth:getState', undefined))
     ).toMatchObject({ hubSession: true })
 
     // Settings → Account shows the connected badge and the disconnect control.
@@ -120,17 +120,17 @@ test('connecting a Hub web session captures and validates the login cookie', asy
     await window.getByRole('button', { name: /^(Disconnect|断开连接)$/ }).click()
     await expect(window.getByText(/^(Connected|已连接)$/)).toHaveCount(0)
     expect(
-      await window.evaluate(() => window.omh.invoke('auth:getState', undefined))
+      await window.evaluate(() => window.hubfetch.invoke('auth:getState', undefined))
     ).toMatchObject({ status: 'signedIn', hubSession: false })
 
     // A login that belongs to a different account is rejected before persistence.
     loginCookie = 'e2e_other'
     const mismatch = await window.evaluate(() =>
-      window.omh.invoke('auth:connectHubSession', undefined)
+      window.hubfetch.invoke('auth:connectHubSession', undefined)
     )
     expect(mismatch).toEqual({ ok: false, error: 'mismatch' })
     expect(
-      await window.evaluate(() => window.omh.invoke('auth:getState', undefined))
+      await window.evaluate(() => window.hubfetch.invoke('auth:getState', undefined))
     ).toMatchObject({ status: 'signedIn', hubSession: false })
   } finally {
     await app.close()

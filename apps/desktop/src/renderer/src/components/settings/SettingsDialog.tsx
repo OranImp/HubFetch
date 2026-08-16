@@ -62,7 +62,7 @@ import { ProfileSection } from '@/components/settings/ProfileSection'
 import { NetworkSection } from '@/components/settings/NetworkSection'
 import { DesktopSection } from '@/components/settings/DesktopSection'
 
-const REPO_URL = 'https://github.com/oh-my-hf/ohmyhf'
+const REPO_URL = 'https://github.com/OranImp/HubFetch'
 const RELEASES_URL = `${REPO_URL}/releases`
 const SPEED_OPTIONS = [1, 5, 10, 20, 50] // MB/s
 const UI_SCALE_MIN = 80

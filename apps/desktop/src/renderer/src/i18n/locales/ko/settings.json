@@ -124,7 +124,7 @@
     "closeHintOther": "창을 닫으면 앱이 시스템 트레이로 숨겨집니다. 완전히 종료하려면 트레이 메뉴에서 종료하세요.",
     "closeToTray": "닫을 때 트레이로 이동",
     "launchAtLogin": "로그인 시 자동 실행",
-    "launchAtLoginHint": "이 컴퓨터에 로그인할 때 Oh My HuggingFace를 시작합니다.",
+    "launchAtLoginHint": "이 컴퓨터에 로그인할 때 HubFetch를 시작합니다.",
     "title": "데스크톱"
   },
   "downloads": {

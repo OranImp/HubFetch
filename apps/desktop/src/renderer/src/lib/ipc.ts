@@ -11,14 +11,14 @@ export function invoke<C extends IpcInvokeChannel>(
   channel: C,
   req: IpcRequest<C>
 ): Promise<IpcResponse<C>> {
-  return window.omh.invoke(channel, req)
+  return window.hubfetch.invoke(channel, req)
 }
 
 export function onIpcEvent<C extends IpcEventChannel>(
   channel: C,
   listener: (payload: IpcEventPayload<C>) => void
 ): () => void {
-  return window.omh.on(channel, listener)
+  return window.hubfetch.on(channel, listener)
 }
 
 export function openExternal(url: string): void {

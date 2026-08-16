@@ -126,7 +126,7 @@ async function linkOrCopy(source: string, destination: string, deps: ExportDeps)
   deps.signal.throwIfAborted()
   const realSource = await fs.realpath(source)
   await fs.mkdir(dirname(destination), { recursive: true })
-  const partial = `${destination}.omhf-${randomUUID()}.partial`
+  const partial = `${destination}.hubfetch-${randomUUID()}.partial`
   try {
     await (deps.linkFile ?? fs.link)(realSource, partial)
     deps.signal.throwIfAborted()
@@ -191,7 +191,7 @@ async function exportToOllama(
     const { promisify } = await import('node:util')
     run = promisify(execFile)
   }
-  const tempDir = await fs.mkdtemp(join(deps.tempDir ?? tmpdir(), 'omhf-ollama-'))
+  const tempDir = await fs.mkdtemp(join(deps.tempDir ?? tmpdir(), 'hubfetch-ollama-'))
   const modelfile = join(tempDir, 'Modelfile')
   try {
     await fs.writeFile(modelfile, `FROM ${snapshotFile}\n`, 'utf8')

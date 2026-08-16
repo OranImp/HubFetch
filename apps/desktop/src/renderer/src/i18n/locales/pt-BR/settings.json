@@ -124,7 +124,7 @@
     "closeHintOther": "Fechar a janela oculta o aplicativo na bandeja do sistema. Saia pelo menu da bandeja para encerrar completamente.",
     "closeToTray": "Fechar para a bandeja",
     "launchAtLogin": "Iniciar ao fazer login",
-    "launchAtLoginHint": "Iniciar o Oh My HuggingFace quando você entrar neste computador.",
+    "launchAtLoginHint": "Iniciar o HubFetch quando você entrar neste computador.",
     "title": "Área de trabalho"
   },
   "downloads": {

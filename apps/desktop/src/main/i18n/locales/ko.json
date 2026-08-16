@@ -1,9 +1,9 @@
 {
   "app": {
-    "name": "Oh My HuggingFace"
+    "name": "HubFetch"
   },
   "tray": {
-    "show": "Oh My HuggingFace 표시",
+    "show": "HubFetch 표시",
     "quit": "종료"
   },
   "menu": {
@@ -13,10 +13,10 @@
     "go": "이동",
     "window": "창",
     "help": "도움말",
-    "about": "Oh My HuggingFace 정보",
+    "about": "HubFetch 정보",
     "settings": "설정…",
-    "quit": "Oh My HuggingFace 종료",
-    "hide": "Oh My HuggingFace 가리기",
+    "quit": "HubFetch 종료",
+    "hide": "HubFetch 가리기",
     "hideOthers": "다른 항목 가리기",
     "showAll": "모두 보기",
     "undo": "실행 취소",

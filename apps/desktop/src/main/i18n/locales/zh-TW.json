@@ -1,9 +1,9 @@
 {
   "app": {
-    "name": "Oh My HuggingFace"
+    "name": "HubFetch"
   },
   "tray": {
-    "show": "顯示 Oh My HuggingFace",
+    "show": "顯示 HubFetch",
     "quit": "結束"
   },
   "menu": {
@@ -13,10 +13,10 @@
     "go": "前往",
     "window": "視窗",
     "help": "說明",
-    "about": "關於 Oh My HuggingFace",
+    "about": "關於 HubFetch",
     "settings": "設定…",
-    "quit": "結束 Oh My HuggingFace",
-    "hide": "隱藏 Oh My HuggingFace",
+    "quit": "結束 HubFetch",
+    "hide": "隱藏 HubFetch",
     "hideOthers": "隱藏其他",
     "showAll": "全部顯示",
     "undo": "復原",

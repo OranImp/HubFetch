@@ -124,7 +124,7 @@
     "closeHintOther": "ウィンドウを閉じるとアプリはシステムトレイに格納されます。完全に終了するには、トレイメニューから終了してください。",
     "closeToTray": "トレイに格納して閉じる",
     "launchAtLogin": "ログイン時に起動",
-    "launchAtLoginHint": "このコンピュータにサインインしたときにOh My HuggingFaceを起動します。",
+    "launchAtLoginHint": "このコンピュータにサインインしたときにHubFetchを起動します。",
     "title": "デスクトップ"
   },
   "downloads": {

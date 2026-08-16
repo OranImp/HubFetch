@@ -8,7 +8,7 @@ import { _electron as electron, expect, test } from '@playwright/test'
  * the three-pane shell renders with localized navigation.
  */
 test('app boots into the three-pane shell', async () => {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'omh-e2e-'))
+  const userDataDir = mkdtempSync(join(tmpdir(), 'hubfetch-e2e-'))
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
@@ -20,7 +20,7 @@ test('app boots into the three-pane shell', async () => {
   })
   try {
     const window = await app.firstWindow()
-    await expect(window).toHaveTitle('Oh My HuggingFace')
+    await expect(window).toHaveTitle('HubFetch')
 
     // Sidebar (navigation), main pane, and the Home feed are all present.
     await window.waitForSelector('aside nav', { timeout: 30_000 })
@@ -41,13 +41,13 @@ test('app boots into the three-pane shell', async () => {
     expect(await window.evaluate(() => typeof (window as never)['process'])).toBe('undefined')
 
     // The typed IPC bridge is the only exposed API.
-    expect(await window.evaluate(() => typeof window.omh?.invoke)).toBe('function')
+    expect(await window.evaluate(() => typeof window.hubfetch?.invoke)).toBe('function')
 
     // Development builds expose the updater contract without touching a release feed.
     const [updateState, appInfo] = await window.evaluate(() =>
       Promise.all([
-        window.omh.invoke('updater:getState', undefined),
-        window.omh.invoke('system:getAppInfo', undefined)
+        window.hubfetch.invoke('updater:getState', undefined),
+        window.hubfetch.invoke('system:getAppInfo', undefined)
       ])
     )
     expect(updateState).toEqual({ status: 'unsupported', currentVersion: appInfo.version })

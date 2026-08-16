@@ -9,7 +9,7 @@ const COMMIT = 'a'.repeat(40)
 const roots: string[] = []
 
 async function tempRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'omhf-export-'))
+  const root = await mkdtemp(join(tmpdir(), 'hubfetch-export-'))
   roots.push(root)
   return root
 }

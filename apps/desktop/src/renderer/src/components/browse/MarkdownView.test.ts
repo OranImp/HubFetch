@@ -22,9 +22,9 @@ describe('markdownCodeLanguage', () => {
 })
 
 describe('repoFileUrl', () => {
-  it('builds an omhf-file URL the main-process handler can parse back', () => {
+  it('builds a hubfetch URL the main-process handler can parse back', () => {
     const url = new URL(repoFileUrl('model', 'owner/repo', 'assets/logo cat.png'))
-    expect(url.protocol).toBe('omhf-file:')
+    expect(url.protocol).toBe('hubfetch:')
     expect(url.searchParams.get('kind')).toBe('model')
     expect(url.searchParams.get('repoId')).toBe('owner/repo')
     expect(url.searchParams.get('revision')).toBe('main')
