@@ -37,7 +37,14 @@
       "upToDate": "最新バージョンを使用しています。",
       "view": "表示"
     },
-    "version": "バージョン{{version}}"
+    "version": "バージョン{{version}}",
+    "notificationRegistration": "システム通知: {{status}}",
+    "notificationStatus": {
+      "registered": "利用可能",
+      "unsupported": "このビルドでは未対応",
+      "failed": "利用不可 — アプリ内通知を使用",
+      "disabled": "設定で無効化"
+    }
   },
   "account": {
     "billing": {

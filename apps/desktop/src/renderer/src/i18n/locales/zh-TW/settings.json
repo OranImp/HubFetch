@@ -37,7 +37,14 @@
       "upToDate": "您目前使用的已是最新版本。",
       "view": "檢視"
     },
-    "version": "版本 {{version}}"
+    "version": "版本 {{version}}",
+    "notificationRegistration": "系統通知：{{status}}",
+    "notificationStatus": {
+      "registered": "已就緒",
+      "unsupported": "此版本不支援",
+      "failed": "無法使用——改用應用程式內通知",
+      "disabled": "已在設定中關閉"
+    }
   },
   "account": {
     "billing": {

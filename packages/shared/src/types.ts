@@ -725,6 +725,19 @@ export interface AppInfo {
   electronVersion: string
   systemLocale: string
   hfCacheDir: string
+  /** Windows-only Start Menu shortcut registration, surfaced to diagnostics. */
+  notificationRegistration: NotificationRegistrationInfo
+}
+
+/**
+ * Typed outcome of registering the portable Start Menu shortcut. The reason is
+ * sanitized in the main process and never contains personal path details.
+ */
+export type NotificationRegistrationStatus = 'registered' | 'unsupported' | 'failed' | 'disabled'
+
+export interface NotificationRegistrationInfo {
+  status: NotificationRegistrationStatus
+  reason?: string
 }
 
 export type AppUpdateErrorCode =

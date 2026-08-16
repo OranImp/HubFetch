@@ -1,3 +1,4 @@
+import { existsSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { BrowserWindow, app, dialog, nativeTheme, protocol, shell } from 'electron'
 import { HubApiError } from '@hubfetch/hub-api'
@@ -21,6 +22,10 @@ import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride } from './runtime-pa
 import { SettingsStore } from './settings'
 import { TrayManager } from './tray'
 import { resolveUpdateClient, UpdateManager } from './updater'
+import {
+  registerWindowsNotificationShortcut,
+  removeWindowsNotificationShortcut
+} from './windows-notification-registration'
 
 // One HubFetch identity everywhere: the name drives the default userData root
 // (`%APPDATA%\HubFetch`), so dev and packaged builds share one database and one
@@ -184,6 +189,21 @@ if (!gotLock) {
     })
 
     const library = new Library(db, () => settings.get().historyLimit)
+    // Portable ZIP builds have no installer to place the Start Menu shortcut, so
+    // Windows toast AUMID routing would silently no-op. Register/repair the
+    // shortcut now — before any NotificationService emission — and surface the
+    // typed outcome to diagnostics. Any failure keeps the in-app fallback.
+    const notificationRegistration = registerWindowsNotificationShortcut({
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      execPath: process.execPath,
+      appData: app.getPath('appData'),
+      appName: APP_NAME,
+      appUserModelId: APP_USER_MODEL_ID,
+      notificationsEnabled: settings.get().notificationsEnabled,
+      writeShortcutLink: shell.writeShortcutLink,
+      readShortcutLink: shell.readShortcutLink
+    })
     const notifications = new NotificationService(settings, i18n, navigate)
     const downloads = new DownloadManager(
       db,
@@ -321,6 +341,16 @@ if (!gotLock) {
       updater,
       i18n,
       rebuildMenu,
+      notificationRegistration,
+      removeNotificationShortcut: () =>
+        removeWindowsNotificationShortcut({
+          isPackaged: app.isPackaged,
+          platform: process.platform,
+          appData: app.getPath('appData'),
+          appName: APP_NAME,
+          existsSync,
+          unlinkSync
+        }),
       broadcast,
       applyNetworkSettings,
       applyDesktopSettings

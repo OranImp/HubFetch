@@ -1096,6 +1096,15 @@ function AboutSection(): React.JSX.Element {
             </span>
           )}
         </div>
+        {appInfo && (
+          <p className="text-ink-muted">
+            {t('settings:about.notificationRegistration', {
+              status: t(
+                `settings:about.notificationStatus.${appInfo.notificationRegistration.status}`
+              )
+            })}
+          </p>
+        )}
         <p className="max-w-[65ch] text-ink-muted">{t('settings:about.disclaimer')}</p>
         <p className="max-w-[65ch] text-ink-muted">{t('settings:about.privacy')}</p>
         <div className="mt-1 flex items-center gap-3">

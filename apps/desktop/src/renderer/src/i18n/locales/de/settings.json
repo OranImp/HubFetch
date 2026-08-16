@@ -37,7 +37,14 @@
       "upToDate": "Sie verwenden die neueste Version.",
       "view": "Anzeigen"
     },
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "notificationRegistration": "Systembenachrichtigungen: {{status}}",
+    "notificationStatus": {
+      "registered": "bereit",
+      "unsupported": "in diesem Build nicht unterstützt",
+      "failed": "nicht verfügbar — In-App-Benachrichtigungen werden verwendet",
+      "disabled": "in den Einstellungen deaktiviert"
+    }
   },
   "account": {
     "billing": {

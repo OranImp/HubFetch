@@ -37,7 +37,14 @@
       "upToDate": "You're running the latest version.",
       "view": "View"
     },
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "notificationRegistration": "System notifications: {{status}}",
+    "notificationStatus": {
+      "registered": "ready",
+      "unsupported": "not supported in this build",
+      "failed": "unavailable — using in-app notifications",
+      "disabled": "disabled in settings"
+    }
   },
   "account": {
     "billing": {

@@ -12,7 +12,8 @@ import type {
   IpcEventPayload,
   IpcInvokeChannel,
   IpcRequest,
-  IpcResponse
+  IpcResponse,
+  NotificationRegistrationInfo
 } from '@hubfetch/shared'
 import {
   DEFAULT_SETTINGS,
@@ -57,6 +58,8 @@ export interface AppContext {
   updater: UpdateManager
   i18n: MainI18n
   rebuildMenu: () => void
+  notificationRegistration: NotificationRegistrationInfo
+  removeNotificationShortcut: () => boolean
   broadcast: <C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>) => void
   applyNetworkSettings: (
     next: { hubEndpoint: string | null; proxyUrl: string | null },
@@ -147,7 +150,8 @@ export function registerIpcHandlers(ctx: AppContext): void {
       platform: process.platform as AppInfo['platform'],
       electronVersion: process.versions.electron ?? '',
       systemLocale: app.getLocale(),
-      hfCacheDir: ctx.settings.get().hfCacheDir ?? defaultCacheDir()
+      hfCacheDir: ctx.settings.get().hfCacheDir ?? defaultCacheDir(),
+      notificationRegistration: ctx.notificationRegistration
     }
   })
   handle('system:openExternal', async ({ url }) => {
@@ -251,6 +255,9 @@ export function registerIpcHandlers(ctx: AppContext): void {
     clearLocalAppData(ctx.db, req)
     if (signOut) {
       await ctx.auth.signOut()
+      // Explicit app-data cleanup: drop the portable Start Menu shortcut too.
+      // Ordinary exit must never touch it (see windows-notification-registration).
+      ctx.removeNotificationShortcut()
     }
     return { cleared: true as const, signedOut: signOut }
   })

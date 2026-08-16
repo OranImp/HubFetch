@@ -37,7 +37,14 @@
       "upToDate": "Você está usando a versão mais recente.",
       "view": "Ver"
     },
-    "version": "Versão {{version}}"
+    "version": "Versão {{version}}",
+    "notificationRegistration": "Notificações do sistema: {{status}}",
+    "notificationStatus": {
+      "registered": "prontas",
+      "unsupported": "não compatível com este build",
+      "failed": "indisponíveis — usando notificações no aplicativo",
+      "disabled": "desativadas nas configurações"
+    }
   },
   "account": {
     "billing": {
