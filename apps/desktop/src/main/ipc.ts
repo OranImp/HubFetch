@@ -106,7 +106,7 @@ function handle<C extends IpcInvokeChannel>(
       // message here — the single boundary — so no secret-bearing error text
       // ever reaches the renderer or its devtools, while the sentinel the
       // renderer matches on (HUB_WEB_SESSION_REQUIRED) passes through unchanged.
-      throw new Error(redactor.redactErrorText(err))
+      throw new Error(redactor.redactErrorText(err), { cause: err })
     }
   })
 }
