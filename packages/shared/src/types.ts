@@ -1036,3 +1036,74 @@ export interface BillingUsage {
   /** Tolerant of shape drift: generic labeled rows for display. */
   rows: { label: string; detail?: string; amountCents?: number }[]
 }
+
+/**
+ * Diagnostics readiness model (plan Todo 23). Every probe emits one typed
+ * `DiagnosticCheck` whose status is always exactly one of the four closed
+ * values — `unknown` is a real outcome, never a disguised `pass` — plus a
+ * normalized machine-readable reason code and a sanitized user action.
+ */
+export type DiagnosticStatus = 'pass' | 'warning' | 'failure' | 'unknown'
+
+export type DiagnosticCategory =
+  | 'app'
+  | 'system'
+  | 'disk'
+  | 'cache'
+  | 'destination'
+  | 'symlink'
+  | 'notifications'
+  | 'network'
+  | 'git'
+  | 'credentials'
+  | 'database'
+
+/** Closed set of normalized machine-readable reason codes emitted by probes. */
+export const DIAGNOSTIC_REASON_CODES = [
+  'ok',
+  'missing',
+  'timeout',
+  'canceled',
+  'probe-error',
+  'unavailable',
+  'unwritable',
+  'low-space',
+  'critical-space',
+  'low-memory',
+  'critical-memory',
+  'degraded',
+  'unconfigured',
+  'plaintext-helper',
+  'no-credential-helper',
+  'unreachable',
+  'unhealthy',
+  'disabled',
+  'unsupported',
+  'bounded',
+  'nonzero'
+] as const
+export type DiagnosticReasonCode = (typeof DIAGNOSTIC_REASON_CODES)[number]
+
+export interface DiagnosticCheck {
+  /** Stable probe id, e.g. `git.version`. */
+  id: string
+  category: DiagnosticCategory
+  status: DiagnosticStatus
+  reasonCode: DiagnosticReasonCode
+  /** Human-readable summary. Never contains raw paths, env, or secrets. */
+  message: string
+  /** Optional structured detail; already redacted and path-sanitized. */
+  detail?: string
+  /** Optional sanitized, user-actionable guidance (never auto-run). */
+  action?: string
+  /** Wall time of the probe in milliseconds (bounded by the configured deadline). */
+  durationMs: number
+  /** ISO timestamp the probe completed. */
+  checkedAt: string
+}
+
+export interface DiagnosticReport {
+  /** Deterministic probe order (sorted by id). */
+  checks: DiagnosticCheck[]
+  completedAt: string
+}

@@ -4,8 +4,52 @@
  */
 import { z } from 'zod'
 import type { IpcInvokeChannel } from './ipc'
-import { SUPPORTED_LOCALES } from './types'
+import { DIAGNOSTIC_REASON_CODES, SUPPORTED_LOCALES } from './types'
 import { normalizeManualProxyUrl } from './urls'
+
+/**
+ * Closed status/category/reason-code enums shared by the DiagnosticsService.
+ * The schemas are `.strict()` so a report with an unknown field or an
+ * out-of-contract reason code is rejected instead of silently tolerated.
+ */
+export const diagnosticStatusSchema = z.enum(['pass', 'warning', 'failure', 'unknown'])
+
+export const diagnosticCategorySchema = z.enum([
+  'app',
+  'system',
+  'disk',
+  'cache',
+  'destination',
+  'symlink',
+  'notifications',
+  'network',
+  'git',
+  'credentials',
+  'database'
+])
+
+export const diagnosticReasonCodeSchema = z.enum(DIAGNOSTIC_REASON_CODES)
+
+export const diagnosticCheckSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    category: diagnosticCategorySchema,
+    status: diagnosticStatusSchema,
+    reasonCode: diagnosticReasonCodeSchema,
+    message: z.string().min(1).max(1000),
+    detail: z.string().max(4000).optional(),
+    action: z.string().max(2000).optional(),
+    durationMs: z.number().int().min(0).max(3_600_000),
+    checkedAt: z.string().min(1).max(64)
+  })
+  .strict()
+
+export const diagnosticReportSchema = z
+  .object({
+    checks: z.array(diagnosticCheckSchema).max(64),
+    completedAt: z.string().min(1).max(64)
+  })
+  .strict()
 
 const repoKind = z.enum(['model', 'dataset', 'space'])
 
