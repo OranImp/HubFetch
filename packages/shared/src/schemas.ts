@@ -5,6 +5,7 @@
 import { z } from 'zod'
 import type { IpcInvokeChannel } from './ipc'
 import { SUPPORTED_LOCALES } from './types'
+import { normalizeManualProxyUrl } from './urls'
 
 const repoKind = z.enum(['model', 'dataset', 'space'])
 
@@ -70,6 +71,37 @@ const repoSummary = z.object({
   trendingScore: z.number().optional()
 })
 
+/**
+ * A manual proxy URL: `http(s)://host:port` with an explicit port and nothing
+ * else — no userinfo, path, query, or fragment. Credentials are never accepted.
+ */
+const manualProxyUrl = z
+  .string()
+  .max(2048)
+  .refine((value) => normalizeManualProxyUrl(value) !== null, 'invalid proxy url')
+
+/**
+ * Closed proxy config for settings. `manualUrl` is retained across mode
+ * switches but Manual mode always requires a concrete normalized URL.
+ */
+const proxyConfig = z
+  .object({
+    mode: z.enum(['system', 'direct', 'manual']),
+    manualUrl: z.union([manualProxyUrl, z.null()])
+  })
+  .strict()
+  .refine(
+    (config) => config.mode !== 'manual' || config.manualUrl !== null,
+    'manual proxy mode requires a URL'
+  )
+
+/** Per-create proxy override for downloads:start. Closed union, no fallback. */
+const downloadProxyOverride = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('system') }).strict(),
+  z.object({ mode: z.literal('direct') }).strict(),
+  z.object({ mode: z.literal('manual'), url: manualProxyUrl }).strict()
+])
+
 const settingsPatch = z
   .object({
     locale: z.enum(['system', ...SUPPORTED_LOCALES]),
@@ -84,7 +116,7 @@ const settingsPatch = z
       .max(24 * 60),
     uiScale: z.number().int().min(80).max(140),
     hubEndpoint: z.union([z.url({ protocol: /^https?$/ }), z.null()]),
-    proxyUrl: z.union([z.url({ protocol: /^https?$/ }), z.null()]),
+    proxy: proxyConfig,
     launchAtLogin: z.boolean(),
     closeToTray: z.boolean(),
     defaultHome: z.enum(['home', 'models', 'datasets', 'spaces', 'papers']),
@@ -168,7 +200,7 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
   'network:testConnection': z
     .object({
       endpoint: z.union([z.url({ protocol: /^https?$/ }), z.null()]).optional(),
-      proxyUrl: z.union([z.url({ protocol: /^https?$/ }), z.null()]).optional()
+      proxyUrl: z.union([manualProxyUrl, z.null()]).optional()
     })
     .optional(),
   // No hf_ prefix check: fine-grained/org tokens and mirror deployments vary.
@@ -559,7 +591,8 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
       repoId,
       kind: repoKind,
       revision: revision.optional(),
-      files: z.array(relPath).max(10000).optional()
+      files: z.array(relPath).max(10000).optional(),
+      proxy: downloadProxyOverride.optional()
     })
   }),
   'downloads:pause': z.object({ id: z.uuid() }),

@@ -13,7 +13,8 @@ import type {
   IpcInvokeChannel,
   IpcRequest,
   IpcResponse,
-  NotificationRegistrationInfo
+  NotificationRegistrationInfo,
+  ProxyConfig
 } from '@hubfetch/shared'
 import {
   DEFAULT_SETTINGS,
@@ -66,8 +67,8 @@ export interface AppContext {
   removeNotificationShortcut: () => boolean
   broadcast: <C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>) => void
   applyNetworkSettings: (
-    next: { hubEndpoint: string | null; proxyUrl: string | null },
-    prev: { hubEndpoint: string | null; proxyUrl: string | null }
+    next: { hubEndpoint: string | null; proxy: ProxyConfig },
+    prev: { hubEndpoint: string | null; proxy: ProxyConfig }
   ) => Promise<void>
   applyDesktopSettings: (
     next: { launchAtLogin: boolean; closeToTray: boolean; theme: string },
@@ -146,8 +147,8 @@ async function applySettingsPatch(
     ctx.rebuildMenu()
   }
   await ctx.applyNetworkSettings(
-    { hubEndpoint: next.hubEndpoint, proxyUrl: next.proxyUrl },
-    { hubEndpoint: prev.hubEndpoint, proxyUrl: prev.proxyUrl }
+    { hubEndpoint: next.hubEndpoint, proxy: next.proxy },
+    { hubEndpoint: prev.hubEndpoint, proxy: prev.proxy }
   )
   ctx.applyDesktopSettings(
     { launchAtLogin: next.launchAtLogin, closeToTray: next.closeToTray, theme: next.theme },
@@ -289,7 +290,8 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   handle('network:testConnection', async (req) => {
     const applied = ctx.settings.get()
     const endpoint = req?.endpoint !== undefined ? req.endpoint : applied.hubEndpoint
-    const proxyUrl = req?.proxyUrl !== undefined ? req.proxyUrl : applied.proxyUrl
+    const appliedProxyUrl = applied.proxy.mode === 'manual' ? applied.proxy.manualUrl : null
+    const proxyUrl = req?.proxyUrl !== undefined ? req.proxyUrl : appliedProxyUrl
     // Drafts are probed on a throwaway client so the live client (and the
     // recorded applied network options) are never touched. Credentials stay
     // bound to the endpoint they belong to — the same rule Apply enforces — so
@@ -298,7 +300,7 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     // draft host receives an anonymous request; this keeps the main-process
     // token siloed even if the renderer supplies an arbitrary endpoint.
     const endpointMatches = endpoint === applied.hubEndpoint
-    const matchesApplied = endpointMatches && proxyUrl === applied.proxyUrl
+    const matchesApplied = endpointMatches && proxyUrl === appliedProxyUrl
     const client = matchesApplied
       ? ctx.hub
       : buildHubClient(
@@ -525,7 +527,7 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     const parent = ownerWindow(event) ?? BrowserWindow.getAllWindows()[0]
     const captured = await captureHubSessionCookie({
       endpoint: ctx.hub.baseUrl,
-      proxyUrl: settings.proxyUrl,
+      proxyUrl: settings.proxy.mode === 'manual' ? settings.proxy.manualUrl : null,
       parent
     })
     if (!captured.ok) return { ok: false as const, error: captured.error }

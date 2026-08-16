@@ -1,5 +1,5 @@
 import type { AppSettings } from '@hubfetch/shared'
-import { DEFAULT_SETTINGS } from '@hubfetch/shared'
+import { DEFAULT_PROXY_CONFIG, DEFAULT_SETTINGS } from '@hubfetch/shared'
 import type { AppDatabase } from './db'
 
 type Listener = (settings: AppSettings) => void
@@ -17,7 +17,12 @@ export class SettingsStore {
       { value: string } | undefined
     if (!row) return { ...DEFAULT_SETTINGS }
     try {
-      return { ...DEFAULT_SETTINGS, ...(JSON.parse(row.value) as Partial<AppSettings>) }
+      const stored = JSON.parse(row.value) as Partial<AppSettings> & { proxyUrl?: unknown }
+      // Belt-and-suspenders beside the DB migration: never carry a legacy
+      // nullable proxyUrl into memory, and always have a closed proxy config.
+      delete stored.proxyUrl
+      if (!stored.proxy) stored.proxy = { ...DEFAULT_PROXY_CONFIG }
+      return { ...DEFAULT_SETTINGS, ...stored }
     } catch {
       return { ...DEFAULT_SETTINGS }
     }

@@ -7,14 +7,17 @@ import { app } from 'electron'
 import { computeSpeedShare } from '@hubfetch/shared'
 import type {
   DownloadFileState,
+  DownloadProxyOverride,
   DownloadRequest,
   DownloadStatus,
-  DownloadTask
+  DownloadTask,
+  ProxyConfig,
+  ProxySnapshot
 } from '@hubfetch/shared'
+import { DEFAULT_MANUAL_PROXY_URL } from '@hubfetch/shared'
 import type { HubClient } from '@hubfetch/hub-api'
 import { RESOLVE_PREFIX, defaultCacheDir, repoCachePaths } from '@hubfetch/hub-api'
 import type { AppDatabase } from './db'
-import { resolveSystemProxyUrl } from './hub'
 import type { NotificationService } from './notifications'
 import type { SettingsStore } from './settings'
 import type { DownloadJob } from './workers/download-worker'
@@ -71,9 +74,55 @@ type DownloadErrorCode =
 
 interface DownloadEnvironment {
   endpoint: string
-  proxyUrl: string | null
+  /** Frozen proxy selection captured at creation. Immutable. */
+  proxy: ProxySnapshot
   cacheDir: string
   version: number
+}
+
+/**
+ * Map a persisted download row back to a closed proxy snapshot. Unknown or
+ * legacy modes behave as System (the pre-migration default); Manual requires a
+ * stored URL.
+ */
+function snapshotFromRow(mode: string | null, url: string | null): ProxySnapshot {
+  switch (mode) {
+    case 'direct':
+      return { mode: 'direct' }
+    case 'manual':
+      return url ? { mode: 'manual', url } : { mode: 'system' }
+    default:
+      return { mode: 'system' }
+  }
+}
+
+/**
+ * Resolve the task's frozen proxy snapshot from an optional per-create
+ * override, falling back to the settings ProxyConfig. Exhaustive over the three
+ * closed modes with no fallback branch.
+ */
+function resolveCreateProxySnapshot(
+  override: DownloadProxyOverride | undefined,
+  config: ProxyConfig
+): ProxySnapshot {
+  if (override) {
+    switch (override.mode) {
+      case 'system':
+        return { mode: 'system' }
+      case 'direct':
+        return { mode: 'direct' }
+      case 'manual':
+        return { mode: 'manual', url: override.url }
+    }
+  }
+  switch (config.mode) {
+    case 'system':
+      return { mode: 'system' }
+    case 'direct':
+      return { mode: 'direct' }
+    case 'manual':
+      return { mode: 'manual', url: config.manualUrl ?? DEFAULT_MANUAL_PROXY_URL }
+  }
 }
 
 interface ManagedDownloadTask extends DownloadTask {
@@ -92,6 +141,7 @@ interface DownloadRow {
   revision: string
   resolved_commit: string | null
   endpoint: string | null
+  proxy_mode: string | null
   proxy_url: string | null
   cache_dir: string | null
   environment_version: number | null
@@ -227,6 +277,7 @@ export class DownloadManager {
         kind: row.kind as DownloadTask['kind'],
         revision: row.revision,
         resolvedCommit: isResolvedCommit(resolvedCommit) ? resolvedCommit : undefined,
+        proxy: snapshotFromRow(row.proxy_mode, row.proxy_url),
         status,
         totalBytes: row.total_bytes,
         receivedBytes: row.received_bytes,
@@ -242,7 +293,7 @@ export class DownloadManager {
         environment: hasEnvironment
           ? {
               endpoint: row.endpoint!.replace(/\/+$/, ''),
-              proxyUrl: row.proxy_url,
+              proxy: snapshotFromRow(row.proxy_mode, row.proxy_url),
               cacheDir: row.cache_dir!,
               version: row.environment_version!
             }
@@ -259,11 +310,12 @@ export class DownloadManager {
   private persistRow(task: ManagedDownloadTask): void {
     this.db
       .prepare(
-        `INSERT INTO downloads (id, repo_id, kind, revision, resolved_commit, endpoint, proxy_url, cache_dir, environment_version, status, total_bytes, received_bytes, files_json, error, error_code, created_at, completed_at)
-         VALUES (@id, @repoId, @kind, @revision, @resolvedCommit, @endpoint, @proxyUrl, @cacheDir, @environmentVersion, @status, @totalBytes, @receivedBytes, @filesJson, @error, @errorCode, @createdAt, @completedAt)
+        `INSERT INTO downloads (id, repo_id, kind, revision, resolved_commit, endpoint, proxy_mode, proxy_url, cache_dir, environment_version, status, total_bytes, received_bytes, files_json, error, error_code, created_at, completed_at)
+         VALUES (@id, @repoId, @kind, @revision, @resolvedCommit, @endpoint, @proxyMode, @proxyUrl, @cacheDir, @environmentVersion, @status, @totalBytes, @receivedBytes, @filesJson, @error, @errorCode, @createdAt, @completedAt)
          ON CONFLICT(id) DO UPDATE SET
            resolved_commit = excluded.resolved_commit,
            endpoint = excluded.endpoint,
+           proxy_mode = excluded.proxy_mode,
            proxy_url = excluded.proxy_url,
            cache_dir = excluded.cache_dir,
            environment_version = excluded.environment_version,
@@ -282,7 +334,8 @@ export class DownloadManager {
         revision: task.revision,
         resolvedCommit: task.resolvedCommit ?? null,
         endpoint: task.environment?.endpoint ?? null,
-        proxyUrl: task.environment?.proxyUrl ?? null,
+        proxyMode: task.environment?.proxy.mode ?? null,
+        proxyUrl: task.environment?.proxy.mode === 'manual' ? task.environment.proxy.url : null,
         cacheDir: task.environment?.cacheDir ?? null,
         environmentVersion: task.environment?.version ?? null,
         status: task.status,
@@ -443,10 +496,10 @@ export class DownloadManager {
     const endpoint = this.currentEndpoint()
     const environment: DownloadEnvironment = {
       endpoint,
-      // Worker threads use Node/undici and cannot see Electron's system proxy.
-      // Freeze the currently resolved HTTP(S) route with the task so file
-      // downloads follow the same network path as the metadata requests.
-      proxyUrl: settings.proxyUrl ?? (await resolveSystemProxyUrl(endpoint)),
+      // Freeze the proxy selection (per-create override or settings default)
+      // with the task. System mode stores NO endpoint: the OS route is resolved
+      // at request execution, never baked into the snapshot.
+      proxy: resolveCreateProxySnapshot(request.proxy, settings.proxy),
       cacheDir: resolve(settings.hfCacheDir ?? defaultCacheDir()),
       version: DOWNLOAD_ENVIRONMENT_VERSION
     }
@@ -498,6 +551,7 @@ export class DownloadManager {
       kind: request.kind,
       revision,
       resolvedCommit,
+      proxy: environment.proxy,
       status: 'queued',
       totalBytes: newFiles.reduce((acc, f) => acc + f.size, 0),
       receivedBytes: 0,
@@ -568,7 +622,11 @@ export class DownloadManager {
       // Each worker gets a share of the limit so the cap holds in aggregate.
       speedLimitBps: computeSpeedShare(this.settings.get().speedLimitBps, this.workers.size + 1),
       userAgent: `HubFetch/${app.getVersion()} (unofficial desktop client)`,
-      proxyUrl: task.environment.proxyUrl
+      // Worker threads use Node/undici and cannot see Electron's system proxy.
+      // Manual snapshots pin the normalized URL; system/direct snapshots carry
+      // no endpoint (the transport work resolves the system route at request
+      // execution), so the worker gets null and downloads directly.
+      proxyUrl: task.environment.proxy.mode === 'manual' ? task.environment.proxy.url : null
     }
     const worker = new Worker(join(__dirname, 'download-worker.mjs'), { workerData: job })
     const key = this.workerKey(task.id, file.path)

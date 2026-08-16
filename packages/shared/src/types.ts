@@ -239,6 +239,11 @@ export interface DownloadTask {
   error?: string
   createdAt: string
   completedAt?: string
+  /**
+   * Frozen proxy selection captured at creation and never rewritten, even when
+   * Settings change or the task is paused/resumed/retried.
+   */
+  proxy: ProxySnapshot
 }
 
 export interface DownloadRequest {
@@ -247,6 +252,11 @@ export interface DownloadRequest {
   revision?: string
   /** File paths to fetch; omit to download the whole snapshot. */
   files?: string[]
+  /**
+   * Optional per-create proxy selection. When omitted the settings ProxyConfig
+   * decides; when present it overrides for THIS task only.
+   */
+  proxy?: DownloadProxyOverride
 }
 
 export interface CachedRevision {
@@ -637,6 +647,48 @@ export interface ActivityFeed {
 
 export type ThemeSetting = 'system' | 'light' | 'dark'
 
+/**
+ * Closed proxy policy. `system` follows the OS/Electron route, `direct`
+ * bypasses every proxy layer, and `manual` uses a fixed HTTP(S) proxy URL.
+ * The mode is always one of these three — never a nullable string.
+ */
+export type ProxyMode = 'system' | 'direct' | 'manual'
+
+/** The seed Manual proxy URL baked into settings (the machine's working proxy). */
+export const DEFAULT_MANUAL_PROXY_URL = 'http://127.0.0.1:7897'
+
+/**
+ * Product-level proxy configuration persisted in settings. `manualUrl` is a
+ * normalized HTTP(S) host:port URL with NO userinfo/path/query/fragment; it is
+ * retained across mode switches so Manual always remembers the last value.
+ */
+export interface ProxyConfig {
+  mode: ProxyMode
+  manualUrl: string | null
+}
+
+export const DEFAULT_PROXY_CONFIG: ProxyConfig = {
+  mode: 'system',
+  manualUrl: DEFAULT_MANUAL_PROXY_URL
+}
+
+/**
+ * The resolved proxy selection frozen onto a download task at creation and
+ * never rewritten afterwards. System stores NO endpoint (the OS route is
+ * resolved at request execution, not frozen); Manual stores the normalized
+ * URL; Direct stores nothing.
+ */
+export type ProxySnapshot =
+  { mode: 'system' } | { mode: 'direct' } | { mode: 'manual'; url: string }
+
+/**
+ * Optional per-create proxy selection in DownloadRequest. When omitted the
+ * settings ProxyConfig decides. A partial or unknown mode is rejected by the
+ * IPC schema before it ever reaches the download manager.
+ */
+export type DownloadProxyOverride =
+  { mode: 'system' } | { mode: 'direct' } | { mode: 'manual'; url: string }
+
 export type DefaultHome = 'home' | 'models' | 'datasets' | 'spaces' | 'papers'
 
 export type UiDensity = 'comfortable' | 'compact'
@@ -663,8 +715,8 @@ export interface AppSettings {
   uiScale: number
   /** null = https://huggingface.co */
   hubEndpoint: string | null
-  /** null = no app-level HTTP(S) proxy override */
-  proxyUrl: string | null
+  /** Closed proxy policy: system (OS route) / direct / manual URL. */
+  proxy: ProxyConfig
   /** Open the app automatically when the user logs into the OS. */
   launchAtLogin: boolean
   /** Hide to the system tray instead of quitting when the window is closed. */
@@ -702,7 +754,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pollIntervalMinutes: 30,
   uiScale: 100,
   hubEndpoint: null,
-  proxyUrl: null,
+  proxy: DEFAULT_PROXY_CONFIG,
   launchAtLogin: false,
   closeToTray: false,
   defaultHome: 'home',

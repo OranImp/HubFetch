@@ -103,14 +103,103 @@ describe('ipcRequestSchemas', () => {
     ).toBe(false)
   })
 
-  it('accepts hubEndpoint and proxyUrl http(s) URLs or null', () => {
+  it('accepts hubEndpoint http(s) URLs or null', () => {
     const schema = ipcRequestSchemas['settings:set']!
     expect(schema.safeParse({ patch: { hubEndpoint: 'https://hf-mirror.com' } }).success).toBe(true)
     expect(schema.safeParse({ patch: { hubEndpoint: null } }).success).toBe(true)
-    expect(schema.safeParse({ patch: { proxyUrl: 'http://127.0.0.1:7890' } }).success).toBe(true)
-    expect(schema.safeParse({ patch: { proxyUrl: null } }).success).toBe(true)
     expect(schema.safeParse({ patch: { hubEndpoint: 'ftp://bad.example' } }).success).toBe(false)
-    expect(schema.safeParse({ patch: { proxyUrl: 'not-a-url' } }).success).toBe(false)
+    // The legacy nullable proxyUrl field is gone: strict mode rejects it.
+    expect(schema.safeParse({ patch: { proxyUrl: 'http://127.0.0.1:7890' } }).success).toBe(false)
+  })
+
+  it('accepts all three closed proxy modes in settings patches', () => {
+    const schema = ipcRequestSchemas['settings:set']!
+    expect(
+      schema.safeParse({ patch: { proxy: { mode: 'system', manualUrl: null } } }).success
+    ).toBe(true)
+    expect(
+      schema.safeParse({ patch: { proxy: { mode: 'direct', manualUrl: null } } }).success
+    ).toBe(true)
+    expect(
+      schema.safeParse({
+        patch: { proxy: { mode: 'manual', manualUrl: 'http://127.0.0.1:7897' } }
+      }).success
+    ).toBe(true)
+    // manualUrl is retained across mode switches.
+    expect(
+      schema.safeParse({
+        patch: { proxy: { mode: 'system', manualUrl: 'http://127.0.0.1:7897' } }
+      }).success
+    ).toBe(true)
+  })
+
+  it('rejects unknown proxy modes, bare strings, and missing manual URLs', () => {
+    const schema = ipcRequestSchemas['settings:set']!
+    // Unknown mode: the union is closed — no fallback branch.
+    expect(
+      schema.safeParse({ patch: { proxy: { mode: 'automatic', manualUrl: null } } }).success
+    ).toBe(false)
+    // A nullable string is NOT a mode.
+    expect(schema.safeParse({ patch: { proxy: null } }).success).toBe(false)
+    expect(schema.safeParse({ patch: { proxy: 'http://127.0.0.1:7897' } }).success).toBe(false)
+    // Manual mode requires a concrete URL.
+    expect(
+      schema.safeParse({ patch: { proxy: { mode: 'manual', manualUrl: null } } }).success
+    ).toBe(false)
+  })
+
+  it('rejects credential-bearing and malformed manual proxy URLs', () => {
+    const schema = ipcRequestSchemas['settings:set']!
+    const manual = (manualUrl: string) => ({ patch: { proxy: { mode: 'manual', manualUrl } } })
+    // Valid normalized host:port forms.
+    expect(schema.safeParse(manual('http://127.0.0.1:7897')).success).toBe(true)
+    expect(schema.safeParse(manual('https://proxy.example.com:8443')).success).toBe(true)
+    expect(schema.safeParse(manual('http://[::1]:7897')).success).toBe(true)
+    // Rejected: credentials, wrong protocol, path, query, fragment, missing port, malformed.
+    for (const bad of [
+      'http://user:pass@127.0.0.1:7897',
+      'http://user@127.0.0.1:7897',
+      'ftp://127.0.0.1:7897',
+      'socks5://127.0.0.1:7897',
+      'http://127.0.0.1:7897/path',
+      'http://127.0.0.1:7897?x=1',
+      'http://127.0.0.1:7897#frag',
+      'http://127.0.0.1',
+      '127.0.0.1:7897',
+      'not-a-url',
+      'http://127.0.0.1:0',
+      'http://127.0.0.1:99999'
+    ]) {
+      expect(schema.safeParse(manual(bad)).success).toBe(false)
+    }
+  })
+
+  it('accepts downloads:start proxy overrides for all three modes and rejects unknown ones', () => {
+    const schema = ipcRequestSchemas['downloads:start']!
+    const request = { repoId: 'org/repo', kind: 'model' }
+    expect(schema.safeParse({ request: { ...request, proxy: { mode: 'system' } } }).success).toBe(
+      true
+    )
+    expect(schema.safeParse({ request: { ...request, proxy: { mode: 'direct' } } }).success).toBe(
+      true
+    )
+    expect(
+      schema.safeParse({
+        request: { ...request, proxy: { mode: 'manual', url: 'http://127.0.0.1:7897' } }
+      }).success
+    ).toBe(true)
+    // Credential-bearing override is rejected before it can reach the manager.
+    expect(
+      schema.safeParse({
+        request: { ...request, proxy: { mode: 'manual', url: 'http://user:pass@127.0.0.1:7897' } }
+      }).success
+    ).toBe(false)
+    expect(schema.safeParse({ request: { ...request, proxy: { mode: 'auto' } } }).success).toBe(
+      false
+    )
+    expect(schema.safeParse({ request: { ...request, proxy: { mode: 'manual' } } }).success).toBe(
+      false
+    )
   })
 
   it('accepts hub quicksearch query channels and rejects empty/oversized', () => {

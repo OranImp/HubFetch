@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Globe, RotateCcw, Wifi } from 'lucide-react'
-import { DEFAULT_HUB_ENDPOINT, normalizeHubEndpoint } from '@hubfetch/shared'
+import {
+  DEFAULT_HUB_ENDPOINT,
+  DEFAULT_MANUAL_PROXY_URL,
+  normalizeHubEndpoint,
+  normalizeManualProxyUrl
+} from '@hubfetch/shared'
+import type { ProxyConfig } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { isHubRemoteQuery } from '@/lib/query'
 import { Button } from '@/components/ui/button'
@@ -33,6 +39,27 @@ function parseOptionalUrl(raw: string): { ok: true; value: string | null } | { o
   return { ok: true, value: trimmed.replace(/\/$/, '') }
 }
 
+/**
+ * The Manual proxy URL must be a normalized http(s) host:port with no
+ * userinfo/path/query/fragment — the same rule the IPC schema enforces.
+ * Empty → system mode; otherwise the normalized URL or an error.
+ */
+function parseProxyDraft(raw: string): { ok: true; value: string | null } | { ok: false } {
+  const trimmed = raw.trim()
+  if (trimmed === '') return { ok: true, value: null }
+  const normalized = normalizeManualProxyUrl(trimmed)
+  return normalized === null ? { ok: false } : { ok: true, value: normalized }
+}
+
+/** Closed settings proxy config derived from the single Manual URL field. */
+function proxyConfigFor(manualUrl: string | null, previous: ProxyConfig): ProxyConfig {
+  if (manualUrl === null) {
+    // Empty field = system route; the last Manual URL is retained.
+    return { mode: 'system', manualUrl: previous.manualUrl ?? DEFAULT_MANUAL_PROXY_URL }
+  }
+  return { mode: 'manual', manualUrl }
+}
+
 export function NetworkSection(): React.JSX.Element {
   const { t } = useTranslation(['settings', 'common'])
   const settings = useAppStore((s) => s.settings)
@@ -42,15 +69,15 @@ export function NetworkSection(): React.JSX.Element {
   const push = useToasts((s) => s.push)
 
   const [endpointDraft, setEndpointDraft] = useState(settings.hubEndpoint ?? '')
-  const [proxyDraft, setProxyDraft] = useState(settings.proxyUrl ?? '')
+  const [proxyDraft, setProxyDraft] = useState(settings.proxy.manualUrl ?? '')
   const [endpointError, setEndpointError] = useState(false)
   const [proxyError, setProxyError] = useState(false)
   const [syncedEndpoint, setSyncedEndpoint] = useState(settings.hubEndpoint)
-  const [syncedProxy, setSyncedProxy] = useState(settings.proxyUrl)
+  const [syncedProxy, setSyncedProxy] = useState(settings.proxy.manualUrl)
 
   const applyNetworkSettings = async (
     hubEndpoint: string | null,
-    proxyUrl: string | null
+    proxy: ProxyConfig
   ): Promise<void> => {
     const previousEndpoint = normalizeHubEndpoint(settings.hubEndpoint)
     const endpointChanged = previousEndpoint !== normalizeHubEndpoint(hubEndpoint)
@@ -59,7 +86,7 @@ export function NetworkSection(): React.JSX.Element {
         predicate: (query) => isHubRemoteQuery(query.queryKey)
       })
     }
-    await updateSettings({ hubEndpoint, proxyUrl })
+    await updateSettings({ hubEndpoint, proxy })
     if (!endpointChanged) return
     // Every endpoint-aware remote key ends in its canonical endpoint. Remove
     // only the old partition, then reset any legacy/unkeyed active observers
@@ -80,15 +107,15 @@ export function NetworkSection(): React.JSX.Element {
     setSyncedEndpoint(settings.hubEndpoint)
     setEndpointDraft(settings.hubEndpoint ?? '')
   }
-  if (settings.proxyUrl !== syncedProxy) {
-    setSyncedProxy(settings.proxyUrl)
-    setProxyDraft(settings.proxyUrl ?? '')
+  if (settings.proxy.manualUrl !== syncedProxy) {
+    setSyncedProxy(settings.proxy.manualUrl)
+    setProxyDraft(settings.proxy.manualUrl ?? '')
   }
 
   const apply = useMutation({
     mutationFn: async () => {
       const endpoint = parseOptionalUrl(endpointDraft)
-      const proxy = parseOptionalUrl(proxyDraft)
+      const proxy = parseProxyDraft(proxyDraft)
       setEndpointError(!endpoint.ok)
       setProxyError(!proxy.ok)
       if (!endpoint.ok || !proxy.ok) {
@@ -96,7 +123,7 @@ export function NetworkSection(): React.JSX.Element {
       }
       await applyNetworkSettings(
         endpoint.value === null ? null : normalizeHubEndpoint(endpoint.value),
-        proxy.value
+        proxyConfigFor(proxy.value, settings.proxy)
       )
     },
     onSuccess: () => push(t('settings:network.saved'), 'success'),
@@ -108,7 +135,7 @@ export function NetworkSection(): React.JSX.Element {
     // so type endpoint → Test reflects what Apply would do.
     mutationFn: async () => {
       const endpoint = parseOptionalUrl(endpointDraft)
-      const proxy = parseOptionalUrl(proxyDraft)
+      const proxy = parseProxyDraft(proxyDraft)
       setEndpointError(!endpoint.ok)
       setProxyError(!proxy.ok)
       if (!endpoint.ok || !proxy.ok) {
@@ -164,7 +191,7 @@ export function NetworkSection(): React.JSX.Element {
             onClick={() => {
               setEndpointDraft('')
               setEndpointError(false)
-              void applyNetworkSettings(null, settings.proxyUrl).then(() =>
+              void applyNetworkSettings(null, settings.proxy).then(() =>
                 push(t('settings:network.resetEndpoint'), 'success')
               )
             }}
@@ -205,9 +232,12 @@ export function NetworkSection(): React.JSX.Element {
             onClick={() => {
               setProxyDraft('')
               setProxyError(false)
-              void updateSettings({ proxyUrl: null }).then(() =>
-                push(t('settings:network.resetProxy'), 'success')
-              )
+              void updateSettings({
+                proxy: {
+                  mode: 'system',
+                  manualUrl: settings.proxy.manualUrl ?? DEFAULT_MANUAL_PROXY_URL
+                }
+              }).then(() => push(t('settings:network.resetProxy'), 'success'))
             }}
           >
             <RotateCcw className="size-3.5" aria-hidden />

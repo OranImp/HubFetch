@@ -11,6 +11,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { repoCachePaths } from '@hubfetch/hub-api'
 import { computeSpeedShare } from '@hubfetch/shared'
+import type { ProxyConfig } from '@hubfetch/shared'
 
 vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test' } }))
 
@@ -61,14 +62,14 @@ function createSettings(
     downloadConcurrency: number
     speedLimitBps: number | null
     hfCacheDir: string | null
-    proxyUrl: string | null
+    proxy: ProxyConfig
   }> = {}
 ) {
   const value = {
     downloadConcurrency: 0,
     speedLimitBps: null,
     hfCacheDir: '/tmp/omh-download-test-cache',
-    proxyUrl: 'http://127.0.0.1:7890',
+    proxy: { mode: 'manual', manualUrl: 'http://127.0.0.1:7890' } satisfies ProxyConfig,
     ...overrides
   }
   return { get: () => value }
@@ -146,13 +147,16 @@ describe('DownloadManager frozen environment', () => {
       recursive: true
     })
     expect(tasks[0]).toMatchObject({ revision: 'main', resolvedCommit: COMMIT_A, resumable: true })
+    expect(tasks[0]).toMatchObject({ proxy: { mode: 'manual', url: 'http://127.0.0.1:7890' } })
     expect(tasks[0]).not.toHaveProperty('environment')
     expect(tasks[0]).not.toHaveProperty('endpoint')
     expect(tasks[0]).not.toHaveProperty('proxyUrl')
+    expect(tasks[0]).not.toHaveProperty('proxyMode')
     expect(tasks[0]).not.toHaveProperty('cacheDir')
     expect(db.writes.at(-1)).toMatchObject({
       resolvedCommit: COMMIT_A,
       endpoint: 'https://hub.example.test',
+      proxyMode: 'manual',
       proxyUrl: 'http://127.0.0.1:7890',
       cacheDir: '/tmp/omh-download-test-cache',
       environmentVersion: 1

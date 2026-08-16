@@ -11,7 +11,7 @@ import {
   type WebContents
 } from 'electron'
 import { HubApiError } from '@hubfetch/hub-api'
-import type { IpcEventChannel, IpcEventPayload } from '@hubfetch/shared'
+import type { IpcEventChannel, IpcEventPayload, ProxyConfig } from '@hubfetch/shared'
 import { isValidRepoId } from '@hubfetch/shared'
 import {
   checkSenderTrust,
@@ -43,6 +43,11 @@ import {
   registerWindowsNotificationShortcut,
   removeWindowsNotificationShortcut
 } from './windows-notification-registration'
+
+/** Concrete HTTP(S) proxy URL for a config; null for system/direct. */
+function proxyUrlFromConfig(config: ProxyConfig): string | null {
+  return config.mode === 'manual' ? config.manualUrl : null
+}
 
 // One HubFetch identity everywhere: the name drives the default userData root
 // (`%APPDATA%\HubFetch`), so dev and packaged builds share one database and one
@@ -172,13 +177,13 @@ if (!gotLock) {
         () => auth.sessionCookie(),
         {
           endpoint: initial.hubEndpoint,
-          proxyUrl: initial.proxyUrl
+          proxyUrl: proxyUrlFromConfig(initial.proxy)
         }
       )
     }
     const hub = createHubProxy(hubHolder)
     auth.attachClient(hubHolder.current)
-    await applyAppProxy(initial.proxyUrl)
+    await applyAppProxy(initial.proxy)
     app.setLoginItemSettings({ openAtLogin: initial.launchAtLogin })
 
     // Permission policy — default deny. No renderer permission request is ever
@@ -297,13 +302,14 @@ if (!gotLock) {
     }
 
     const applyNetworkSettings = async (
-      next: { hubEndpoint: string | null; proxyUrl: string | null },
-      prev: { hubEndpoint: string | null; proxyUrl: string | null }
+      next: { hubEndpoint: string | null; proxy: ProxyConfig },
+      prev: { hubEndpoint: string | null; proxy: ProxyConfig }
     ): Promise<void> => {
       const endpointChanged = next.hubEndpoint !== prev.hubEndpoint
-      const proxyChanged = next.proxyUrl !== prev.proxyUrl
+      const proxyChanged =
+        next.proxy.mode !== prev.proxy.mode || next.proxy.manualUrl !== prev.proxy.manualUrl
       if (!endpointChanged && !proxyChanged) return
-      if (proxyChanged) await applyAppProxy(next.proxyUrl)
+      if (proxyChanged) await applyAppProxy(next.proxy)
       // A web-session cookie is bound to the host it was captured on; it must
       // never ride along to a different (mirror) endpoint.
       if (endpointChanged) await auth.disconnectHubSession()
@@ -314,7 +320,7 @@ if (!gotLock) {
           () => auth.sessionCookie(),
           {
             endpoint: next.hubEndpoint,
-            proxyUrl: next.proxyUrl
+            proxyUrl: proxyUrlFromConfig(next.proxy)
           }
         )
         auth.attachClient(hubHolder.current)

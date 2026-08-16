@@ -2,6 +2,28 @@ import type { RepoKind } from './types'
 
 export const DEFAULT_HUB_ENDPOINT = 'https://huggingface.co'
 
+/**
+ * Validate + normalize a manual proxy URL. Accepts only `http(s)://host:port`
+ * with an explicit port (1-65535) and NO userinfo, path (beyond a bare slash),
+ * query, or fragment. Returns the canonical URL or null when invalid.
+ */
+export function normalizeManualProxyUrl(value: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(value.trim())
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+  if (parsed.username !== '' || parsed.password !== '') return null
+  if (parsed.pathname !== '' && parsed.pathname !== '/') return null
+  if (parsed.search !== '' || parsed.hash !== '') return null
+  if (!parsed.hostname || !parsed.port) return null
+  const port = Number(parsed.port)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return null
+  return `${parsed.protocol}//${parsed.host}`
+}
+
 const REPO_PREFIX: Record<RepoKind, string> = {
   model: '',
   dataset: 'datasets/',
