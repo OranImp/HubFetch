@@ -1,0 +1,242 @@
+{
+  "about": {
+    "disclaimer": "This application is not affiliated with, endorsed by, or sponsored by Hugging Face, Inc. \"Hugging Face\" is a trademark of Hugging Face, Inc., used here only to refer to the service this application connects to.",
+    "github": "Source code on GitHub",
+    "license": "Licensed under Apache-2.0",
+    "privacy": "Privacy: everything stays on your machine. No telemetry, no analytics. Your token is encrypted with your OS keychain and stored locally.",
+    "title": "About",
+    "unofficialTitle": "UNOFFICIAL",
+    "updates": {
+      "available": "Version {{version}} is available from GitHub Releases.",
+      "check": "Check for updates",
+      "checkAgain": "Check again",
+      "checking": "Checking GitHub Releases for updates…",
+      "description": "Updates are checked against the latest published GitHub Release.",
+      "download": "Download update",
+      "downloadProgress": "{{transferred}} of {{total}}",
+      "downloading": "Downloading version {{version}} — {{percent}}%",
+      "downloadingButton": "Downloading {{percent}}%",
+      "errors": {
+        "configuration": "The GitHub Release update metadata is unavailable.",
+        "network": "Couldn't reach GitHub Releases. Check your connection and try again.",
+        "permission": "The updater doesn't have permission to install this update.",
+        "unknown": "The update couldn't be completed. Try again or install it from GitHub Releases.",
+        "verification": "The update couldn't be verified, so it wasn't installed."
+      },
+      "manual": "Version {{version}} is available. This unsigned build must be updated manually.",
+      "openReleases": "Open GitHub Releases",
+      "progressLabel": "Update download progress",
+      "ready": "Version {{version}} is ready. Restart the app to install it.",
+      "restartAndInstall": "Restart and install",
+      "retry": "Retry",
+      "retryInstall": "Retry installation",
+      "title": "App updates",
+      "toastAvailable": "Version {{version}} is available.",
+      "toastReady": "Version {{version}} is ready to install.",
+      "unsupported": "In-app updates are available only in installed builds.",
+      "upToDate": "You're running the latest version.",
+      "view": "View"
+    },
+    "version": "Version {{version}}"
+  },
+  "account": {
+    "billing": {
+      "empty": "No usage recorded for the current period.",
+      "gated": "Billing usage requires the read-billing permission. Re-authorize to grant it.",
+      "period": "{{start}} – {{end}}",
+      "title": "Billing usage",
+      "unauthorized": "The Hub did not authorize this token to read billing usage."
+    },
+    "hub": {
+      "missingScopes": "Missing permissions: {{scopes}}. Re-authorize to grant them.",
+      "reauthorize": "Re-authorize",
+      "roleLabels": {
+        "fineGrained": "Fine-grained",
+        "read": "Read",
+        "write": "Write"
+      },
+      "scopes": "Granted permissions",
+      "scopesUnknown": "The permissions granted to this session are unknown. Re-authorize to refresh them.",
+      "title": "Hub account",
+      "tokenHint": "Signed in with a User Access Token. What this app can do is decided by the token's own permissions on the Hub — including the Hub notification inbox, which browser sign-in can't reach.",
+      "tokenSession": "Access token"
+    },
+    "scopeLabels": {
+      "inference-api": "Inference API",
+      "jobs": "Manage jobs",
+      "manage-repos": "Manage repositories",
+      "openid": "Sign-in identity",
+      "profile": "Read profile",
+      "read-billing": "Read billing",
+      "read-collections": "Read collections",
+      "read-repos": "Read repositories",
+      "webhooks": "Manage webhooks",
+      "write-collections": "Write collections",
+      "write-discussions": "Post discussions",
+      "write-repos": "Write repositories"
+    },
+    "title": "Account"
+  },
+  "appearance": {
+    "accent": "Accent color",
+    "accentOptions": {
+      "blue": "Blue",
+      "default": "Default",
+      "green": "Green",
+      "orange": "Orange",
+      "violet": "Violet"
+    },
+    "browsePageSize": "Browse page size",
+    "browsePageSizeOption": "{{count}} per page",
+    "defaultHome": "Default home",
+    "defaultSort": "Default sort",
+    "density": "Density",
+    "densityOptions": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
+    "fontScale": "Text size",
+    "fontScaleDecrease": "Decrease text size",
+    "fontScaleIncrease": "Increase text size",
+    "historyLimit": "History limit",
+    "historyLimitOption": "{{count}} items",
+    "homeOptions": {
+      "datasets": "Datasets",
+      "home": "Home feed",
+      "models": "Models",
+      "papers": "Papers",
+      "spaces": "Spaces"
+    },
+    "language": "Language",
+    "openTarget": {
+      "app": "In app",
+      "browser": "System browser"
+    },
+    "repoOpenTarget": "Open favorites & history",
+    "sidebarCollapsed": "Collapse sidebar by default",
+    "title": "Appearance",
+    "uiScale": "Interface scale",
+    "uiScaleDecrease": "Decrease interface scale",
+    "uiScaleIncrease": "Increase interface scale"
+  },
+  "desktop": {
+    "closeHintMac": "Closing the window hides the app to the menu bar tray. Quit from the tray menu or Dock to exit fully.",
+    "closeHintOther": "Closing the window hides the app to the system tray. Quit from the tray menu to exit fully.",
+    "closeToTray": "Close to tray",
+    "launchAtLogin": "Launch at login",
+    "launchAtLoginHint": "Start Oh My HuggingFace when you sign in to this computer.",
+    "title": "Desktop"
+  },
+  "downloads": {
+    "cacheDir": "HF cache directory",
+    "cacheDirDefault": "System default",
+    "choose": "Choose…",
+    "concurrency": "Parallel downloads",
+    "reset": "Reset",
+    "speedLimit": "Speed limit",
+    "speedPerSecond": "{{value}}/s",
+    "title": "Downloads",
+    "unlimited": "Unlimited"
+  },
+  "groups": {
+    "about": "About",
+    "account": "Account",
+    "connection": "Connection",
+    "data": "Data",
+    "interface": "Interface",
+    "system": "System"
+  },
+  "network": {
+    "apply": "Apply",
+    "description": "Override the Hub API base URL and optionally route traffic through an HTTP(S) proxy. Leave blank to use defaults.",
+    "downloadWarning": "In-flight downloads may keep the previous endpoint or proxy until they are paused and resumed.",
+    "hubEndpoint": "Hub endpoint",
+    "invalidUrl": "Enter a valid http:// or https:// URL, or leave blank.",
+    "proxyUrl": "HTTP(S) proxy",
+    "reset": "Reset to default",
+    "resetEndpoint": "Hub endpoint reset to default.",
+    "resetProxy": "Proxy cleared.",
+    "saved": "Network settings saved.",
+    "test": "Test connection",
+    "testFail": "Connection failed: {{error}}",
+    "testOk": "Connected to the Hub successfully.",
+    "title": "Network"
+  },
+  "notifications": {
+    "enabled": "System notifications",
+    "minutes": "{{count}} min",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "pollInterval": "Check follows every",
+    "title": "Notifications"
+  },
+  "privacy": {
+    "cache": {
+      "open": "Open cache manager",
+      "path": "Location",
+      "retry": "Retry",
+      "scanFailed": "Couldn't scan the cache.",
+      "size": "Total size",
+      "title": "HF cache"
+    },
+    "local": {
+      "clear": "Clear local data…",
+      "confirm": "Clear data",
+      "confirmBody": "Choose what to remove on this device:",
+      "confirmTitle": "Clear local data?",
+      "description": "Clears selected favorites, history, download records, follows, and inbox on this device. Does not delete model or dataset files in the HF cache.",
+      "items": {
+        "downloads": "Download task records",
+        "favorites": "Favorites",
+        "follows": "Followed accounts",
+        "history": "Browse history",
+        "inbox": "Local inbox",
+        "otherKv": "Other local app data"
+      },
+      "signOutAlso": "Also sign out of Hub",
+      "success": "Local data cleared.",
+      "successSignedOut": "Local data cleared. You have been signed out.",
+      "title": "App local data"
+    },
+    "title": "Privacy & data",
+    "transfer": {
+      "description": "Export or import appearance and preference settings as JSON. Does not include account tokens or library data. Cache directory on this machine is kept when importing.",
+      "export": "Export settings…",
+      "exportSuccess": "Settings exported.",
+      "import": "Import settings…",
+      "importSuccess": "Settings imported.",
+      "title": "Settings transfer"
+    }
+  },
+  "profile": {
+    "avatar": "Avatar",
+    "avatarHint": "PNG, JPEG or WebP, up to 10 MB.",
+    "avatarUpload": "Upload image",
+    "bluesky": "Bluesky username",
+    "details": "AI & ML interests",
+    "error": "Couldn't save the profile: {{error}}",
+    "fullname": "Full name",
+    "github": "GitHub username",
+    "homepage": "Homepage",
+    "homepagePlaceholder": "https://",
+    "linkedin": "LinkedIn profile",
+    "loadError": "Couldn't load your profile: {{error}}",
+    "needsSession": "Editing your public profile needs a Hub web session — connect one under Account.",
+    "openAccount": "Go to Account",
+    "primaryOrg": "Primary organization",
+    "primaryOrgHint": "Only Team / Enterprise / Plus organizations can be set as primary. The menu groups available vs unavailable options.",
+    "primaryOrgNone": "None",
+    "primaryOrgNonePaid": "None of your organizations are on a paid plan, so a primary organization can’t be set yet.",
+    "primaryOrgGroupAvailable": "Available",
+    "primaryOrgGroupUnavailable": "Unavailable (paid plan required)",
+    "primaryOrgOptionAvailable": "{{name}} ({{plan}})",
+    "primaryOrgOptionUnavailable": "{{name}} — unavailable",
+    "primaryOrgSummary": "{{available}} available · {{unavailable}} unavailable",
+    "save": "Save changes",
+    "saved": "Profile saved",
+    "title": "Public profile",
+    "twitter": "Twitter username",
+    "avatarTooLarge": "That image is too large — avatars are limited to 10 MB."
+  },
+  "title": "Settings"
+}

@@ -1,0 +1,41 @@
+{
+  "compose": {
+    "error": "Couldn't publish the post: {{error}}",
+    "new": "New post",
+    "placeholder": "Share an update with the community… Markdown is supported.",
+    "posted": "Post published",
+    "submit": "Publish",
+    "unavailable": "Posting unavailable: {{reason}}",
+    "unavailableFallback": "your account is not in the posting beta yet."
+  },
+  "feed": {
+    "acted": {
+      "discussion": "<author>{{actor}}</author> in <repo>{{repo}}</repo>",
+      "liked": "<author>{{actor}}</author> liked",
+      "published": "<author>{{actor}}</author> published",
+      "untitledDiscussion": "Untitled",
+      "updated": "<author>{{actor}}</author> updated"
+    },
+    "empty": "Nothing here yet",
+    "emptyBody": "Activity from the Hub will show up here.",
+    "emptyFollowing": "You're not following anyone yet",
+    "emptyFollowingBody": "Follow users and organizations from the Inbox to see their latest models and datasets here.",
+    "manageFollows": "Manage follows",
+    "updated": "<author>{{author}}</author> updated <repo>{{repo}}</repo>",
+    "error": "Couldn't load the feed"
+  },
+  "kind": {
+    "post": "Post"
+  },
+  "reactions": {
+    "onHub": "React on the Hub",
+    "react": "Add a reaction",
+    "toggle": "React with {{emoji}}"
+  },
+  "title": "Home",
+  "trending": {
+    "all": "All",
+    "empty": "Nothing trending right now",
+    "title": "Trending"
+  }
+}

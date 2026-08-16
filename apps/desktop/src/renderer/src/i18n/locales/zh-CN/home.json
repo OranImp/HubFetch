@@ -1,0 +1,41 @@
+{
+  "compose": {
+    "error": "发布失败：{{error}}",
+    "new": "发新帖",
+    "placeholder": "向社区分享动态… 支持 Markdown。",
+    "posted": "帖子已发布",
+    "submit": "发布",
+    "unavailable": "发帖暂不可用：{{reason}}",
+    "unavailableFallback": "你的账号尚未加入发帖 beta。"
+  },
+  "feed": {
+    "acted": {
+      "discussion": "<author>{{actor}}</author> 在 <repo>{{repo}}</repo>",
+      "liked": "<author>{{actor}}</author> 赞了",
+      "published": "<author>{{actor}}</author> 发布了",
+      "untitledDiscussion": "无标题",
+      "updated": "<author>{{actor}}</author> 更新了"
+    },
+    "empty": "暂时没有内容",
+    "emptyBody": "Hugging Face Hub 上的动态会显示在这里。",
+    "emptyFollowing": "你还没有关注任何人",
+    "emptyFollowingBody": "在收件箱中关注用户和组织，他们最新的模型和数据集就会出现在这里。",
+    "manageFollows": "管理关注",
+    "updated": "<author>{{author}}</author> 更新了 <repo>{{repo}}</repo>",
+    "error": "动态加载失败"
+  },
+  "kind": {
+    "post": "帖子"
+  },
+  "reactions": {
+    "onHub": "在 Hub 上回应",
+    "react": "添加回应",
+    "toggle": "用 {{emoji}} 回应"
+  },
+  "title": "首页",
+  "trending": {
+    "all": "全部",
+    "empty": "暂无热门内容",
+    "title": "热门"
+  }
+}

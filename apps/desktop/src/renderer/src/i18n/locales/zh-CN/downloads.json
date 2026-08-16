@@ -1,0 +1,49 @@
+{
+  "actions": {
+    "cancel": "取消",
+    "openFolder": "在文件夹中显示",
+    "pause": "暂停",
+    "remove": "从列表移除",
+    "resume": "继续"
+  },
+  "bulk": {
+    "clearCompleted": "清除已完成",
+    "pauseAll": "全部暂停",
+    "resumeAll": "全部继续"
+  },
+  "commands": {
+    "actions": "操作",
+    "downloadCurrentRepository": "下载 {{repo}}",
+    "downloadRepository": "下载仓库",
+    "downloadSelectedFile": "下载 {{file}}",
+    "searchPlaceholder": "搜索要下载的模型、数据集或 Space…",
+    "started": "下载已开始",
+    "starting": "正在启动下载…",
+    "typeToSearch": "输入仓库名称以开始下载。"
+  },
+  "confirmRemove": {
+    "body": "该下载仍在进行中。移除会取消传输，并将其从列表中删除。",
+    "confirm": "取消并移除",
+    "title": "移除进行中的下载？"
+  },
+  "count_other": "{{count}} 个任务",
+  "empty": {
+    "body": "找到心仪的模型后点击“下载”——文件会存入标准 HF 缓存，transformers、llama.cpp 等工具可直接使用。",
+    "title": "还没有下载任务"
+  },
+  "files": "{{done}}/{{total}} 个文件",
+  "removed": "已移除下载记录",
+  "revision": "修订 {{revision}}",
+  "speed": "{{speed}}/秒",
+  "status": {
+    "canceled": "已取消",
+    "completed": "已完成",
+    "error": "失败",
+    "paused": "已暂停",
+    "queued": "排队中",
+    "running": "下载中"
+  },
+  "title": "下载",
+  "verified": "sha256 校验通过",
+  "checksumsVerified": "校验和验证通过"
+}

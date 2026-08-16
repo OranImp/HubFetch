@@ -1,0 +1,87 @@
+{
+  "bell": {
+    "empty": "No new notifications",
+    "title": "Notifications",
+    "viewAll": "View all notifications"
+  },
+  "checked": "{{count}} new item(s)",
+  "checked_one": "{{count}} new item",
+  "checked_other": "{{count}} new items",
+  "checking": "Checking…",
+  "checkNow": "Check now",
+  "clear": "Clear inbox",
+  "empty": {
+    "body": "Follow users, orgs, repositories, or the Daily Papers digest and updates will land here.",
+    "title": "You're all caught up"
+  },
+  "follows": {
+    "add": "Follow",
+    "empty": "Not following anything yet.",
+    "loadError": "Couldn't load followed sources",
+    "targetLabel": "User, organization, or repository to follow",
+    "imported": "Imported {{count}} account(s) you follow on the Hub",
+    "imported_one": "Imported {{count}} account you follow on the Hub",
+    "imported_other": "Imported {{count}} accounts you follow on the Hub",
+    "importFromHub": "Import from Hugging Face",
+    "papers": "Daily Papers digest",
+    "placeholder": "username, org, or model:org/name",
+    "removed": "Unfollowed {{target}}",
+    "title": "Following",
+    "type": {
+      "org": "Organization",
+      "papers": "Papers",
+      "repo": "Repository",
+      "user": "User"
+    }
+  },
+  "hub": {
+    "clearAll": "Clear all",
+    "loadError": "Couldn't load Hub notifications",
+    "confirmClear": {
+      "body": "This permanently removes every notification from your Hugging Face inbox.",
+      "confirm": "Clear all",
+      "title": "Clear all Hub notifications?"
+    },
+    "empty": {
+      "body": "Notifications from discussions, pull requests, and posts on the Hub will show up here.",
+      "title": "No Hub notifications"
+    },
+    "kind": {
+      "org": "Organization",
+      "other": "Other",
+      "paper": "Paper",
+      "post": "Post",
+      "repo": "Repository"
+    },
+    "pageNext": "Next page",
+    "pageOf": "Page {{page}} of {{pages}}",
+    "pagePrev": "Previous page",
+    "signIn": {
+      "action": "Open account settings",
+      "body": "Connect your Hugging Face account to sync the notification inbox from the Hub.",
+      "title": "Sign in to see Hub notifications"
+    },
+    "unauthorized": {
+      "action": "Open on the Hub",
+      "body": "This access token can't read Hub notifications (a read-only or insufficient fine-grained token). Create a write or fine-grained token with notification access, or view them on the Hub.",
+      "title": "Hub notifications unavailable",
+      "tokenAction": "Manage tokens"
+    }
+  },
+  "kind": {
+    "new-repo": "New",
+    "paper": "Paper",
+    "repo-update": "Updated"
+  },
+  "markAllRead": "Mark all read",
+  "local": {
+    "loadError": "Couldn't load the local inbox"
+  },
+  "unreadCount": "{{count}} unread item",
+  "unreadCount_other": "{{count}} unread items",
+  "tabs": {
+    "hub": "Hub notifications",
+    "local": "Following feed"
+  },
+  "title": "Inbox"
+}

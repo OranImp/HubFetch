@@ -1,160 +1,144 @@
-# HubFetch
+# Oh My HuggingFace
 
-HubFetch is a Windows 11 x64 desktop application for managing local Hugging
-Face download and Git clone workflows. It runs a one-task-at-a-time transfer
-queue, downloads individual files and filtered snapshots through a pinned
-`huggingface_hub` adapter, performs real Git working-copy clones through
-system Git, and ships as an unsigned portable ZIP with no installer and no
-update mechanism.
+> [!IMPORTANT]
+> **UNOFFICIAL.** Oh My HuggingFace is an independent, community-built desktop client for the
+> Hugging Face Hub. It is **not affiliated with, endorsed by, or sponsored by Hugging Face, Inc.**
+> "Hugging Face" is a trademark of Hugging Face, Inc. and is used here only to refer to the
+> service this application connects to.
 
-HubFetch is an independent project and is not affiliated with or endorsed by
-Hugging Face, Inc.
+An open-source, cross-platform (macOS / Windows / Linux) desktop client for browsing the Hugging
+Face Hub, managing large model downloads, and plugging models into your local AI toolchain.
 
-## What HubFetch does
+**Privacy-first: everything stays on your machine.** No telemetry, no analytics, no external
+services beyond the Hugging Face API itself. Your access token is encrypted with your OS keychain
+(Electron `safeStorage`) and stored in `~/.oh_my_hf/credentials.json` with owner-only permissions.
 
-- **Downloads** — single-file and filtered/full snapshot downloads for model,
-  dataset, and Space repositories at a branch, tag, or full commit revision,
-  with dry-run estimates, include/exclude patterns, automatic Hub cache
-  resume, and three destination conflict policies.
-- **Clones** — real Git working-copy clones through system Git and system
-  Git-Xet into an empty or new destination, with forced progress capture,
-  dependency/version diagnostics, and Git Credential Manager / SSH preference
-  with an app-token AskPass fallback.
-- **Queue** — one global FIFO scheduler; exactly one task runs at a time, the
-  next queued task starts automatically, and interrupted work is recovered at
-  startup.
-- **Cancellation, retry, recovery** — queued tasks cancel without a worker,
-  active tasks receive a cooperative stop and then a bounded process-tree
-  termination, terminal tasks can be retried as fresh linked attempts, and
-  abandoned `running`/`cancelling` tasks become `interrupted` at startup.
-- **Authentication** — anonymous access, shared machine browser OAuth behind
-  one pinned compatibility adapter, or HubFetch-only manual tokens stored in
-  Windows Credential Manager behind opaque aliases.
-- **Proxies** — per-task system inheritance, an explicit direct mode, or a
-  validated manual HTTP/HTTPS proxy (seeded with `http://127.0.0.1:7897`).
-- **Diagnostics** — cache/disk/dependency checks, Windows symlink awareness,
-  Git/Git-Xet and credential-helper readiness, endpoint reachability, and
-  sanitized support-bundle ZIP export.
-- **Languages** — Simplified Chinese as the default locale with a complete
-  English catalog from the first release.
+![Three-pane browse view: model list with a live detail pane](docs/screenshots/browse.png)
 
-## Release facts
+## Features
 
-| Item | Value |
-|---|---|
-| Version | 0.1.0 |
-| Platform | Windows 11 x64 (build >= 22000, AMD64) |
-| Runtime | Python 3.12 (`>=3.12,<3.13`) |
-| GUI | PySide6 6.11.1 |
-| Hub library | huggingface_hub 1.27.0 |
-| Packaging | PyInstaller 6.22.0, one-folder COLLECT, no UPX, no one-file |
-| Identifiers | `HubFetch.Desktop`, `HubFetch.Credentials`, `hubfetch.db` |
-| License | MIT (see `LICENSE`, `THIRD_PARTY_NOTICES.md`, `docs/qt-lgpl-compliance.md`) |
-| Delivery | Unsigned portable ZIP `artifacts/HubFetch-0.1.0-windows-x64.zip` |
-| Updates | None — no update check, no release polling, no self-update |
+- **Browse** — Models / Datasets / Spaces / Daily Papers in a three-pane, keyboard-first UI with
+  virtualized lists, instant model-card rendering (sanitized Markdown), file trees, and metadata.
+- **Search everything** — `Cmd/Ctrl+K` command palette: search, filter (task, library, license),
+  and sort (trending / likes / downloads).
+- **Sign in** — paste a Hugging Face User Access Token; it is encrypted at rest,
+  never stored in plaintext, never in `localStorage`.
+- **Download manager** — resumable, parallel, queued downloads with speed limiting, SHA-256
+  verification, and system notifications. Files land in the **standard HF cache layout**, fully
+  interoperable with `transformers`, `huggingface-cli`, and friends.
+- **Cache visualizer** — scan your HF cache, see disk usage per repo, and clean stale revisions
+  with one click.
+- **Follow & inbox** — follow users/orgs/repos and Daily Papers; get system notifications.
+- **Compare** — 2–4 models side by side (params, license, downloads, likes).
+- **Upload & export** — scan and upload local folders safely; export downloaded files to Ollama,
+  LM Studio, or ComfyUI with progress and cancellation.
+- **History** — local, searchable browsing history with repository-type filters.
+- **i18n** — English and 简体中文 built in; adding a language is a single JSON folder.
+- **Dark & light themes**, native menus, and OS conventions on every platform.
+- **In-app updates** — installed builds compare their version with the latest published GitHub
+  Release, then download and restart-install only after explicit confirmation.
 
-## What HubFetch does NOT do
+## Install
 
-HubFetch does not provide upload, repository create/delete/move/settings/tag
-or branch mutation, or any other remote-write feature. It ships no MSIX
-package, no installer, no signing or elevation, and no background updater. It
-bundles no Git, Git-Xet, or Hugging Face command-line tool; Git and Git-Xet
-must be installed separately. Git clones are never resumed in place; a
-retried clone requires an empty or new destination. Manual tokens are never
-accepted or recommended through environment variables (`HF_TOKEN` and the
-other credential-bearing variables are stripped from every worker
-environment). There is no official Hugging Face affiliation or endorsement,
-and the package is not a trusted-signing release.
+Grab the latest release for your platform from
+[GitHub Releases](https://github.com/oh-my-hf/ohmyhf/releases):
 
-## Prerequisites
+- **macOS** — `.dmg`
+- **Windows** — `.exe` (NSIS installer)
+- **Linux** — `.AppImage` or `.deb`
 
-- Windows 11 x64 (build >= 22000)
-- Python 3.12 (only for development and building; the packaged archive needs
-  no installed Python)
-- `uv` (development and building)
-- Git (runtime, for clone tasks)
-- Git-Xet (runtime, for repositories that use Xet storage; download-only
-  tasks do not require it)
+### macOS: Gatekeeper / quarantine
 
-Install Git and Git-Xet as an unprivileged user; neither requires elevation.
-Git for Windows installs credential helper support through Git Credential
-Manager. See [docs/user-guide.zh-CN.md](docs/user-guide.zh-CN.md) or
-[docs/user-guide.en.md](docs/user-guide.en.md) for exact `winget` commands and
-the non-elevated guidance.
+macOS release builds use the stable self-signed `OhMyHF-Release` certificate; local builds remain
+**ad-hoc signed**. Neither is Developer ID notarized (see [docs/signing.md](docs/signing.md)). After
+a browser download, first launch may still need:
 
-## Quick start (user)
+```sh
+xattr -dr com.apple.quarantine "/Applications/Oh My HuggingFace.app"
+```
 
-1. Extract the portable ZIP into a folder (a path with spaces or non-ASCII
-   characters is fine).
-2. Start `HubFetch.exe`. Windows will show a SmartScreen warning because the
-   archive is unsigned; read it, choose "More info / Run anyway" only if you
-   trust the source of the archive.
-3. Use **Download** to fetch files or snapshots and **Clone** to create a Git
-   working copy, then watch the queue in **Tasks**.
-4. See **Diagnostics** for cache/disk/Git/credential health and to export a
-   support bundle.
+or right-click the app → **Open** → **Open**.
 
-Read the full user guide: [简体中文](docs/user-guide.zh-CN.md) /
-[English](docs/user-guide.en.md).
-
-## Documentation
-
-- [User guide (简体中文)](docs/user-guide.zh-CN.md) — primary documentation
-- [User guide (English)](docs/user-guide.en.md) — paired translation
-- [Architecture](docs/architecture.md) — maintainer documentation
-- [Security model](docs/security.md) — credential boundaries and redaction
-- [Troubleshooting](docs/troubleshooting.md) — diagnostics and common issues
-- [Releasing](docs/releasing.md) — reproducible release procedure
-- [Contributing](docs/contributing.md) — development workflow and gates
-- [Qt LGPL compliance](docs/qt-lgpl-compliance.md) — dynamic Qt licensing
-- [Design system](DESIGN.md) — Transfer Ledger design tokens and rules
-- [Changelog](CHANGELOG.md)
+The app can discover new GitHub Releases from **Settings → About**. Releases signed with the same
+self-signed certificate can update in-app; older or differently signed installations use the
+GitHub Releases link as the one-time manual fallback.
 
 ## Development
 
-```powershell
-uv sync --frozen
-uv run ruff format --check .
-uv run ruff check .
-uv run basedpyright
-uv run pytest -q
-uv run python scripts/check_no_excuse_rules.py .
+Prerequisites: **Node.js ≥ 22**, **pnpm ≥ 11** (`corepack enable`), and a C++ toolchain for
+native modules (Xcode CLT on macOS, `build-essential` on Linux, VS Build Tools on Windows).
+
+```sh
+pnpm install        # installs deps and rebuilds better-sqlite3 for Electron
+pnpm dev            # launches the app with hot reload
+pnpm test           # unit tests (vitest)
+pnpm typecheck      # strict TS across the workspace
+pnpm lint           # ESLint (includes hardcoded-string checks for i18n)
+pnpm build          # production build of every package
 ```
 
-Run all quality gates at once:
+Platform packaging (from `apps/desktop`):
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\run_quality_gates.ps1
+```sh
+pnpm --filter oh-my-huggingface-desktop build:linux   # AppImage + deb
+pnpm --filter oh-my-huggingface-desktop build:mac     # dmg (ad-hoc signed)
+pnpm --filter oh-my-huggingface-desktop build:win     # nsis
 ```
 
-Check the design contract and package policy:
+### Sign-in
 
-```powershell
-uv run python scripts/check_design_contract.py
-uv run python scripts/check_package_policy.py packaging\hubfetch.spec --json .omo\evidence\package-policy.json
-uv run python scripts/generate_notices.py --check
+Paste a [User Access Token](https://huggingface.co/settings/tokens) in
+**Settings → Account**. Prefer a **write** token (or a fine-grained token with the
+permissions you need) so downloads of gated repos, discussions, collections, and
+Hub notifications all work. The token is encrypted with the OS keychain and stored
+at `~/.oh_my_hf/credentials.json`.
+
+### Security
+
+- **The token** is encrypted with the OS keychain (Electron `safeStorage`) and stored at
+  `~/.oh_my_hf/credentials.json` (`0600`), **never plaintext and never in localStorage**. The
+  file lives outside the per-profile `userData` directory so every session — packaged app,
+  `pnpm dev`, extra profiles — shares one login. `OMH_CREDENTIALS_DIR` relocates it (tests use
+  this for isolation). Deleting the file signs you out everywhere.
+- **No network calls forward the token cross-host**: the `Authorization` header is only sent to
+  `huggingface.co` API hosts, never to the CDN/`resolve` redirect targets.
+
+### Releasing
+
+Releases are cut from `main` by a commit whose subject is `[RELEASE] Vx.y.z`. See
+[docs/releasing.md](docs/releasing.md) for the full flow; in short: bump all four workspace
+manifest versions, then land a commit titled e.g. `[RELEASE] V0.2.0`. CI verifies the source,
+builds and smoke-tests all three platforms, and validates the updater manifests before it creates
+the `v0.2.0` tag or draft release. Publishing happens only after the remote asset list is verified.
+
+## Architecture
+
+```
+packages/shared     @oh-my-huggingface/shared    shared types + typed IPC contract
+packages/hub-api    @oh-my-huggingface/hub-api   pure-TS Hub API client (zero Electron deps)
+apps/desktop        oh-my-huggingface-desktop    electron-vite app (main / preload / renderer)
 ```
 
-## Building the portable archive
+- The **main process** owns all network, downloads, cache scanning, and polling (via `hub-api`);
+  heavy work runs in `worker_threads` off the main thread.
+- The **renderer** is view-only React (React Router, Zustand, TanStack Query/Virtual, Tailwind,
+  Radix). `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, strict CSP.
+- The whole IPC surface is a **typed contract** in `packages/shared` — no magic strings; every
+  handler validates its input.
+- Local SQLite (better-sqlite3) stores favorites, history, download tasks, follows, and settings.
+  The token lives only in the separate safeStorage-encrypted credentials file; a legacy database
+  token is migrated and deleted on first successful restore.
 
-From a clean shell on Windows 11 x64:
+## Contributing
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1 -Frozen -EvidenceDir .omo\evidence\task-30-windows-huggingface-manager
-powershell -ExecutionPolicy Bypass -File scripts\smoke_portable.ps1 -Zip artifacts\HubFetch-0.1.0-windows-x64.zip -EvidenceDir .omo\evidence\task-30-windows-huggingface-manager\smoke
-```
-
-The build asserts the platform, the exact Python 3.12 and pinned dependency
-versions, the clean frozen lock, every mandatory quality gate, translation
-compilation, license notices, and the package policy before producing
-`artifacts/HubFetch-0.1.0-windows-x64.zip`. The smoke script extracts the ZIP
-into a clean path with spaces and non-ASCII characters, removes the project,
-venv, and Python from `PATH`, and runs the packaged `--smoke-test` plus a GUI
-capture with an isolated app-data root. See [docs/releasing.md](docs/releasing.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Translations are especially welcome — locales live in
+`apps/desktop/src/renderer/src/i18n/locales/<lang>/` (renderer) and
+`apps/desktop/src/main/i18n/locales/` (native menus & notifications).
 
 ## License
 
-HubFetch is distributed under the MIT license (see `LICENSE`). Third-party
-component licenses are listed in `THIRD_PARTY_NOTICES.md`; Qt/PySide6
-compliance is documented in `docs/qt-lgpl-compliance.md`. The bundled
-Cascadia Mono font is under the SIL Open Font License 1.1 (`resources/fonts/OFL.txt`).
+[Apache-2.0](LICENSE). Not affiliated with Hugging Face, Inc.
+
+## Friendly Link
+
+- [linux.do](https://linux.do) —— Where possible begins

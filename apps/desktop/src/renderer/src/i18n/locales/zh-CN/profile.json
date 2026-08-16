@@ -1,0 +1,76 @@
+{
+  "editProfile": "编辑资料",
+  "empty": {
+    "dataset": "还没有公开的数据集",
+    "model": "还没有公开的模型",
+    "space": "还没有公开的 Space"
+  },
+  "error": {
+    "title": "无法加载该用户主页"
+  },
+  "follow": "关注",
+  "followError": "无法更新关注状态：{{error}}",
+  "members": "成员",
+  "orgBadge": "组织",
+  "orgsLabel": "所属组织",
+  "plan": {
+    "academia": "Academia",
+    "enterprise": "Enterprise",
+    "enterprisePlus": "Enterprise Plus",
+    "pro": "PRO",
+    "team": "Team"
+  },
+  "post": {
+    "actions": "评论操作",
+    "comment": {
+      "heading": "发表评论",
+      "placeholder": "写下评论… 支持 Markdown。",
+      "posted": "评论已发布"
+    },
+    "commentOnHub": "在 Hub 上评论",
+    "commentsOnHub": "社区帖评论需要 Hub 网页会话——可在 设置 → 账户 中连接，或到 Hub 打开该帖再回复。",
+    "error": {
+      "title": "无法加载该帖子"
+    },
+    "hide": {
+      "action": "隐藏",
+      "confirm": "隐藏评论",
+      "done": "评论已隐藏",
+      "error": "隐藏评论失败：{{error}}",
+      "hidden": "该评论已被隐藏。",
+      "hiddenWithReason": "该评论已被隐藏（标记为 {{reason}}）。",
+      "reason": "原因",
+      "selectReason": "选择隐藏该评论的原因（可选）：",
+      "title": "隐藏评论",
+      "warning": "隐藏评论不可撤销，之后任何人都无法再看到其内容。"
+    },
+    "reply": "回复",
+    "replyInThread": "在话题中回复",
+    "replyPlaceholder": "回复 {{user}}… 支持 Markdown。"
+  },
+  "reactions": {
+    "error": "回应更新失败：{{error}}"
+  },
+  "selfBadge": "我的主页",
+  "stats": {
+    "datasets": "数据集",
+    "followers": "关注者",
+    "following": "正在关注",
+    "members": "成员",
+    "models": "模型",
+    "spaces": "Spaces"
+  },
+  "unfollow": "取消关注",
+  "unwatch": "取消 Watch",
+  "unwatchOpenHub": "Hub 会忽略应用发起的 Unwatch——请到其 Hub 页面上操作。",
+  "viewProfile": "查看主页",
+  "watch": "Watch",
+  "watchError": "无法更新 Watch：{{error}}",
+  "watchOnHub": "在 Hub 中打开",
+  "watchReconnect": "打开设置",
+  "watchSessionExpired": "Hub 忽略了本次 Watch 变更——网页会话可能已过期。请在 设置 → 账户 中重新连接。",
+  "watchSuccess": "已 Watch——你将收到该账号的 Hub 通知。",
+  "unwatchSuccess": "已取消 Watch。",
+  "watchOpenHub": "Hub 会忽略应用发起的 Watch——请到其 Hub 页面上点 Watch repositories。",
+  "watchSyncNotApplied": "已在本地关注。Hub 会忽略应用发起的 watch 请求——如需该账号的 Hub 通知，请到其 Hub 页面上点 Watch。"
+}

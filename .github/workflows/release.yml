@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and verify every release artifact without creating a tag or release
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ohmyhf-release
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Detect release version
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.detect.outputs.release }}
+      version: ${{ steps.detect.outputs.version }}
+      dry_run: ${{ steps.detect.outputs.dry_run }}
+      commit_sha: ${{ steps.detect.outputs.commit_sha }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - id: detect
+        name: Parse version and validate workspace manifests
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_DRY_RUN: ${{ inputs.dry_run || false }}
+        run: |
+          set -euo pipefail
+          arguments=()
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            arguments=(--subject "$(git log -1 --pretty=%s)")
+          fi
+          result="$(node .github/scripts/release-tools/detect-version.mjs "${arguments[@]}")"
+          echo "$result"
+          echo "release=$(jq -r .release <<<"$result")" >>"$GITHUB_OUTPUT"
+          echo "version=$(jq -r .version <<<"$result")" >>"$GITHUB_OUTPUT"
+          echo "dry_run=$REQUESTED_DRY_RUN" >>"$GITHUB_OUTPUT"
+          echo "commit_sha=$GITHUB_SHA" >>"$GITHUB_OUTPUT"
+
+  verify:
+    needs: detect
+    if: needs.detect.outputs.release == 'true'
+    uses: ./.github/workflows/verify.yml
+
+  build:
+    needs: [detect, verify]
+    if: needs.detect.outputs.release == 'true'
+    uses: ./.github/workflows/packaged-smoke.yml
+    with:
+      commit_sha: ${{ needs.detect.outputs.commit_sha }}
+      publishable: true
+      signed_macos: ${{ needs.detect.outputs.dry_run != 'true' }}
+    secrets:
+      MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+      MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+
+  preflight:
+    name: Verify release assets and updater metadata
+    needs: [detect, build]
+    if: needs.detect.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out verification scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.detect.outputs.commit_sha }}
+
+      - name: Download all platform release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-*-${{ github.run_id }}
+          path: dist/release
+          merge-multiple: true
+
+      - name: Validate installers, manifests, references, and SHA-512
+        run: node .github/scripts/release-tools/preflight.mjs dist/release "${{ needs.detect.outputs.version }}"
+
+      - name: Record dry-run result
+        if: needs.detect.outputs.dry_run == 'true'
+        run: |
+          echo "### Release dry-run passed" >>"$GITHUB_STEP_SUMMARY"
+          echo "All three platforms were built and smoke-tested; no tag or release was created." \
+            >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload preflight-approved release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: verified-release-assets-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 7
+          path: dist/release/
+
+  publish:
+    name: Create and publish verified GitHub release
+    needs: [detect, preflight]
+    if: >-
+      needs.detect.outputs.release == 'true' &&
+      needs.detect.outputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out verified source and release history
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.detect.outputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download preflight-approved assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: verified-release-assets-${{ github.run_id }}
+          path: dist/release
+
+      - name: Create tag and draft, verify remote assets, then publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          bash .github/scripts/release-tools/publish-release.sh
+          "${{ needs.detect.outputs.version }}"
+          "${{ needs.detect.outputs.commit_sha }}"
+          dist/release
+          dist/release/release-assets.json

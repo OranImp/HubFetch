@@ -1,0 +1,98 @@
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { normalizeShikiLanguage } from '@/lib/file-kinds'
+import { highlightCode } from '@/lib/syntax-highlighting'
+
+/** Tokenizing near-megabyte files on the renderer thread makes scrolling jank. */
+export const HIGHLIGHT_MAX_CHARS = 100_000
+
+interface HighlightResult {
+  attempt: number
+  html?: string
+  key: string
+  status: 'ready' | 'error'
+}
+
+function PlainCode({ code, busy = false }: { code: string; busy?: boolean }): React.JSX.Element {
+  return (
+    <pre aria-busy={busy || undefined}>
+      <code>{code}</code>
+    </pre>
+  )
+}
+
+/**
+ * Syntax-highlighted code shared by direct file previews, Markdown fences, and
+ * notebook cells. Highlight results are tagged with their exact input, so a
+ * fast file switch can never paint the previous file's tokens.
+ */
+export function CodeBlock({
+  code,
+  language
+}: {
+  code: string
+  language?: string
+}): React.JSX.Element {
+  const { t } = useTranslation(['detail', 'common'])
+  const [attempt, setAttempt] = useState(0)
+  const [result, setResult] = useState<HighlightResult | null>(null)
+  const requestedLanguage = language?.trim()
+  const normalizedLanguage = normalizeShikiLanguage(requestedLanguage)
+  const inputKey = `${normalizedLanguage ?? requestedLanguage ?? ''}\u0000${code}`
+  const tooLarge = code.length > HIGHLIGHT_MAX_CHARS
+
+  useEffect(() => {
+    if (!normalizedLanguage || tooLarge) return
+    let active = true
+    void highlightCode(code, normalizedLanguage)
+      .then((html) => {
+        if (active) setResult({ attempt, html, key: inputKey, status: 'ready' })
+      })
+      .catch(() => {
+        if (active) setResult({ attempt, key: inputKey, status: 'error' })
+      })
+    return () => {
+      active = false
+    }
+  }, [attempt, code, inputKey, normalizedLanguage, tooLarge])
+
+  const current = result?.key === inputKey && result.attempt === attempt ? result : null
+  if (current?.status === 'ready' && current.html) {
+    // Shiki emits escaped HTML from local, already-sanitized text content.
+    return <div className="code-highlight" dangerouslySetInnerHTML={{ __html: current.html }} />
+  }
+
+  const isLoading = Boolean(normalizedLanguage && !tooLarge && current?.status !== 'error')
+  let notice: React.ReactNode = null
+  let isError = false
+  if (tooLarge) {
+    notice = t('detail:preview.highlightTooLarge')
+  } else if (requestedLanguage && !normalizedLanguage) {
+    notice = t('detail:preview.highlightUnknown', { language: requestedLanguage })
+  } else if (current?.status === 'error') {
+    isError = true
+    notice = (
+      <>
+        <span>{t('detail:preview.highlightFailed')}</span>
+        <button
+          type="button"
+          className="code-highlight-retry"
+          onClick={() => setAttempt((n) => n + 1)}
+        >
+          {t('common:retry')}
+        </button>
+      </>
+    )
+  }
+
+  return (
+    <div className="code-highlight">
+      <PlainCode code={code} busy={isLoading} />
+      {notice && (
+        <div className="code-highlight-notice" role={isError ? 'alert' : 'status'}>
+          {notice}
+        </div>
+      )}
+    </div>
+  )
+}

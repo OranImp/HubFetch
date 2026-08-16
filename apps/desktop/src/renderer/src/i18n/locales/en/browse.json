@@ -1,0 +1,77 @@
+{
+  "datasetFilter": {
+    "format": "Format",
+    "modalities": "Modalities",
+    "size": {
+      "100kTo1m": "100K – 1M",
+      "100mTo1b": "100M – 1B",
+      "10kTo100k": "10K – 100K",
+      "10mTo100m": "10M – 100M",
+      "1kTo10k": "1K – 10K",
+      "1mTo10m": "1M – 10M",
+      "gt1t": "> 1T",
+      "label": "Size (rows)",
+      "lt1k": "< 1K"
+    }
+  },
+  "downloads": "Downloads",
+  "empty": {
+    "body": "Try a different search, or clear the active filters.",
+    "title": "No results"
+  },
+  "endOfResults": "End of results",
+  "error": {},
+  "filter": {
+    "all": "All",
+    "clear": "Clear filters",
+    "clearAll": "Clear all",
+    "clientSide": "filters loaded results only",
+    "done": "Done",
+    "hardware": "Hardware",
+    "inferenceProviders": "Inference Providers",
+    "languages": "Languages",
+    "libraries": "Libraries",
+    "library": "Library",
+    "license": "License",
+    "licenses": "Licenses",
+    "mcp": "MCP Compatible",
+    "options": "Options",
+    "other": "Other",
+    "params": "Parameters",
+    "runningOnly": "Running only",
+    "sdk": "SDK",
+    "status": "Status",
+    "task": "Task",
+    "tasks": "Tasks",
+    "title": "Filters"
+  },
+  "hardware": {
+    "cpu": "CPU",
+    "gpu": "GPU",
+    "zerogpu": "ZeroGPU"
+  },
+  "likes": "Likes",
+  "listHint": "navigate",
+  "params": {
+    "1to7b": "1B – 7B",
+    "7to30b": "7B – 30B",
+    "gt30b": "> 30B",
+    "lt1b": "< 1B"
+  },
+  "paramsBadge": "{{value}} params",
+  "searchPlaceholder": {
+    "dataset": "Search datasets…",
+    "model": "Search models…",
+    "space": "Search Spaces…"
+  },
+  "sort": {
+    "created": "Recently created",
+    "downloads": "Downloads",
+    "label": "Sort",
+    "likes": "Likes",
+    "trending": "Trending",
+    "updated": "Recently updated"
+  },
+  "updated": "Updated {{time}}",
+  "searchingMore": "Searching more results…"
+}

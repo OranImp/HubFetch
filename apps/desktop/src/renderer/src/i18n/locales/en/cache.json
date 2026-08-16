@@ -1,0 +1,33 @@
+{
+  "confirmDelete": {
+    "body": "This frees {{size}} on disk. Files shared with other revisions are kept. This cannot be undone.",
+    "title": "Delete {{count}} revision(s)?",
+    "title_one": "Delete {{count}} revision?",
+    "title_other": "Delete {{count}} revisions?"
+  },
+  "deleted": "Deleted. {{size}} freed.",
+  "deleteRevision": "Delete revision",
+  "deleteStale": "Clean revisions without refs",
+  "empty": {
+    "body": "Downloads from this app (and from transformers or the CLI) will show up here.",
+    "title": "Cache is empty"
+  },
+  "files": "{{count}} files",
+  "files_one": "{{count}} file",
+  "files_other": "{{count}} files",
+  "location": "Cache location",
+  "noRefs": "no refs",
+  "reposCount": "{{count}} cached repositories",
+  "reposCount_one": "{{count}} cached repository",
+  "reposCount_other": "{{count}} cached repositories",
+  "revisions": "{{count}} revisions",
+  "revisions_one": "{{count}} revision",
+  "revisions_other": "{{count}} revisions",
+  "scan": "Rescan",
+  "scanning": "Scanning…",
+  "title": "Local cache",
+  "totalOnDisk": "{{size}} on disk",
+  "pinned": "pinned",
+  "partialData": "{{size}} of incomplete download data",
+  "cleanPartials": "Clean up"
+}

@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+
+  packaged-smoke:
+    needs: verify
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/packaged-smoke.yml
+    with:
+      commit_sha: ${{ github.sha }}
+      publishable: false
+      signed_macos: false

@@ -1,0 +1,28 @@
+{
+  "authors": "Authors",
+  "comment": {
+    "placeholder": "Write a comment (Markdown supported)…",
+    "posted": "Comment posted"
+  },
+  "comments": {
+    "empty": "No comments yet.",
+    "heading": "Comments",
+    "loadError": "Couldn't load comments"
+  },
+  "empty": "No papers loaded yet.",
+  "listError": "Couldn't load Daily Papers",
+  "detailError": "Couldn't load this paper",
+  "retryMore": "Retry loading more",
+  "published": "Published {{time}}",
+  "readOnArxiv": "Read on arXiv",
+  "readOnHub": "Open on the Hub",
+  "title": "Daily Papers",
+  "upvote": {
+    "add": "Upvote",
+    "error": "Couldn't update the upvote: {{error}}",
+    "onHub": "Upvoting needs a Hub web session — connect one in Settings → Account, or open it on the Hub.",
+    "remove": "Remove upvote",
+    "sessionExpired": "Your Hub web session expired. Reconnect it in Settings → Account to upvote from the app."
+  },
+  "upvotes": "Upvotes"
+}

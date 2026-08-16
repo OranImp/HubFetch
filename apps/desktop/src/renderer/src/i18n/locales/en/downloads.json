@@ -1,0 +1,50 @@
+{
+  "actions": {
+    "cancel": "Cancel",
+    "openFolder": "Show in folder",
+    "pause": "Pause",
+    "remove": "Remove from list",
+    "resume": "Resume"
+  },
+  "bulk": {
+    "clearCompleted": "Clear completed",
+    "pauseAll": "Pause all",
+    "resumeAll": "Resume all"
+  },
+  "commands": {
+    "actions": "Actions",
+    "downloadCurrentRepository": "Download {{repo}}",
+    "downloadRepository": "Download repository",
+    "downloadSelectedFile": "Download {{file}}",
+    "searchPlaceholder": "Search models, datasets, and Spaces to download…",
+    "started": "Download started",
+    "starting": "Starting download…",
+    "typeToSearch": "Type a repository name to start a download."
+  },
+  "confirmRemove": {
+    "body": "This download is still in progress. Removing it cancels the transfer and drops it from the list.",
+    "confirm": "Cancel and remove",
+    "title": "Remove active download?"
+  },
+  "count_one": "{{count}} task",
+  "count_other": "{{count}} tasks",
+  "empty": {
+    "body": "Find a model you like and hit Download — files land in the standard HF cache, ready for transformers, llama.cpp, and friends.",
+    "title": "No downloads yet"
+  },
+  "files": "{{done}}/{{total}} files",
+  "removed": "Download entry removed",
+  "revision": "Revision {{revision}}",
+  "speed": "{{speed}}/s",
+  "status": {
+    "canceled": "Canceled",
+    "completed": "Completed",
+    "error": "Failed",
+    "paused": "Paused",
+    "queued": "Queued",
+    "running": "Downloading"
+  },
+  "title": "Downloads",
+  "verified": "sha256 verified",
+  "checksumsVerified": "checksums verified"
+}

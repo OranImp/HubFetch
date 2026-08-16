@@ -1,137 +1,107 @@
-# HubFetch Design System — Transfer Ledger
+# Design
 
-## 0. Research Log
+Visual system for Oh My HuggingFace. Register: **product** — design serves the task.
+Mood: "the Hub, distilled into a desktop instrument — cool paper grays, mono repo names,
+one yellow wink."
 
-- Embedded refs: shortlisted Native Fluent, Dark Operations, Transfer Ledger → selected Transfer Ledger because it is the user-owned direction and it concentrates one aesthetic risk on the product's real subject: long-running transfers. Native Fluent and Dark Operations are rejected comparison directions and must not be averaged into this system.
-- Taste: operational brief → taste-skill discipline (dense but calm, truth before decoration, no decorative card grids). Raycast is reference material only for dense tool hierarchy and layered state readability; its dark chrome, red identity, pills, and heavy shadows are left out.
-- Windows evidence (navigation, typography, writing, responsive, accessibility, motion): navigation-basics (flat top-level navigation, list/detail for frequent child switching), typography (Segoe UI Variable, 14/20 body, 12/16 captions, sentence case, Microsoft YaHei UI for Simplified Chinese), writing-style (active concise action labels; errors state what failed plus the next step), responsive-design (reveal the full list/detail layout only at wider widths), Qt accessibility (standard widgets expose accessible names, roles, and values), and motion (direct, brief transitions; omitted when they do not aid state or wayfinding).
-- Unavailable lanes: lazyweb real-product screens and imagen concept drafts were skipped because the approved direction and the native-desktop subject make web-browser screens and generated drafts unreliable evidence; the deterministic Qt state captures in Todo 23 provide the visual evidence instead.
+## Design language
 
-## 1. Atmosphere & Identity
+We speak huggingface.co's dialect: cool-gray surfaces with faint left-to-right card gradients,
+border-heavy depth (shadows near-invisible), 8px radius everywhere with full-round pills, mono
+repo names that recolor on hover (follows the accent setting; stock: indigo in light, yellow in
+dark), and brand yellow/orange used
+only as accents — never as CTAs. Primary actions are near-black pills that invert on hover.
+Focus and selection speak blue/indigo, not brand color. We borrow the design language, not the
+identity: our own name, logo, and disclaimers; no 🤗 or HF logo in our chrome.
 
-A quiet Windows transfer console. Dense when the queue is full, calm when it is idle. The identity comes from the ledger metaphor: every task is a row in an immutable record, and the transfer-stage rail in the detail pane is the single expressive element that makes long-running transfers observable. No marketing hero, no decorative card grids, no copied branding — only the disciplined asymmetry of navigation, a stable task list, and flexible detail.
+## Color
 
-## 2. Personas
+All colors OKLCH; tokens live in `apps/desktop/src/renderer/src/assets/main.css`
+(`--c-*` custom properties → `@theme inline` → Tailwind utilities). Grays are the Tailwind v4
+cool-gray ramp; dark mode uses HF's near-black blues, not plain grays.
 
-- power downloader: a keyboard-heavy engineer who creates repeated model/dataset tasks, scans the queue, copies revisions and paths, and expects complete tab order, accelerators, context commands, and no mouse-only action.
-- occasional private-repo user: a researcher on unstable or proxied connectivity who needs dry-run size estimates, interruption recovery, actionable auth and gated-repo errors, and confidence that retry will not silently corrupt or overwrite work.
-- support maintainer: the person who reads the sanitized support bundle and diagnostic logs; every error names its stage and provides one executable recovery action so triage happens at the point of failure.
+### Roles (light / dark)
 
-## 3. Constraints
+| Role        | Light                | Dark                 | Usage                                      |
+| ----------- | -------------------- | -------------------- | ------------------------------------------ |
+| bg          | white                | gray-950 `#030712`   | page                                       |
+| panel       | gray-50              | `#0b0f19`            | sidebar, toolbars, pre blocks              |
+| panel-2     | gray-100             | `#101623`            | hovers, chips, skeletons                   |
+| elevated    | white                | `#0b0f19`            | dialog, menu, palette, toast               |
+| field       | white                | `#101623`            | input interiors (recessed inset shadow)    |
+| border      | gray-200             | gray-800 `#1e2939`   | interactive borders (universal default)    |
+| border-card | gray-100 `#f3f4f6`   | `#141c2e`            | card outlines, hairlines                   |
+| ink-strong  | gray-900 `#101828`   | gray-100             | headings, repo names, links                |
+| ink         | gray-700 `#364153`   | gray-300             | body (10.3:1)                              |
+| ink-muted   | gray-600             | gray-400             | secondary text                             |
+| ink-faint   | gray-500 `#6a7282`   | custom L 0.63        | metadata TEXT — the ≥4.5:1 floor           |
+| decor       | gray-400             | gray-600             | decorative glyphs/dots only, never words   |
+| cta / -ink  | gray-900 / white     | gray-100 / gray-950  | black-pill CTA; inverts on hover           |
+| link        | gray-900             | gray-200             | inline links, hover underline              |
+| hover-title | = select             | yellow-500 / acc-400 | mono-title hover recolor; follows accent   |
+| focus       | blue-500             | blue-500             | focus rings (at /25–/50), `::selection`    |
+| select      | indigo-600           | indigo-400           | selection tint (/10), progress, switch     |
+| brand       | `#FFD21E` (+ orange) | same                 | count badges, unread dots, star fills ONLY |
 
-- cognitive: dense but calm — queue scanning and repeated actions are low-load; truth before decoration keeps displayed state aligned with persisted worker reality; one action, one outcome name.
-- A11y (keyboard, focus, contrast, screen reader): full keyboard reachability with visible focus on every interactive element; WCAG 2.2 AA contrast floor (4.5:1 body / 3:1 large text); screen reader support through Qt accessible names, roles, and values; status conveyed by text, icon, and shape as well as color; no clipping of Chinese labels or long repository identifiers.
-- Situational: a user may close or lose the GUI mid-transfer; startup recovery distinguishes interrupted from completed or cancelled work and offers the valid next action.
+WCAG deviations from huggingface.co (deliberate): HF sets metadata in gray-400 (≈2.7:1, fails
+AA) — our metadata text sits one step darker (`ink-faint`); gray-400 survives only as `decor`
+for separator dots and glyphs. Dark `ink-faint` is a custom lightness because gray-500 fails
+on `#0b0f19` cards.
 
-## 4. Content Inventory
+Tag category hues (blue, green, indigo `#615fff`, orange `#fe6e00`, purple, red `#fb2c36`,
+amber) tint the leading icon tile of task tags; the task→hue/icon mapping is data in
+`apps/desktop/src/renderer/src/lib/tag-colors.ts`. Semantic state: Tailwind green/amber/red/blue
+(600 light, 400–500 dark); state is never conveyed by color alone.
 
-- Primary surfaces: Tasks (queue order, kind, repo, stage/state, progress, selected detail), Cache (read-only inspection), Diagnostics, and Settings in the navigation footer.
-- Transient surfaces: Download creation (file/snapshot), Clone creation, OAuth/token management.
-- States with deliberate UI and copy: empty, loading, authenticating, gated, proxy failure, missing Git/Git-Xet, low disk, cancelling, interrupted, completed, error, failed.
-- Long-content fixtures: long Chinese/English labels, unbroken URLs, long repo/revision paths, and 200% scaling are part of every content fixture set; primary content reflows to one readable column with no horizontal scroll at narrow widths.
+### Signature textures
 
-## 5. Design Tokens
+- Cards: `bg-card-gradient` (panel → bg, left to right) + `border-border-card`; hover darkens
+  the border, never adds shadow.
+- Secondary buttons and tags: white → gray-100 vertical gradient, gray-200 border, inset shadow
+  on hover (`--shadow-btn-inset`). Inputs are recessed with `--shadow-field-inset`.
+- Aurora (`bg-aurora`): the HF multicolor wash at 10% alpha — avatar fallbacks and banners only.
+- `shadow-overlay` is reserved for overlays (dialog, menu, palette, toast); in-page depth is
+  borders and gradients.
 
-### 5.1 Color Palette
+## Typography
 
-| Role | Token | Light | Usage |
-|------|-------|-------|-------|
-| Text/Ink | --ink | #202124 | Primary text |
-| Canvas/background | --canvas | #F7F8FA | Application background |
-| Surface | --surface | #FFFFFF | Panels, list, detail |
-| Line/border | --line | #D9DEE7 | 1 px borders, separators |
-| Signal Yellow | --signal-yellow | #FFD21E | Active-transfer stage identity (limited) |
-| Action Blue | --action-blue | #2563EB | Commands, links, focus |
+**Source Sans 3 Variable** (UI/body) + **IBM Plex Mono** 400/500/600 (code AND repo names —
+mono identifiers are a signature). Bundled via fontsource; no font CDNs. CJK fallbacks
+(PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans SC) sit directly after the Latin
+face in both stacks. Fixed rem scale: 12 / 13 / 14 (base) / `smd` 15 (titles, buttons, detail
+H1 — HF's bespoke size) / 16 / 20 / 24. Weights: 400 body, 500 UI labels, 600 headings and
+active states. Prose (model cards) capped at 72ch; prose links are near-black with a light
+underline that darkens on hover.
 
-Rules:
-- Never introduce a color not in this table; extend the table first.
-- Dark and high-contrast variants are derived from Qt system roles (Section 9), not by recoloring these six values.
-- Signal Yellow is never the only semantic cue for a state.
+## Layout
 
-### 5.2 Typography
+App shell: **TopBar (44px, full-width, the macOS drag region)** over sidebar rail + content.
+The TopBar hosts identity, sidebar toggle (Cmd+B), history back/forward (Cmd+[ / Cmd+]), the
+global-search entry (opens the Cmd+K palette), and account. The sidebar is pure navigation
+(panel tone, manual collapse persisted locally, auto-collapse below 860px). Browse pages keep
+the three-pane pattern: 22rem virtualized list + detail pane. 4px spacing grid; 56px repo rows.
+Every interactive TopBar child opts out of the drag region (`.app-no-drag`).
 
-- Latin UI: Segoe UI Variable (Windows-provided), 14/20 body, 12/16 captions, sentence case.
-- Simplified Chinese: Microsoft YaHei UI (Windows-provided; not redistributed by HubFetch).
-- Technical data (paths, revisions, speeds, log excerpts): bundled Cascadia Mono under OFL 1.1 with Consolas fallback.
-- No other font families enter the product.
+## Components
 
-### 5.3 Spacing
+Radix + CVA primitives in `components/ui/`. Radius: 8px (`rounded-lg`) everywhere; pills
+`rounded-full`; never above 12px. Buttons: `cta` (black pill, inverts on hover — one per
+surface, for the standalone primary action), `secondary` (gradient + inset-shadow hover, the
+workhorse), `ghost`, `outline`, `danger`. Tags: 28px, 8px radius, gradient fill, optional
+32×28 colored icon tile (`components/ui/tag.tsx`); dense list rows use a colored dot + label
+instead. Tabs: HF `.tab-alternate` — 2px bottom border, transparent → gray hover → ink +
+semibold active. Every control ships default/hover/focus/active/disabled/loading. Skeletons
+over spinners; empty states teach quietly (no aurora). Toasts: bottom-right, error 8s,
+optional action slot (undo), close icon, hover pauses the timer.
 
-- Base unit is 4 px; all spacing derives from 4 px and 8 px steps.
-- Controls and panels use 4-8 px padding; list rows use an 8 px vertical rhythm; no pills except compact status/filter chips.
+## Motion
 
-### 5.4 Radii
+150–250ms, `ease-out`, state changes only: fade, fade-rise (route/dialog), pop (anchored
+overlays), toast-in, skeleton-pulse. No page-load choreography.
+`prefers-reduced-motion: reduce` collapses everything to 0.01ms.
 
-- Border radii never exceed 8 px: 4 px for compact controls, 8 px for panels and dialogs; no pill-shaped controls.
+## Iconography
 
-### 5.5 Borders & Depth
-
-- Depth strategy: borders only. Surfaces separate with 1 px Line (#D9DEE7) borders; no drop shadows, no tonal-shift blurs, no gradient fills, no orbs.
-- Never nest cards inside cards; every surface is one level deep.
-
-### 5.6 Icon Policy
-
-- Use the bundled Lucide-compatible SVG icon set with recorded licenses; 16 px inline, 20 px in navigation and commands.
-- No emoji icons; primary status pairs an icon with text; every icon has an accessible name or equivalent text.
-
-## 6. Components
-
-### 6.1 Primitive Anatomy
-
-Primitives: navigation item, icon button with tooltip, text/action button, segmented control, checkbox/toggle, text/path/revision/proxy fields, repository-type selector, progress bar, status icon/text pair, task row, empty/error/loading blocks, inline recovery action, transfer-stage rail, log excerpt, dialog/sheet, focus ring. Fixed/min/max geometry contracts and keyboard focus apply to every primitive.
-
-### 6.2 Component States
-
-Every interactive primitive defines default, hover, pressed, focus, disabled, loading, empty, error states, with reduced-motion variants included. Status is never color-only, and disabled states are explained accessibly.
-
-### 6.3 Transfer-Stage Rail
-
-The transfer-stage rail is the only custom expressive control. It renders the stages resolve, authorize, transfer, verify, materialize/checkout with accessible text, icon, and status metadata, respects reduced motion, and never relies on color alone.
-
-## 7. Motion
-
-### 7.1 Timing
-
-- State feedback runs at 83-167 ms opacity/transform transitions; the active-segment pulse on the transfer-stage rail runs at 120 ms.
-- No decorative ambient animation; motion serves state or wayfinding only.
-
-### 7.2 Reduced Motion
-
-Under reduced-motion preferences the active-segment pulse is disabled and progress stays readable as static text and geometry.
-
-## 8. Layout
-
-### 8.1 Scroll Ownership
-
-Each visible list/detail region has exactly one scroll owner; navigation never scrolls; fixed windows retain stable control geometry while updates stream in.
-
-### 8.2 Breakpoints
-
-<760 effective px: one pane (list or detail) with an explicit back command; 760-1179: navigation collapses to an icon rail/menu with the list/detail split retained; >=1180: fixed navigation, 360 px task list, and flexible detail.
-
-## 9. Theme Mapping
-
-- Light is locked (Section 5.1). Dark and high contrast variants are derived from Qt system roles (QPalette Window/Base/Text/Highlight/Button) mapped to semantic roles, not one-note recoloring of the light hex values.
-- Signal Yellow never serves as the only semantic cue, and dark/high-contrast variants keep text, icon, and shape status semantics.
-
-## 10. Localization
-
-- Simplified Chinese is the default locale with complete English resources from the first release; no UI string literals exist outside the localization layer.
-- Stable action/result pairs such as 取消任务 → 任务已取消 and 重试任务 → 已重新排队; every error names its failed stage and gives one executable recovery action, never a generic 发生错误.
-
-## 11. Showcase
-
-The Todo 23 showcase exercises every primitive and state at <760, 760-1179, and >=1180 effective px in light, dark, and high-contrast variants with 100%/200% scaling; a deterministic harness captures the PNG matrix before product screens are composed.
-
-## 12. Visual QA
-
-Capture light, dark, high contrast, and reduced-motion variants at the three widths (760/1180) and 100%/200% scaling for the shell, create flows, task states, Cache, Diagnostics, Settings, OAuth, and empty/loading/error/offline/gated/missing-dependency/cancelling/interrupted states; inspect the PNGs with look_at, then /visual-qa before handoff.
-
-## 13. Accepted Debt
-
-None accepted as of the contract date. Critical or Major accessibility/usability findings are repaired before handoff; Minor findings require an entry here with affected users, suggested fix, status, and explicit rationale.
-
-## 14. Handoff
-
-- Todo 23 builds the primitive showcase first; every token, type, spacing, radius, and motion value in code traces to this contract, and new tokens are added to DESIGN.md first.
-- Visual QA gates each primitive and required state before product screens; any new reusable pattern is documented back into Section 6.
+lucide-react, 16px in dense UI, 20px in navigation, 1.5px stroke. Hub-provided emoji (Space
+cards, feed items) render as data — that's authentic HF texture. No 🤗 and no HF logo in our
+own chrome.

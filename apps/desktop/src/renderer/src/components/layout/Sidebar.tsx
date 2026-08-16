@@ -1,0 +1,285 @@
+import { NavLink, useLocation } from 'react-router'
+import { useTranslation } from 'react-i18next'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import {
+  ArrowDownToLine,
+  Bookmark,
+  Boxes,
+  Columns3,
+  Database,
+  FileText,
+  FolderGit2,
+  HardDrive,
+  History,
+  Home,
+  Inbox,
+  LayoutGrid,
+  Settings,
+  Star,
+  UploadCloud,
+  UserCircle2
+} from 'lucide-react'
+import { isAuthError } from '@/lib/errors'
+import { invoke } from '@/lib/ipc'
+import { cn } from '@/lib/utils'
+import { useAppStore } from '@/stores/app'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
+import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+
+interface NavItem {
+  to: string
+  labelKey: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: number
+}
+
+function SidebarLink({
+  item,
+  label,
+  badgeLabel,
+  collapsed,
+  active
+}: {
+  item: NavItem
+  label: string
+  badgeLabel?: string
+  collapsed: boolean
+  active: boolean
+}): React.JSX.Element {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <NavLink
+          to={item.to}
+          aria-current={active ? 'page' : undefined}
+          aria-label={collapsed ? [label, badgeLabel].filter(Boolean).join(', ') : undefined}
+          className={cn(
+            'group relative flex h-8 items-center gap-2.5 rounded-lg border border-transparent px-2 text-[13px] font-medium transition-colors duration-150',
+            collapsed ? 'justify-center' : 'justify-start',
+            active ? 'text-ink-strong' : 'text-ink-muted hover:bg-panel-2 hover:text-ink'
+          )}
+        >
+          {active && (
+            <span
+              className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-select"
+              aria-hidden
+            />
+          )}
+          <item.icon className={cn('size-4 shrink-0', active && 'text-select')} aria-hidden />
+          {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+          {item.badge ? (
+            collapsed ? (
+              <>
+                <span
+                  className="absolute top-1 right-1 size-1.5 rounded-full bg-brand"
+                  aria-hidden
+                />
+                <span className="sr-only">{badgeLabel}</span>
+              </>
+            ) : (
+              <>
+                <span
+                  aria-hidden
+                  className="nums inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] leading-none font-semibold text-brand-ink"
+                >
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+                <span className="sr-only">{badgeLabel}</span>
+              </>
+            )
+          ) : null}
+        </NavLink>
+      </TooltipTrigger>
+      <TooltipContent side="right" className={collapsed ? undefined : 'hidden'}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/**
+ * A section stays highlighted while browsing anything under it (e.g. Models
+ * stays lit on /models/owner/name), not just on the list page itself. Home
+ * ("/") is the fallback: it lights up for any route no other sidebar item
+ * claims (post pages, user profiles, search) instead of matching everything.
+ */
+function isNavItemActive(item: NavItem, pathname: string, allItems: NavItem[]): boolean {
+  const matches = (to: string): boolean => pathname === to || pathname.startsWith(`${to}/`)
+  if (item.to === '/') {
+    return !allItems.some((other) => other.to !== '/' && matches(other.to))
+  }
+  return matches(item.to)
+}
+
+export function Sidebar(): React.JSX.Element {
+  const { t } = useTranslation(['nav', 'auth', 'common'])
+  const auth = useAppStore((s) => s.auth)
+  const endpointKey = normalizeHubEndpoint(useAppStore((s) => s.settings.hubEndpoint))
+  const settingsOpen = useAppStore((s) => s.settingsOpen)
+  const openSettings = useAppStore((s) => s.openSettings)
+  const manualCollapsed = useAppStore((s) => s.sidebarCollapsed)
+  const narrow = useMediaQuery('(max-width: 859.98px)')
+  const collapsed = manualCollapsed || narrow
+  const pathname = useLocation().pathname
+
+  const downloads = useQuery({
+    queryKey: ['downloads'],
+    queryFn: () => invoke('downloads:list', undefined)
+  })
+  const inbox = useQuery({ queryKey: ['inbox'], queryFn: () => invoke('inbox:list', undefined) })
+  // Hub notifications are the Inbox's default tab for signed-in users, so the
+  // badge counts them too. Shares the NotificationBell's cache entry; options
+  // mirror it so the two observers agree.
+  const signedIn = auth.status === 'signedIn'
+  const hubNotifications = useQuery({
+    queryKey: ['hub-notifications', 0, endpointKey],
+    queryFn: () => invoke('hub:notifications', { page: 0 }),
+    enabled: signedIn,
+    placeholderData: keepPreviousData,
+    retry: (failureCount, error) => failureCount < 2 && !isAuthError(error.message)
+  })
+
+  const activeDownloads =
+    downloads.data?.filter((d) => d.status === 'running' || d.status === 'queued').length ?? 0
+  const hubUnread = hubNotifications.data?.items.filter((i) => !i.read).length ?? 0
+  const unread = (inbox.data?.filter((i) => !i.readAt).length ?? 0) + hubUnread
+
+  const browse: NavItem[] = [
+    { to: '/', labelKey: 'home', icon: Home },
+    { to: '/models', labelKey: 'models', icon: Boxes },
+    { to: '/datasets', labelKey: 'datasets', icon: Database },
+    { to: '/spaces', labelKey: 'spaces', icon: LayoutGrid },
+    { to: '/papers', labelKey: 'papers', icon: FileText }
+  ]
+  const library: NavItem[] = [
+    { to: '/favorites', labelKey: 'favorites', icon: Star },
+    { to: '/history', labelKey: 'history', icon: History },
+    { to: '/my-repos', labelKey: 'myRepos', icon: FolderGit2 },
+    { to: '/collections', labelKey: 'collections', icon: Bookmark },
+    { to: '/downloads', labelKey: 'downloads', icon: ArrowDownToLine, badge: activeDownloads },
+    { to: '/cache', labelKey: 'cache', icon: HardDrive },
+    { to: '/inbox', labelKey: 'inbox', icon: Inbox, badge: unread },
+    { to: '/compare', labelKey: 'compare', icon: Columns3 },
+    { to: '/upload', labelKey: 'upload', icon: UploadCloud }
+  ]
+  const allNavItems = [...browse, ...library]
+
+  return (
+    <aside
+      aria-label={t('navigation')}
+      className={cn(
+        'flex shrink-0 flex-col border-r border-border-card bg-panel',
+        collapsed ? 'w-12' : 'w-52'
+      )}
+    >
+      <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pt-3">
+        <div className="flex flex-col gap-0.5">
+          {!collapsed && (
+            <div className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-ink-faint uppercase">
+              {t('browse')}
+            </div>
+          )}
+          {browse.map((item) => (
+            <SidebarLink
+              key={item.to}
+              item={item}
+              label={t(item.labelKey)}
+              badgeLabel={item.badge ? t('badgeCount', { count: item.badge }) : undefined}
+              collapsed={collapsed}
+              active={isNavItemActive(item, pathname, allNavItems)}
+            />
+          ))}
+        </div>
+        <div className="flex flex-col gap-0.5">
+          {!collapsed && (
+            <div className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-ink-faint uppercase">
+              {t('library')}
+            </div>
+          )}
+          {library.map((item) => (
+            <SidebarLink
+              key={item.to}
+              item={item}
+              label={t(item.labelKey)}
+              badgeLabel={item.badge ? t('badgeCount', { count: item.badge }) : undefined}
+              collapsed={collapsed}
+              active={isNavItemActive(item, pathname, allNavItems)}
+            />
+          ))}
+        </div>
+      </nav>
+
+      <div className="flex flex-col gap-0.5 border-t border-border-card p-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={collapsed ? t('settings') : undefined}
+              aria-pressed={settingsOpen}
+              onClick={() => openSettings()}
+              className={cn(
+                'group relative flex h-8 items-center gap-2.5 rounded-lg border border-transparent px-2 text-[13px] font-medium transition-colors duration-150',
+                collapsed ? 'justify-center' : 'justify-start',
+                settingsOpen ? 'text-ink-strong' : 'text-ink-muted hover:bg-panel-2 hover:text-ink'
+              )}
+            >
+              {settingsOpen && (
+                <span
+                  className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-select"
+                  aria-hidden
+                />
+              )}
+              <Settings
+                className={cn('size-4 shrink-0', settingsOpen && 'text-select')}
+                aria-hidden
+              />
+              {!collapsed && (
+                <span className="min-w-0 flex-1 truncate text-left">{t('settings')}</span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className={collapsed ? undefined : 'hidden'}>
+            {t('settings')}
+          </TooltipContent>
+        </Tooltip>
+        <button
+          type="button"
+          aria-label={
+            collapsed
+              ? auth.status === 'signedIn'
+                ? t('accountSignedIn', { name: auth.user.name })
+                : t('auth:signedOut')
+              : undefined
+          }
+          onClick={() => openSettings('account')}
+          className={cn(
+            'mt-0.5 flex h-9 items-center gap-2.5 rounded-lg text-[13px] text-ink-muted transition-colors duration-150 hover:text-ink',
+            collapsed
+              ? 'justify-center hover:bg-panel-2'
+              : 'justify-start border bg-linear-to-b from-btn-from to-btn-to px-2 hover:shadow-btn-inset'
+          )}
+        >
+          {auth.status === 'signedIn' ? (
+            <ProfileAvatar
+              name={auth.user.name}
+              url={auth.user.avatarUrl}
+              isPro={auth.user.isPro === true}
+              frame="compact"
+              eager
+              className={cn(collapsed ? 'size-6 text-[11px]' : 'size-5 text-[10px]')}
+            />
+          ) : (
+            <UserCircle2 className={cn('shrink-0', collapsed ? 'size-5' : 'size-4')} aria-hidden />
+          )}
+          {!collapsed && (
+            <span className="min-w-0 flex-1 truncate text-left font-medium">
+              {auth.status === 'signedIn' ? auth.user.name : t('auth:signedOut')}
+            </span>
+          )}
+        </button>
+      </div>
+    </aside>
+  )
+}

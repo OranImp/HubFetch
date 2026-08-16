@@ -1,14 +1,30 @@
-﻿.omo/
-# omo/oh-my-openagent tooling output
+# HubFetch root ignore policy - union of the retained HubFetch rules and the
+# promoted ohmyhf v0.0.9 snapshot ignore rules (plan Todo 4, cutover commit).
+# OMO planning/evidence state (evidence dirs live under .omo/ and are covered here).
+.omo/
+
+# Python/uv tooling retained only in history (inactive in the promoted tree)
 package/
 .venv/
-.codegraph/
-Webfatch_Fail2Suc/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.basedpyright/
+.mypy_cache/
+.coverage
+htmlcov/
 
-build/
+# Build/output/artifact dirs
+# Note: /build/ is root-anchored because the incoming snapshot tracks apps/desktop/build/.
+/build/
 dist/
+out/
+release/
+coverage/
 artifacts/
 
+# Local credentials & app data (HubFetch runtime identity)
 /.hubfetch/
 /HubFetch/
 /app-data/
@@ -20,15 +36,30 @@ artifacts/
 *.db-wal
 *.db-shm
 
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.ruff_cache/
-.basedpyright/
-.mypy_cache/
-.coverage
-htmlcov/
+# Incoming ohmyhf ignore rules
+node_modules/
+.pnpm-store/
+*.local
+.DS_Store
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/
+.impeccable/
 
+# macOS Finder-style duplicate artifacts (created spuriously by the environment)
+* 2.*
+
+.superpowers/
+.worktrees/
+
+# Local tooling state
+.codegraph/
+Webfatch_Fail2Suc/
+
+# Qt translation artifacts (inactive in the promoted tree)
 *.qm
 
+# Nested snapshot reference (removed by the cutover; guardrail)
 reference/

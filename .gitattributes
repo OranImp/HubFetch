@@ -1,16 +1,38 @@
+# Root .gitattributes - LF policy for the promoted ohmyhf (Electron/TS) tree.
+# The incoming snapshot ships no .gitattributes; this file is an allowlisted delta
+# (plan Todo 4). Windows scripts keep CRLF.
+
 * text=auto
 
-*.py text eol=lf
-*.toml text eol=lf
-*.md text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
 *.json text eol=lf
-*.yml text eol=lf
 *.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.lock text eol=lf
+*.plist text eol=lf
+*.sh text eol=lf
+
+# Windows scripts keep CRLF
 *.ps1 text eol=crlf
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
+# Binary assets
 *.png binary
 *.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
 *.zip binary
+*.gz binary
 *.qm binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

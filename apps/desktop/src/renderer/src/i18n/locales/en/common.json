@@ -1,0 +1,58 @@
+{
+  "appName": "Oh My HuggingFace",
+  "back": "Back",
+  "cancel": "Cancel",
+  "close": "Close",
+  "confirm": "Confirm",
+  "copied": "Copied",
+  "copy": "Copy",
+  "delete": "Delete",
+  "dismiss": "Dismiss",
+  "error": {
+    "generic": "Something went wrong",
+    "network": "Could not reach the Hugging Face API"
+  },
+  "gated": "Gated",
+  "goBack": "Back",
+  "goForward": "Forward",
+  "imageViewer": "Image viewer",
+  "kind": {
+    "dataset": "Dataset",
+    "model": "Model",
+    "paper": "Paper",
+    "space": "Space"
+  },
+  "language": {
+    "de": "Deutsch",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "ja": "日本語",
+    "ko": "한국어",
+    "pt-BR": "Português (Brasil)",
+    "system": "System language",
+    "zh-CN": "简体中文",
+    "zh-TW": "繁體中文"
+  },
+  "loading": "Loading…",
+  "progress": {
+    "indeterminate": "In progress"
+  },
+  "open": "Open",
+  "openOnHub": "Open on the Hub",
+  "private": "Private",
+  "remove": "Remove",
+  "retry": "Retry",
+  "running": "Running",
+  "showInFolder": "Show in folder",
+  "theme": {
+    "dark": "Dark",
+    "label": "Theme",
+    "light": "Light",
+    "system": "System"
+  },
+  "undo": "Undo",
+  "unofficial": "Unofficial",
+  "zoomImage": "Open image viewer",
+  "zoomImageNamed": "Open image viewer for {{name}}"
+}
