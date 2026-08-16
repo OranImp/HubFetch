@@ -36,7 +36,6 @@ import type { IntegrationTaskManager } from './integration-tasks'
 import type { Library } from './library'
 import { clearLocalAppData } from './privacy'
 import type { SettingsStore } from './settings'
-import type { UpdateManager } from './updater'
 import {
   cancelInference,
   detectExportTargets,
@@ -55,7 +54,6 @@ export interface AppContext {
   cache: CacheManager
   follows: FollowsPoller
   integrationTasks: IntegrationTaskManager
-  updater: UpdateManager
   i18n: MainI18n
   rebuildMenu: () => void
   notificationRegistration: NotificationRegistrationInfo
@@ -160,35 +158,6 @@ export function registerIpcHandlers(ctx: AppContext): void {
     }
     await shell.openExternal(url)
   })
-  // --- updater --------------------------------------------------------------
-  handle('updater:getState', () => ctx.updater.getState())
-  handle('updater:check', () => ctx.updater.checkForUpdates())
-  handle('updater:download', () => ctx.updater.downloadUpdate())
-  handle('updater:install', async () => {
-    const state = ctx.updater.getState()
-    const version =
-      state.status === 'ready' ||
-      (state.status === 'error' && state.operation === 'install' && state.availableVersion)
-        ? state.availableVersion
-        : null
-    if (!version) return ctx.updater.installUpdate()
-
-    const result = await dialog.showMessageBox({
-      type: 'question',
-      title: ctx.i18n.t('dialogs.updateInstallTitle'),
-      message: ctx.i18n.t('dialogs.updateInstallMessage', { version }),
-      detail: ctx.i18n.t('dialogs.updateInstallDetail'),
-      buttons: [
-        ctx.i18n.t('dialogs.updateInstallButton'),
-        ctx.i18n.t('dialogs.updateInstallCancel')
-      ],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true
-    })
-    if (result.response === 0) await ctx.updater.installUpdate()
-  })
-
   // --- settings ---------------------------------------------------------------
   handle('settings:get', () => ctx.settings.get())
   handle('settings:set', async ({ patch }) => applySettingsPatch(ctx, patch))

@@ -64,11 +64,6 @@
   "dialogs": {
     "aboutDetail": "一個非官方的 Hugging Face Hub 桌面用戶端。\n版本 {{version}}\n\n非官方聲明：本應用程式與 Hugging Face, Inc. 沒有任何關聯，亦未獲其認可或贊助。「Hugging Face」為 Hugging Face, Inc. 的商標，此處使用僅為指稱本應用程式所連接的服務。\n\n採用 Apache-2.0 授權發布。",
     "ok": "確定",
-    "updateInstallButton": "重新啟動並安裝",
-    "updateInstallCancel": "取消",
-    "updateInstallDetail": "應用程式將在安裝前關閉，請先確認目前的工作可以安全中斷。",
-    "updateInstallMessage": "要立即安裝版本 {{version}} 嗎？",
-    "updateInstallTitle": "安裝更新",
     "renderFailureMessage": "應用程式視窗載入失敗。",
     "renderFailureDetail": "介面連續發生當機或載入失敗。您可以重新載入，或結束應用程式。",
     "renderFailureReload": "重新載入",

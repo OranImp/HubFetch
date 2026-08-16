@@ -21,7 +21,6 @@ import { applyAppProxy } from './proxy'
 import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride } from './runtime-paths'
 import { SettingsStore } from './settings'
 import { TrayManager } from './tray'
-import { resolveUpdateClient, UpdateManager } from './updater'
 import {
   registerWindowsNotificationShortcut,
   removeWindowsNotificationShortcut
@@ -54,12 +53,6 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 const isDev = !app.isPackaged
-// Squirrel.Mac validates the update against the running app's designated
-// requirement. Releases are signed with the stable self-signed OhMyHF-Release
-// certificate (docs/signing.md), so the requirement matches across versions.
-// Installs older than the first self-signed release still fall back to manual
-// because their ad-hoc requirement (cdhash-based) can never match.
-const macAutoInstallEnabled = true
 
 // Renderer crash / load-failure recovery: reload this many times before asking
 // the user, with a short pause so a persistent crash can't spin a tight loop.
@@ -236,16 +229,6 @@ if (!gotLock) {
       (items) => broadcast('evt:inbox', items),
       notifications
     )
-    const updater = new UpdateManager({
-      currentVersion: app.getVersion(),
-      isPackaged: app.isPackaged,
-      autoInstallSupported: process.platform !== 'darwin' || macAutoInstallEnabled,
-      loadUpdater: async () => {
-        const updaterModule = await import('electron-updater')
-        return resolveUpdateClient(updaterModule)
-      },
-      onStateChange: (state) => broadcast('evt:updater', state)
-    })
 
     const tray = new TrayManager(
       () => BrowserWindow.getAllWindows()[0],
@@ -338,7 +321,6 @@ if (!gotLock) {
       cache,
       follows,
       integrationTasks,
-      updater,
       i18n,
       rebuildMenu,
       notificationRegistration,
@@ -505,12 +487,6 @@ if (!gotLock) {
 
     createAppWindow()
     follows.start()
-
-    if (!isDev) {
-      // Compare this packaged version with the latest published GitHub Release.
-      // Download and installation remain explicit user actions in Settings → About.
-      void updater.checkForUpdates()
-    }
 
     // Session restore happens after the window exists so auth events reach the UI.
     void auth.init()

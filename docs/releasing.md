@@ -26,7 +26,7 @@ four manifest versions. Other pushes finish after detection without creating rel
      full Ubuntu E2E suite;
    - **build** packages macOS, Windows, and Linux with `--publish never`, then runs the packaged
      smoke test on each platform;
-   - **preflight** checks required installers, updater manifests, every referenced file, and its
+   - **preflight** checks required installers, every referenced file, and its
      SHA-512 value;
    - **publish** creates or resumes the draft, uploads only preflight-approved assets, downloads
      them again to verify the remote asset set and hashes, and only then removes draft status.
@@ -45,7 +45,7 @@ all three platform builds, packaged smoke tests, and preflight, but it never cre
 published release. Dry-run macOS artifacts use the configured ad-hoc identity; real releases require
 the `MAC_CSC_LINK` and `MAC_CSC_KEY_PASSWORD` secrets described in [signing.md](signing.md).
 
-Use dry-run before changing release automation or updater configuration.
+Use dry-run before changing release automation.
 
 ## Recovery and idempotency
 
@@ -61,12 +61,11 @@ publish job is retried:
 Do not delete and recreate a successful release merely to rerun CI. For a genuinely new release,
 bump the patch version and land a new release commit.
 
-## Updater contract
+## Updater absence
 
-Packaged builds use the electron-builder generated `app-update.yml` and the release's `latest.yml`,
-`latest-mac.yml`, or `latest-linux.yml`. The macOS zip is required by Squirrel.Mac. Keep each updater
-manifest and all files it references in the same release; preflight rejects missing files or SHA-512
-mismatches.
-
-The application checks only published releases. Update discovery, download, and restart-install are
-separate user actions, and development builds do not load the updater.
+HubFetch has no self-update capability (plan Todo 16 removed it). There is no `electron-updater`,
+no `publish` metadata in `electron-builder.yml`, and the release produces no `latest.yml`,
+`app-update.yml`, or `.blockmap` artifacts. Release preflight therefore does not validate updater
+manifests; updates are manual — users install a newer build from the GitHub Releases page. Keep the
+release's installable artifacts and their SHA-512 hashes consistent so manual downloads verify
+cleanly.

@@ -12,11 +12,9 @@ import { TopBar } from '@/components/layout/TopBar'
 import { SettingsDialog } from '@/components/settings/SettingsDialog'
 import { useIpcEvent } from '@/hooks/use-ipc-event'
 import { invoke } from '@/lib/ipc'
-import { APP_UPDATE_QUERY_KEY } from '@/lib/query'
 import { isEditableTarget } from '@/lib/utils'
 import { useAppStore } from '@/stores/app'
 
-const UPDATE_TOAST_ID = 10_001
 const INTEGRATION_TASKS_QUERY_KEY = ['integration-tasks'] as const
 
 export function AppShell(): React.JSX.Element {
@@ -33,15 +31,8 @@ export function AppShell(): React.JSX.Element {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen)
   const push = useToasts((s) => s.push)
-  const dismiss = useToasts((s) => s.dismiss)
-  const lastUpdateToast = useRef<string | null>(null)
   const integrationToastIds = useRef(new Map<string, number>())
   const integrationUpdates = useRef(new Map<string, string>())
-  const updateQuery = useQuery({
-    queryKey: APP_UPDATE_QUERY_KEY,
-    queryFn: () => invoke('updater:getState', undefined),
-    staleTime: Infinity
-  })
   const integrationTasks = useQuery({
     queryKey: INTEGRATION_TASKS_QUERY_KEY,
     queryFn: () => invoke('integrationTasks:list', undefined),
@@ -85,38 +76,6 @@ export function AppShell(): React.JSX.Element {
     'evt:inbox',
     useCallback((items) => queryClient.setQueryData(['inbox'], items), [queryClient])
   )
-  useIpcEvent(
-    'evt:updater',
-    useCallback((state) => queryClient.setQueryData(APP_UPDATE_QUERY_KEY, state), [queryClient])
-  )
-
-  useEffect(() => {
-    const state = updateQuery.data
-    if (state?.status !== 'available' && state?.status !== 'manual' && state?.status !== 'ready') {
-      dismiss(UPDATE_TOAST_ID)
-      lastUpdateToast.current = null
-      return
-    }
-
-    const toastKey = `${state.status}:${state.availableVersion}`
-    if (lastUpdateToast.current === toastKey) return
-    lastUpdateToast.current = toastKey
-    const ready = state.status === 'ready'
-    push(
-      t(ready ? 'about.updates.toastReady' : 'about.updates.toastAvailable', {
-        version: state.availableVersion
-      }),
-      ready ? 'success' : 'info',
-      {
-        id: UPDATE_TOAST_ID,
-        duration: ready ? null : 8000,
-        action: {
-          label: t('about.updates.view'),
-          onClick: () => openSettings('about')
-        }
-      }
-    )
-  }, [dismiss, openSettings, push, t, updateQuery.data])
 
   useEffect(() => {
     const tasks: IntegrationTask[] = integrationTasks.data ?? []

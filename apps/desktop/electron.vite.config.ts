@@ -26,8 +26,8 @@ export default defineConfig({
     build: {
       rollupOptions: {
         // Pure-JS deps (workspace packages, @huggingface/*, zod) are bundled;
-        // only the runtime, native modules, and electron-updater stay external.
-        external: ['electron', 'better-sqlite3', 'electron-updater'],
+        // only the runtime and native modules stay external.
+        external: ['electron', 'better-sqlite3'],
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           'download-worker': resolve(__dirname, 'src/main/workers/download-worker.ts'),

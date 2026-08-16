@@ -42,24 +42,6 @@ test('app boots into the three-pane shell', async () => {
 
     // The typed IPC bridge is the only exposed API.
     expect(await window.evaluate(() => typeof window.hubfetch?.invoke)).toBe('function')
-
-    // Development builds expose the updater contract without touching a release feed.
-    const [updateState, appInfo] = await window.evaluate(() =>
-      Promise.all([
-        window.hubfetch.invoke('updater:getState', undefined),
-        window.hubfetch.invoke('system:getAppInfo', undefined)
-      ])
-    )
-    expect(updateState).toEqual({ status: 'unsupported', currentVersion: appInfo.version })
-
-    // Settings → About renders the manual updater surface and its development-mode fallback.
-    await window
-      .getByRole('button', { name: /^(Settings|设置)$/ })
-      .first()
-      .click()
-    await window.getByRole('button', { name: /^(About|关于)$/ }).click()
-    await expect(window.getByRole('heading', { name: /^(App updates|应用更新)$/ })).toBeVisible()
-    await expect(window.getByText(/In-app updates are available only|应用内更新仅在/)).toBeVisible()
   } finally {
     await app.close()
   }

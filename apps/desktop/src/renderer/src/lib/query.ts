@@ -1,7 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
 
-export const APP_UPDATE_QUERY_KEY = ['app-update'] as const
-
 /** Query families whose payload comes from the currently configured Hub endpoint. */
 const HUB_REMOTE_QUERY_ROOTS = new Set([
   'access-requests',

@@ -36,8 +36,9 @@ permissions.
 - **History** — local, searchable browsing history with repository-type filters.
 - **i18n** — English and 简体中文 built in; adding a language is a single JSON folder.
 - **Dark & light themes**, native menus, and OS conventions on every platform.
-- **In-app updates** — installed builds compare their version with the latest published GitHub
-  Release, then download and restart-install only after explicit confirmation.
+- **Manual updates** — the app does not self-update. New versions are published to GitHub
+  Releases and installed by downloading the latest build; no updater or release-feed code ships
+  in the app, and the app never phones home for update checks at startup.
 
 ## Install
 
@@ -60,9 +61,8 @@ xattr -dr com.apple.quarantine "/Applications/Oh My HuggingFace.app"
 
 or right-click the app → **Open** → **Open**.
 
-The app can discover new GitHub Releases from **Settings → About**. Releases signed with the same
-self-signed certificate can update in-app; older or differently signed installations use the
-GitHub Releases link as the one-time manual fallback.
+Updates are manual: install a newer build from the
+[GitHub Releases](https://github.com/oh-my-hf/ohmyhf/releases) page when one is published.
 
 ## Development
 
@@ -110,8 +110,9 @@ at `%APPDATA%\HubFetch\credentials.json`.
 Releases are cut from `main` by a commit whose subject is `[RELEASE] Vx.y.z`. See
 [docs/releasing.md](docs/releasing.md) for the full flow; in short: bump all four workspace
 manifest versions, then land a commit titled e.g. `[RELEASE] V0.2.0`. CI verifies the source,
-builds and smoke-tests all three platforms, and validates the updater manifests before it creates
-the `v0.2.0` tag or draft release. Publishing happens only after the remote asset list is verified.
+builds and smoke-tests the packaged application before it creates the `v0.2.0` tag or draft
+release. Publishing happens only after the remote asset list is verified. There is no updater
+metadata to validate: the app has no self-update capability (see the manual-updates note above).
 
 ## Architecture
 

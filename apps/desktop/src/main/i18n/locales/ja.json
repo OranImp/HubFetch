@@ -64,11 +64,6 @@
   "dialogs": {
     "aboutDetail": "Hugging Face Hubの非公式デスクトップクライアントです。\nバージョン {{version}}\n\n非公式: 本アプリケーションはHugging Face, Inc.と提携、承認、またはスポンサー関係にあるものではありません。「Hugging Face」はHugging Face, Inc.の商標であり、ここでは本アプリケーションが接続するサービスを指す目的でのみ使用しています。\n\nApache-2.0ライセンスの下で提供されています。",
     "ok": "OK",
-    "updateInstallButton": "再起動してインストール",
-    "updateInstallCancel": "キャンセル",
-    "updateInstallDetail": "インストールの前にアプリが終了します。進行中の作業を中断できる状態にしておいてください。",
-    "updateInstallMessage": "今すぐバージョン{{version}}をインストールしますか?",
-    "updateInstallTitle": "更新をインストール",
     "renderFailureMessage": "アプリウィンドウの読み込みに失敗しました。",
     "renderFailureDetail": "インターフェースがクラッシュしたか、読み込みに繰り返し失敗しました。再読み込みするか、アプリを終了できます。",
     "renderFailureReload": "再読み込み",

@@ -64,11 +64,6 @@
   "dialogs": {
     "aboutDetail": "Un cliente de escritorio no oficial para el Hub de Hugging Face.\nVersión {{version}}\n\nNO OFICIAL: esta aplicación no está afiliada, avalada ni patrocinada por Hugging Face, Inc. «Hugging Face» es una marca comercial de Hugging Face, Inc., utilizada aquí únicamente para referirse al servicio con el que se conecta esta aplicación.\n\nCon licencia Apache-2.0.",
     "ok": "Aceptar",
-    "updateInstallButton": "Reiniciar e instalar",
-    "updateInstallCancel": "Cancelar",
-    "updateInstallDetail": "La aplicación se cerrará antes de instalar. Asegúrese de que cualquier trabajo activo pueda interrumpirse.",
-    "updateInstallMessage": "¿Instalar la versión {{version}} ahora?",
-    "updateInstallTitle": "Instalar actualización",
     "renderFailureMessage": "La ventana de la aplicación no se pudo cargar.",
     "renderFailureDetail": "La interfaz falló o no se pudo cargar repetidamente. Puede recargarla o salir de la aplicación.",
     "renderFailureReload": "Recargar",

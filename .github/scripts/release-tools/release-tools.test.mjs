@@ -293,11 +293,9 @@ test('identity contract: electron-builder appId/productName/repository are HubFe
   const builder = readFileSync(join(repositoryRoot, 'apps/desktop/electron-builder.yml'), 'utf8')
   assert.match(builder, /^appId:\s*io\.github\.oranimp\.hubfetch\s*$/m)
   assert.match(builder, /^productName:\s*HubFetch\s*$/m)
-  const publishIndex = builder.indexOf('publish:')
-  assert.ok(publishIndex >= 0, 'electron-builder publish block present')
-  const publishBlock = builder.slice(publishIndex)
-  assert.match(publishBlock, /owner:\s*OranImp/)
-  assert.match(publishBlock, /repo:\s*HubFetch/)
+  // The self-update capability and its GitHub release-feed metadata were removed
+  // (plan Todo 16): electron-builder must carry no publish/update-feed block.
+  assert.doesNotMatch(builder, /^publish:\s*$/m, 'electron-builder publish block must be absent')
   assert.equal(readManifests().desktop.homepage, 'https://github.com/OranImp/HubFetch')
 })
 

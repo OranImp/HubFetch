@@ -23,12 +23,10 @@ mac:
   category: public.app-category.developer-tools
   target:
     - dmg
-    # zip is required for Squirrel.Mac: without it electron-builder emits no
-    # latest-mac.yml and electron-updater cannot stage macOS auto-updates.
+    # Squirrel.Mac requires a zip alongside the dmg for macOS releases.
     - zip
   # Ad-hoc signature for local builds. Release CI overrides this with a
-  # stable self-signed certificate so Squirrel.Mac can validate auto-updates;
-  # still not notarized — see docs/signing.md.
+  # stable self-signed certificate; still not notarized — see docs/signing.md.
   identity: '-'
   # Fail the build instead of silently shipping an unsigned (broken-seal) app
   # when the release identity cannot be found, e.g. a missing CI secret.
@@ -38,13 +36,8 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  # productName is space-free ("HubFetch"); electron-builder's default
-  # artifactName preserves the product name in the built file, but the safe
-  # name it computes for latest-mac.yml's differential-update reference
-  # replaces every space with a hyphen. --publish never (used by CI's build
-  # job) never renames the real file to match, so the two silently diverge and
-  # preflight fails with "references missing artifact". Space-free artifactName
-  # here makes the built file and the safe name identical, everywhere, always.
+  # productName is space-free ("HubFetch"); keep artifactName space-free so the
+  # built file's name is stable and predictable across every CI job.
   artifactName: 'HubFetch-${version}-${arch}.${ext}'
 
 win:
@@ -74,10 +67,3 @@ linux:
 # not under linux:, so it doesn't touch the .deb naming convention).
 appImage:
   artifactName: 'HubFetch-${version}.${ext}'
-
-# Must match the repository the release CI runs in: GITHUB_TOKEN can only publish
-# there, and electron-updater reads this same config to find update artifacts.
-publish:
-  provider: github
-  owner: OranImp
-  repo: HubFetch

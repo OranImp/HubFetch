@@ -57,7 +57,6 @@ import type {
   UploadSelection,
   UploadStartRequest,
   WatchedEntry,
-  AppUpdateState,
   SettingsPatch,
   UserOverview,
   UserSearchResult,
@@ -70,11 +69,6 @@ import type {
 export interface IpcInvokeContract {
   'system:getAppInfo': { req: void; res: AppInfo }
   'system:openExternal': { req: { url: string }; res: void }
-
-  'updater:getState': { req: void; res: AppUpdateState }
-  'updater:check': { req: void; res: AppUpdateState }
-  'updater:download': { req: void; res: AppUpdateState }
-  'updater:install': { req: void; res: void }
 
   'settings:get': { req: void; res: AppSettings }
   'settings:set': { req: { patch: SettingsPatch }; res: AppSettings }
@@ -515,7 +509,6 @@ export interface IpcEventContract {
   'evt:navigate': string
   'evt:integrationTasks': IntegrationTask[]
   'evt:inference': InferenceStreamEvent
-  'evt:updater': AppUpdateState
 }
 
 export type IpcEventChannel = keyof IpcEventContract
@@ -524,10 +517,6 @@ export type IpcEventPayload<C extends IpcEventChannel> = IpcEventContract[C]
 export const IPC_INVOKE_CHANNELS = [
   'system:getAppInfo',
   'system:openExternal',
-  'updater:getState',
-  'updater:check',
-  'updater:download',
-  'updater:install',
   'settings:get',
   'settings:set',
   'settings:selectCacheDir',
@@ -685,8 +674,7 @@ export const IPC_EVENT_CHANNELS: readonly IpcEventChannel[] = [
   'evt:inbox',
   'evt:navigate',
   'evt:integrationTasks',
-  'evt:inference',
-  'evt:updater'
+  'evt:inference'
 ] as const
 
 /** Shape of the API exposed on `window.hubfetch` by the preload script. */

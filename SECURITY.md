@@ -18,5 +18,6 @@ services, or publishing details before a fix is available.
 ## Release security controls
 
 CI audits production dependencies for high and critical advisories and runs CodeQL. Release jobs
-build all platforms with publishing disabled, smoke-test packaged applications, and verify updater
-manifests and SHA-512 hashes before the only write-enabled job can create a tag or GitHub Release.
+build all platforms with publishing disabled, smoke-test packaged applications, and verify
+SHA-512 hashes before the only write-enabled job can create a tag or GitHub Release. The application
+has no self-update capability, so there are no updater manifests to validate.
