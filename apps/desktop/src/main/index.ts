@@ -17,20 +17,22 @@ import { Library } from './library'
 import { buildMenu } from './menu'
 import { NotificationService } from './notifications'
 import { applyAppProxy } from './proxy'
+import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride } from './runtime-paths'
 import { SettingsStore } from './settings'
 import { TrayManager } from './tray'
 import { resolveUpdateClient, UpdateManager } from './updater'
 
-// One identity everywhere: dev and packaged share the same safeStorage keychain
-// entry and userData, so the ~/.oh_my_hf credentials decrypt in every session.
-// This matches the identity existing installs already used — never change it,
-// or stored ciphertexts stop decrypting and profiles orphan.
-app.setName('oh-my-huggingface-desktop')
+// One HubFetch identity everywhere: the name drives the default userData root
+// (`%APPDATA%\HubFetch`), so dev and packaged builds share one database and one
+// safeStorage-encrypted credentials file. Nothing under the legacy Oh My
+// HuggingFace name is read, written, or migrated. Keep this name stable — the
+// runtime state lives and dies with it.
+app.setName(APP_NAME)
 
 // Windows routes toasts by AppUserModelID; it must match the shortcut AUMID
 // electron-builder (NSIS) derives from appId in electron-builder.yml, or
 // Notification.show() silently no-ops.
-if (process.platform === 'win32') app.setAppUserModelId('dev.oh-my-huggingface.desktop')
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID)
 
 // Repo images (file previews, README images) load through this custom scheme
 // so the hub client's auth + proxy apply — a renderer <img> pointing straight
@@ -60,9 +62,10 @@ const MAX_RENDER_RECOVERIES = 3
 const RENDER_RECOVERY_DELAY_MS = 1000
 
 // E2E tests point userData at a temp dir so they never touch a real profile.
-if (process.env.OMH_USER_DATA_DIR) {
-  app.setPath('userData', process.env.OMH_USER_DATA_DIR)
-}
+// Runs before any app.getPath('userData') read so the DB, credentials, cache,
+// and settings all land under the override. The legacy user-data override
+// variable is deliberately NOT honored.
+applyUserDataOverride()
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   // Callers include timers (download progress, inference delta flushes); a send that

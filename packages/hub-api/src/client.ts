@@ -415,7 +415,7 @@ export class HubClient {
       // Non-URL endpoint: auth only attaches to *.huggingface.co hosts.
     }
     this.endpointHost = endpointHost
-    this.userAgent = options.userAgent ?? 'oh-my-huggingface (unofficial desktop client)'
+    this.userAgent = options.userAgent ?? 'HubFetch/0.2.0 (unofficial desktop client)'
     this.fetchImpl = options.fetchImpl ?? fetch
     this.cacheTtlMs = options.cacheTtlMs ?? 30_000
     this.maxConcurrent = Math.max(1, options.maxConcurrent ?? 4)

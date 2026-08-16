@@ -8,7 +8,7 @@ export interface HubHolder {
 
 type ProxyResolver = (url: string) => Promise<string>
 
-const SYSTEM_PROXY_PARTITION = 'ohmyhf-system-proxy'
+const SYSTEM_PROXY_PARTITION = 'hubfetch-system-proxy'
 let systemProxySessionPromise: Promise<Session> | null = null
 const proxyAgents = new Map<string, ProxyAgent>()
 
@@ -149,7 +149,7 @@ export function buildHubClient(
   return new HubClient({
     endpoint: options?.endpoint ?? undefined,
     fetchImpl: createProxiedFetch(options?.proxyUrl ?? null),
-    userAgent: `oh-my-huggingface/${app.getVersion()} (unofficial desktop client; +https://github.com/oh-my-hf/ohmyhf)`,
+    userAgent: `HubFetch/${app.getVersion()} (unofficial desktop client; +https://github.com/OranImp/HubFetch)`,
     cacheTtlMs: 120_000,
     // Desktop browsing bursts (grids, file trees) get smoothed out instead of tripping
     // the Hub's per-IP rate limits: few sockets, spaced starts, a couple of retries.

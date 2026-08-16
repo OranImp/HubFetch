@@ -46,7 +46,11 @@ test('manual access-token sign-in validates against the Hub', async () => {
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
-    env: { ...process.env, OMH_USER_DATA_DIR: userDataDir, OMH_CREDENTIALS_DIR: userDataDir }
+    env: {
+      ...process.env,
+      HUBFETCH_USER_DATA_DIR: userDataDir,
+      HUBFETCH_CREDENTIALS_DIR: userDataDir
+    }
   })
   try {
     const window = await app.firstWindow()
@@ -117,7 +121,11 @@ test('token sign-in fails fast when the Hub never responds', async () => {
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
-    env: { ...process.env, OMH_USER_DATA_DIR: userDataDir, OMH_CREDENTIALS_DIR: userDataDir }
+    env: {
+      ...process.env,
+      HUBFETCH_USER_DATA_DIR: userDataDir,
+      HUBFETCH_CREDENTIALS_DIR: userDataDir
+    }
   })
   try {
     const window = await app.firstWindow()

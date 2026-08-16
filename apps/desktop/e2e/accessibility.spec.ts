@@ -9,7 +9,11 @@ test('sidebar and History remain keyboard reachable with no serious axe violatio
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
-    env: { ...process.env, OMH_USER_DATA_DIR: userDataDir, OMH_CREDENTIALS_DIR: userDataDir }
+    env: {
+      ...process.env,
+      HUBFETCH_USER_DATA_DIR: userDataDir,
+      HUBFETCH_CREDENTIALS_DIR: userDataDir
+    }
   })
 
   try {

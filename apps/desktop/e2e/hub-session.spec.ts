@@ -69,7 +69,11 @@ test('connecting a Hub web session captures and validates the login cookie', asy
   const app = await electron.launch({
     args: ['.'],
     cwd: join(__dirname, '..'),
-    env: { ...process.env, OMH_USER_DATA_DIR: userDataDir, OMH_CREDENTIALS_DIR: userDataDir }
+    env: {
+      ...process.env,
+      HUBFETCH_USER_DATA_DIR: userDataDir,
+      HUBFETCH_CREDENTIALS_DIR: userDataDir
+    }
   })
   try {
     const window = await app.firstWindow()

@@ -11,7 +11,8 @@ Face Hub, managing large model downloads, and plugging models into your local AI
 
 **Privacy-first: everything stays on your machine.** No telemetry, no analytics, no external
 services beyond the Hugging Face API itself. Your access token is encrypted with your OS keychain
-(Electron `safeStorage`) and stored in `~/.oh_my_hf/credentials.json` with owner-only permissions.
+(Electron `safeStorage`) and stored in `%APPDATA%\HubFetch\credentials.json` with user-only
+permissions.
 
 ![Three-pane browse view: model list with a live detail pane](docs/screenshots/browse.png)
 
@@ -91,15 +92,16 @@ Paste a [User Access Token](https://huggingface.co/settings/tokens) in
 **Settings → Account**. Prefer a **write** token (or a fine-grained token with the
 permissions you need) so downloads of gated repos, discussions, collections, and
 Hub notifications all work. The token is encrypted with the OS keychain and stored
-at `~/.oh_my_hf/credentials.json`.
+at `%APPDATA%\HubFetch\credentials.json`.
 
 ### Security
 
 - **The token** is encrypted with the OS keychain (Electron `safeStorage`) and stored at
-  `~/.oh_my_hf/credentials.json` (`0600`), **never plaintext and never in localStorage**. The
-  file lives outside the per-profile `userData` directory so every session — packaged app,
-  `pnpm dev`, extra profiles — shares one login. `OMH_CREDENTIALS_DIR` relocates it (tests use
-  this for isolation). Deleting the file signs you out everywhere.
+  `%APPDATA%\HubFetch\credentials.json` (atomically written with a current-user-only DACL),
+  **never plaintext and never in localStorage**. The file lives in the app's data directory,
+  which the packaged app and `pnpm dev` share under the HubFetch identity, so they share one
+  login. `HUBFETCH_USER_DATA_DIR` and `HUBFETCH_CREDENTIALS_DIR` relocate the data/credentials
+  roots (tests use these for isolation). Deleting the file signs you out everywhere.
 - **No network calls forward the token cross-host**: the `Authorization` header is only sent to
   `huggingface.co` API hosts, never to the CDN/`resolve` redirect targets.
 

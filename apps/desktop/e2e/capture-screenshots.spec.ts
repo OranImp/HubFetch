@@ -55,8 +55,8 @@ test('capture docs screenshots', async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), 'omh-shots-'))
   const env = { ...process.env }
   delete env.ELECTRON_RUN_AS_NODE
-  env.OMH_USER_DATA_DIR = userDataDir
-  env.OMH_CREDENTIALS_DIR = userDataDir
+  env.HUBFETCH_USER_DATA_DIR = userDataDir
+  env.HUBFETCH_CREDENTIALS_DIR = userDataDir
 
   const app = await electron.launch({
     args: ['.'],

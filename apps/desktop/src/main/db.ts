@@ -1,6 +1,5 @@
-import { join } from 'node:path'
 import Database from 'better-sqlite3'
-import { app } from 'electron'
+import { databaseFile } from './runtime-paths'
 
 export type AppDatabase = Database.Database
 
@@ -87,7 +86,7 @@ const MIGRATIONS: string[] = [
 ]
 
 export function openDatabase(filePath?: string): AppDatabase {
-  const file = filePath ?? join(app.getPath('userData'), 'oh-my-huggingface.db')
+  const file = filePath ?? databaseFile()
   const db: AppDatabase = new Database(file)
   db.pragma('journal_mode = WAL')
   migrate(db)

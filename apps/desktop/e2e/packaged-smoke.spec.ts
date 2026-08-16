@@ -14,7 +14,7 @@ function walk(directory: string): string[] {
 }
 
 function packagedExecutable(): string {
-  const override = process.env.OMH_PACKAGED_EXECUTABLE
+  const override = process.env.HUBFETCH_PACKAGED_EXECUTABLE
   if (override) return override
 
   const files = walk(RELEASE_DIR)
@@ -42,8 +42,8 @@ test('packaged application boots with an isolated profile', async () => {
     args: process.platform === 'darwin' ? ['--use-mock-keychain'] : [],
     env: {
       ...process.env,
-      OMH_USER_DATA_DIR: userDataDir,
-      OMH_CREDENTIALS_DIR: userDataDir
+      HUBFETCH_USER_DATA_DIR: userDataDir,
+      HUBFETCH_CREDENTIALS_DIR: userDataDir
     }
   })
 

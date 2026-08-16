@@ -14,6 +14,7 @@ const electronMock = vi.hoisted(() => ({
 }))
 
 vi.mock('electron', () => ({
+  app: { getPath: () => '' },
   safeStorage: {
     isEncryptionAvailable: () => electronMock.encryptionAvailable,
     encryptString: (value: string) => {
@@ -63,8 +64,8 @@ describe('AuthManager', () => {
   let states: AuthState[]
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'omh-auth-test-'))
-    process.env.OMH_CREDENTIALS_DIR = dir
+    dir = mkdtempSync(join(tmpdir(), 'hubfetch-auth-test-'))
+    process.env.HUBFETCH_CREDENTIALS_DIR = dir
     electronMock.encryptionAvailable = true
     electronMock.encryptThrows = false
     electronMock.online = true
@@ -73,7 +74,7 @@ describe('AuthManager', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    delete process.env.OMH_CREDENTIALS_DIR
+    delete process.env.HUBFETCH_CREDENTIALS_DIR
     rmSync(dir, { recursive: true, force: true })
   })
 

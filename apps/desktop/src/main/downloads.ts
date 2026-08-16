@@ -567,7 +567,7 @@ export class DownloadManager {
       authToken: this.runtimeAuthTokens.get(task.id),
       // Each worker gets a share of the limit so the cap holds in aggregate.
       speedLimitBps: computeSpeedShare(this.settings.get().speedLimitBps, this.workers.size + 1),
-      userAgent: `oh-my-huggingface/${app.getVersion()} (unofficial desktop client)`,
+      userAgent: `HubFetch/${app.getVersion()} (unofficial desktop client)`,
       proxyUrl: task.environment.proxyUrl
     }
     const worker = new Worker(join(__dirname, 'download-worker.mjs'), { workerData: job })

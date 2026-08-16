@@ -1,15 +1,5 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  watch,
-  writeFileSync,
-  type FSWatcher
-} from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, rmSync, watch, type FSWatcher } from 'node:fs'
+import { dirname } from 'node:path'
 import { net, safeStorage } from 'electron'
 import type {
   AuthState,
@@ -20,17 +10,18 @@ import type {
 import { hubRelativeUrl } from '@hubfetch/shared'
 import type { HubClient } from '@hubfetch/hub-api'
 import { isForbidden, isUnauthorized } from '@hubfetch/hub-api'
+import { writeCredentialsFileAtomic } from './credential-file'
 import type { AppDatabase } from './db'
+import { credentialsFile } from './runtime-paths'
 
 /**
- * Credentials live OUTSIDE the per-profile userData so every session — packaged,
- * dev, and any extra profile — shares one login. Still safeStorage-encrypted;
- * never plaintext. Tests isolate themselves via OMH_CREDENTIALS_DIR.
+ * Credentials live under the HubFetch userData root — `<userData>\credentials.json`
+ * — shared by dev and packaged sessions through the shared app name. Still
+ * safeStorage-encrypted and never plaintext; the file itself is written
+ * atomically with a DACL restricted to the current user. Tests isolate
+ * themselves via HUBFETCH_CREDENTIALS_DIR. No legacy shared-credentials
+ * location is ever read, written, or migrated.
  */
-function credentialsFile(): string {
-  const dir = process.env.OMH_CREDENTIALS_DIR ?? join(homedir(), '.oh_my_hf')
-  return join(dir, 'credentials.json')
-}
 
 interface StoredToken {
   accessToken: string
@@ -152,15 +143,16 @@ export class AuthManager {
         return
       }
       const cipher = safeStorage.encryptString(JSON.stringify(this.token))
-      mkdirSync(join(file, '..'), { recursive: true, mode: 0o700 })
-      // Atomic replace: concurrent sessions read this file, a torn write must be impossible.
-      const tmp = `${file}.${process.pid}.tmp`
-      writeFileSync(tmp, JSON.stringify({ version: 1, cipher: cipher.toString('base64') }), {
-        mode: 0o600
-      })
-      renameSync(tmp, file)
+      mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
+      // Atomic replace with a current-user-only DACL: a torn write must be
+      // impossible, and the encrypted payload is the only content ever written.
+      writeCredentialsFileAtomic(
+        file,
+        JSON.stringify({ version: 1, cipher: cipher.toString('base64') })
+      )
       this.tokenOnDisk = true
-      // The pre-shared-credentials location; clear it so there is one source of truth.
+      // The legacy in-DB token slot; clear it so the credentials file is the
+      // one source of truth.
       this.db.prepare('DELETE FROM auth WHERE id = 1').run()
     } finally {
       this.persisting = false
@@ -272,7 +264,8 @@ export class AuthManager {
   async init(): Promise<void> {
     if (this.state.status !== 'signedOut') return
     this.ensureCredentialsWatch()
-    // Prefer a sibling session's shared file (dev + packaged share ~/.oh_my_hf).
+    // Prefer a sibling session's shared file (dev + packaged share the HubFetch
+    // userData root, so one credentials.json serves both).
     const rawShared = this.readSharedToken()
     const rawLoaded = this.loadPersistedToken() ?? this.token
     const accepted = this.acceptToken(rawShared) ?? this.acceptToken(rawLoaded)
@@ -306,7 +299,7 @@ export class AuthManager {
   }
 
   /**
-   * Deleting ~/.oh_my_hf/credentials.json is the documented "sign out
+   * Deleting `<userData>\credentials.json` is the documented "sign out
    * everywhere" gesture; honor it for running sessions too. Watching the
    * directory (not the file) survives the atomic rename-based rewrites.
    */
@@ -314,8 +307,8 @@ export class AuthManager {
     if (this.credentialsWatcher) return
     const file = credentialsFile()
     try {
-      mkdirSync(join(file, '..'), { recursive: true, mode: 0o700 })
-      const watcher = watch(join(file, '..'), (_event, filename) => {
+      mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
+      const watcher = watch(dirname(file), (_event, filename) => {
         if (filename && filename !== 'credentials.json') return
         if (this.watchDebounce) clearTimeout(this.watchDebounce)
         this.watchDebounce = setTimeout(() => {
