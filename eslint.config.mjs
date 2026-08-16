@@ -50,7 +50,12 @@ export default tseslint.config(
         Buffer: 'readonly',
         module: 'writable',
         require: 'readonly',
-        __dirname: 'readonly'
+        __dirname: 'readonly',
+        global: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly'
       }
     }
   },

@@ -24,21 +24,28 @@ vi.mock('electron', () => ({
 
 const RUNTIME_MODULES = String(process.versions.modules)
 
+function validHandle(): Record<string, unknown> {
+  return {
+    assignProcess: () => ({ ok: true }),
+    containsProcess: () => ({ ok: true, contains: false }),
+    activeProcessIds: () => ({ ok: true, pids: [] }),
+    terminate: () => ({ ok: true }),
+    waitForEmpty: () => Promise.resolve({ ok: true }),
+    close: () => ({ ok: true })
+  }
+}
+
 function validModule(nodeAbi = RUNTIME_MODULES, arch = 'x64'): Record<string, unknown> {
   return {
     addonName: 'hubfetch_job',
     getRuntimeInfo: () => ({
       addonName: 'hubfetch_job',
-      addonVersion: '0.1.0',
+      addonVersion: '0.2.0',
       nodeAbi: Number(nodeAbi),
       arch,
       napiVersion: 8
     }),
-    createKillOnCloseJob: () => ({
-      status: 'not-implemented',
-      code: 'HUBFETCH_JOB_NOT_IMPLEMENTED',
-      message: 'Todo 26 stub'
-    })
+    createKillOnCloseJob: () => validHandle()
   }
 }
 
@@ -277,5 +284,97 @@ describe('loadHubFetchJob — typed unavailable contract (no throws)', () => {
         loadModule: () => validModule('148')
       })
     ).not.toThrow()
+  })
+})
+
+describe('getCloneSupport — real-bridge probe (Todo 26)', () => {
+  it('enables clone support only when createKillOnCloseJob returns a valid handle', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => validModule()
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      expect(getCloneSupport(bridge)).toEqual({ enabled: true, reason: null })
+    }
+  })
+
+  it('keeps clone support disabled when createKillOnCloseJob throws', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({
+        ...validModule(),
+        createKillOnCloseJob: () => {
+          const err = new Error('CreateJobObjectW failed') as Error & {
+            code?: string
+            errorCode?: string
+          }
+          err.code = 'HUBFETCH_JOB_CREATE_FAILED'
+          err.errorCode = 'access-denied'
+          throw err
+        }
+      })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      const support = getCloneSupport(bridge)
+      expect(support.enabled).toBe(false)
+      expect(support.reason).toContain('HUBFETCH_JOB_CREATE_FAILED')
+      expect(support.reason).toContain('access-denied')
+    }
+  })
+
+  it('keeps clone support disabled for a malformed handle (stub / not-implemented shape)', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({
+        ...validModule(),
+        createKillOnCloseJob: () => ({ status: 'not-implemented' })
+      })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      const support = getCloneSupport(bridge)
+      expect(support.enabled).toBe(false)
+      expect(support.reason).toContain('HUBFETCH_JOB_BAD_EXPORTS')
+    }
+  })
+
+  it('probe closes the throwaway Job handle it creates', () => {
+    const closeSpy = vi.fn(() => ({ ok: true }))
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({
+        ...validModule(),
+        createKillOnCloseJob: () => ({ ...validHandle(), close: closeSpy })
+      })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      expect(getCloneSupport(bridge).enabled).toBe(true)
+      expect(closeSpy).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('never throws even when the probe itself misbehaves', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({
+        ...validModule(),
+        createKillOnCloseJob: () => {
+          throw new Error('boom')
+        }
+      })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      expect(() => getCloneSupport(bridge)).not.toThrow()
+      expect(getCloneSupport(bridge).enabled).toBe(false)
+    }
   })
 })

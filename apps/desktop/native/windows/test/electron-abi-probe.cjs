@@ -1,13 +1,15 @@
 // apps/desktop/native/windows/test/electron-abi-probe.cjs
 //
-// Todo 25 native smoke test. Runs under the REAL Electron runtime
+// Todo 26 addon-coverage test. Runs under the REAL Electron runtime
 // (ELECTRON_RUN_AS_NODE=1, via `pnpm native:test`) so the addon loads against
 // the Electron ABI it was compiled for. Asserts, with process exit codes:
 //   - platform win32 / arch x64
 //   - runtime ABI (process.versions.modules) == 148 (Electron 43.1.0)
 //   - the compiled .node is a PE/COFF x64 (machine 0x8664) binary
 //   - the addon loads and getRuntimeInfo() reports the matching ABI + arch
-//   - createKillOnCloseJob() returns the typed not-implemented stub
+//   - createKillOnCloseJob() returns a working JobHandle (real bridge, not a
+//     stub): methods present, empty-job waitForEmpty resolves ok, close is
+//     idempotent
 'use strict'
 const { readFileSync, existsSync } = require('node:fs')
 const { join } = require('node:path')
@@ -56,34 +58,64 @@ const checks = {
   nodeAbiMatchesRuntime: Number(info.nodeAbi) === EXPECTED_ELECTRON_ABI,
   archIsX64: info.arch === EXPECTED_ARCH,
   napiVersionAtLeast8: Number(info.napiVersion) >= 8,
-  createKillOnCloseJobExport: typeof addon.createKillOnCloseJob === 'function'
+  createKillOnCloseJobExport: typeof addon.createKillOnCloseJob === 'function',
+  getNativeLayoutExport: typeof addon.getNativeLayout === 'function',
+  getProcessHandleCountExport: typeof addon.getProcessHandleCount === 'function'
 }
 for (const [name, ok] of Object.entries(checks)) {
   if (!ok) fail(`assertion '${name}' failed: ${JSON.stringify(info)}`)
 }
 
-const stub = addon.createKillOnCloseJob()
-if (!stub || stub.status !== 'not-implemented' || stub.code !== 'HUBFETCH_JOB_NOT_IMPLEMENTED') {
-  fail(`unexpected stub result: ${JSON.stringify(stub)}`)
+async function verifyBridge() {
+  const job = addon.createKillOnCloseJob()
+  for (const method of [
+    'assignProcess',
+    'containsProcess',
+    'activeProcessIds',
+    'terminate',
+    'waitForEmpty',
+    'close'
+  ]) {
+    if (typeof job[method] !== 'function') fail(`JobHandle method '${method}' is not a function`)
+  }
+  const active = job.activeProcessIds()
+  if (!active.ok || !Array.isArray(active.pids) || active.pids.length !== 0) {
+    fail(`fresh Job must have zero active processes: ${JSON.stringify(active)}`)
+  }
+  const emptyWait = await job.waitForEmpty(2000)
+  if (!emptyWait.ok) fail(`empty-Job waitForEmpty must resolve ok: ${JSON.stringify(emptyWait)}`)
+  const c1 = job.close()
+  const c2 = job.close()
+  if (!c1.ok || !c2.ok) fail(`close must be idempotent: ${JSON.stringify({ c1, c2 })}`)
+
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        platform: process.platform,
+        arch: process.arch,
+        electron: process.versions.electron ?? 'electron-run-as-node',
+        node: process.versions.node,
+        modules: Number(process.versions.modules),
+        peMachine: machine,
+        peMachineHex: `0x${machine.toString(16)}`,
+        runtimeInfo: info,
+        bridge: {
+          createKillOnCloseJob: 'real JobHandle (Todo 26)',
+          emptyActivePids: active.pids,
+          emptyWaitForEmpty: emptyWait,
+          doubleClose: { c1, c2 }
+        },
+        addonPath,
+        addonBytes: bytes.length
+      },
+      null,
+      2
+    )
+  )
 }
 
-console.log(
-  JSON.stringify(
-    {
-      ok: true,
-      platform: process.platform,
-      arch: process.arch,
-      electron: process.versions.electron ?? 'electron-run-as-node',
-      node: process.versions.node,
-      modules: Number(process.versions.modules),
-      peMachine: machine,
-      peMachineHex: `0x${machine.toString(16)}`,
-      runtimeInfo: info,
-      stub,
-      addonPath,
-      addonBytes: bytes.length
-    },
-    null,
-    2
-  )
-)
+verifyBridge().catch((err) => {
+  console.error(`FAIL: bridge verification rejected: ${err && err.message}`)
+  process.exit(1)
+})

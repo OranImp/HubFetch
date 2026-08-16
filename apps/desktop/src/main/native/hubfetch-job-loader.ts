@@ -1,16 +1,18 @@
 // apps/desktop/src/main/native/hubfetch-job-loader.ts
 //
-// Todo 25: typed main-process loader for the `hubfetch_job` Windows x64
-// Node-API addon. Resolves the dev and packaged paths, validates platform /
+// Todo 25 + Todo 26: typed main-process loader for the `hubfetch_job` Windows
+// x64 Node-API addon. Resolves the dev and packaged paths, validates platform /
 // ABI / architecture / export shape, and NEVER throws — it returns a typed
 // bridge:
 //
-//   { status: 'ready', ... }        → safe to enable clone containment
+//   { status: 'ready', ... }        → safe to probe clone containment
 //   { status: 'unavailable', code } → typed reason, clone support stays OFF
 //
-// Clone support MUST remain disabled while the bridge is unavailable or while
-// createKillOnCloseJob returns the Todo 26 not-implemented stub — the Git
-// containment layer (Todos 26/27) is gated behind `getCloneSupport()`.
+// Since Todo 26 the ready bridge carries a `probeJob` capability that calls
+// the REAL addon's createKillOnCloseJob() (creating a throwaway Job, verifying
+// its shape, closing it) so getCloneSupport() only reports clone support ENABLED
+// when the real Windows Job Object bridge loads AND a createKillOnCloseJob()
+// succeeds. Todo 27 gates the Git clone start behind that probe.
 import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -35,11 +37,67 @@ export interface HubFetchJobRuntimeInfo {
   napiVersion: number
 }
 
+/** x64 structure/layout constants exported by getNativeLayout(). */
+export interface HubFetchJobNativeLayout {
+  pointerSize: number
+  sizeofBasicLimitInformation: number
+  offsetofLimitFlags: number
+  sizeofIoCounters: number
+  sizeofExtendedLimitInformation: number
+  offsetofExtendedLimitFlags: number
+  sizeofBasicProcessIdList: number
+  offsetofNumberOfAssignedProcesses: number
+  offsetofNumberOfProcessIdsInList: number
+  offsetofProcessIdList: number
+  sizeofAssociateCompletionPort: number
+  offsetofCompletionKey: number
+  offsetofCompletionPort: number
+  killOnCloseFlag: number
+  activeProcessZeroMessage: number
+}
+
+/** Typed failure returned by every fallible JobHandle operation. */
+export type HubFetchJobOpError = {
+  ok: false
+  /** Stable operation-level code, e.g. 'HUBFETCH_JOB_ASSIGN_FAILED'. */
+  code: string
+  /** Stable Win32-error category, e.g. 'access-denied' | 'invalid-parameter'. */
+  errorCode: string
+  win32Error?: number
+  message: string
+}
+
+export type HubFetchJobOpResult = { ok: true } | HubFetchJobOpError
+
+/** The JobHandle instance returned by the addon's createKillOnCloseJob(). */
+export interface HubFetchJobHandle {
+  assignProcess(pid: number): HubFetchJobOpResult
+  containsProcess(pid: number): { ok: true; contains: boolean } | HubFetchJobOpError
+  activeProcessIds(): { ok: true; pids: number[] } | HubFetchJobOpError
+  terminate(exitCode: number): HubFetchJobOpResult
+  waitForEmpty(timeoutMs: number): Promise<HubFetchJobOpResult>
+  close(): unknown
+}
+
+/** The addon module surface the loader depends on. */
+export interface HubFetchJobAddon {
+  addonName: string
+  getRuntimeInfo(): HubFetchJobRuntimeInfo
+  createKillOnCloseJob(): HubFetchJobHandle
+}
+
 export type HubFetchJobBridge =
   | {
       status: 'ready'
       addonPath: string
       runtimeInfo: HubFetchJobRuntimeInfo
+      /**
+       * Probes the REAL bridge: creates a throwaway kill-on-close Job via the
+       * loaded addon, validates its shape, closes it, and returns a typed
+       * result. getCloneSupport() uses it so clone support only enables when
+       * the real Job bridge loads AND createKillOnCloseJob() succeeds.
+       */
+      probeJob(): HubFetchJobOpResult
     }
   | {
       status: 'unavailable'
@@ -277,17 +335,88 @@ export function loadHubFetchJob(opts: HubFetchJobLoaderOptions = {}): HubFetchJo
       addonPath: resolved.path
     }
   }
-  return { status: 'ready', addonPath: resolved.path, runtimeInfo: classified.runtimeInfo }
+
+  const addon = mod as unknown as HubFetchJobAddon
+  return {
+    status: 'ready',
+    addonPath: resolved.path,
+    runtimeInfo: classified.runtimeInfo,
+    probeJob: () => probeRealBridge(addon)
+  }
+}
+
+/**
+ * Probe the REAL Job bridge: create a throwaway kill-on-close Job, verify it
+ * has the expected handle shape, close it idempotently, and return a typed
+ * result. Never throws — a broken addon degrades clone support to disabled.
+ */
+function probeRealBridge(addon: HubFetchJobAddon): HubFetchJobOpResult {
+  let job: HubFetchJobHandle | null = null
+  try {
+    const created = addon.createKillOnCloseJob()
+    if (!isRecord(created)) {
+      return {
+        ok: false,
+        code: 'HUBFETCH_JOB_BAD_EXPORTS',
+        errorCode: 'bad-exports',
+        message: 'createKillOnCloseJob returned a non-object'
+      }
+    }
+    const handle = created as unknown as HubFetchJobHandle
+    const handleMethods: Array<keyof HubFetchJobHandle> = [
+      'assignProcess',
+      'containsProcess',
+      'activeProcessIds',
+      'terminate',
+      'waitForEmpty',
+      'close'
+    ]
+    for (const method of handleMethods) {
+      if (typeof handle[method] !== 'function') {
+        return {
+          ok: false,
+          code: 'HUBFETCH_JOB_BAD_EXPORTS',
+          errorCode: 'bad-exports',
+          message: `createKillOnCloseJob handle is missing method '${String(method)}'`
+        }
+      }
+    }
+    job = handle
+    return { ok: true }
+  } catch (err) {
+    const code =
+      isRecord(err) && typeof err.code === 'string' ? String(err.code) : 'HUBFETCH_JOB_CREATE_THREW'
+    const errorCode =
+      isRecord(err) && typeof err.errorCode === 'string' ? String(err.errorCode) : 'threw'
+    return {
+      ok: false,
+      code,
+      errorCode,
+      message: err instanceof Error ? err.message : String(err)
+    }
+  } finally {
+    try {
+      job?.close()
+    } catch {
+      // Idempotent close; the finalizer is also safe. Never let cleanup throw.
+    }
+  }
 }
 
 /**
  * Typed clone-support gate. Todo 27 consumes this before arming a utility
- * worker; while it reports disabled, the clone entry must stay disabled and no
- * Git process may be spawned by the clone layer.
+ * worker. Clone support is enabled ONLY when the Job bridge loaded (ready) AND
+ * a real createKillOnCloseJob() probe succeeds; otherwise it stays disabled
+ * with a typed reason and no Git process may be spawned by the clone layer.
  */
 export function getCloneSupport(bridge: HubFetchJobBridge): CloneSupport {
   if (bridge.status !== 'ready') {
     return { enabled: false, reason: `hubfetch_job unavailable: ${bridge.code}` }
   }
-  return { enabled: true, reason: null }
+  const probe = bridge.probeJob()
+  if (probe.ok) return { enabled: true, reason: null }
+  return {
+    enabled: false,
+    reason: `hubfetch_job createKillOnCloseJob failed: ${probe.code} (${probe.errorCode})`
+  }
 }
