@@ -1,5 +1,5 @@
-import type { AppSettings } from '@oh-my-huggingface/shared'
-import { DEFAULT_SETTINGS } from '@oh-my-huggingface/shared'
+import type { AppSettings } from '@hubfetch/shared'
+import { DEFAULT_SETTINGS } from '@hubfetch/shared'
 import type { AppDatabase } from './db'
 
 type Listener = (settings: AppSettings) => void

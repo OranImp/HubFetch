@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowDownToLine, FileQuestion } from 'lucide-react'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { parseOnnxBytes } from '@/lib/onnx'
 import { formatBytes } from '@/lib/utils'

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Heart } from 'lucide-react'
-import type { RepoSummary } from '@oh-my-huggingface/shared'
+import type { RepoSummary } from '@hubfetch/shared'
 import { hubThemeColor } from '@/lib/theme-colors'
 import { cn, formatCount } from '@/lib/utils'
 

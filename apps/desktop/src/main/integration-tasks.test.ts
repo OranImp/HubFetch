@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { once } from 'node:events'
 import { createServer } from 'node:net'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { IntegrationTask, UploadStartRequest } from '@oh-my-huggingface/shared'
+import type { IntegrationTask, UploadStartRequest } from '@hubfetch/shared'
 import type { WebContents } from 'electron'
 import type { NotificationService } from './notifications'
 import {

@@ -7,7 +7,7 @@ import {
   Link as LinkIcon,
   Scissors
 } from 'lucide-react'
-import type { FileTreeEntry, RepoKind } from '@oh-my-huggingface/shared'
+import type { FileTreeEntry, RepoKind } from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { codeLanguageOf, fileKindOf, hubBlobUrl, resolveUrl } from '@/lib/file-kinds'
 import { formatBytes, formatParams } from '@/lib/utils'

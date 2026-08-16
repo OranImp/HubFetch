@@ -1,4 +1,4 @@
-import type { HubOrgPlan } from '@oh-my-huggingface/shared'
+import type { HubOrgPlan } from '@hubfetch/shared'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 

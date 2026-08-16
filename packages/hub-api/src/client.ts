@@ -38,12 +38,8 @@ import type {
   OrgSearchResult,
   PaperSearchResult,
   CollectionSearchResult
-} from '@oh-my-huggingface/shared'
-import {
-  DEFAULT_HUB_ENDPOINT,
-  hubRelativeUrl,
-  normalizeHubEndpoint
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { DEFAULT_HUB_ENDPOINT, hubRelativeUrl, normalizeHubEndpoint } from '@hubfetch/shared'
 import { CookieRequiredError, HubApiError, isNotFound } from './errors'
 import {
   mapAccessRequest,

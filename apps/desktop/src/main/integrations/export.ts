@@ -5,8 +5,8 @@ import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { repoCachePaths } from '@oh-my-huggingface/hub-api'
-import type { ExportResult, ExportTarget, ExportTool, RepoKind } from '@oh-my-huggingface/shared'
+import { repoCachePaths } from '@hubfetch/hub-api'
+import type { ExportResult, ExportTarget, ExportTool, RepoKind } from '@hubfetch/shared'
 import type { ExportDeps } from './types'
 
 const OLLAMA_TIMEOUT_MS = 15 * 60 * 1000

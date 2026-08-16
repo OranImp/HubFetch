@@ -2,13 +2,8 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowDownToLine, ChevronRight, File, FileSearch, Folder, Share, X } from 'lucide-react'
-import type {
-  ExportIntegrationTask,
-  ExportTool,
-  FileTreeEntry,
-  RepoKind
-} from '@oh-my-huggingface/shared'
-import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import type { ExportIntegrationTask, ExportTool, FileTreeEntry, RepoKind } from '@hubfetch/shared'
+import { normalizeHubEndpoint } from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { cn, formatBytes } from '@/lib/utils'

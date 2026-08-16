@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { RepoDetail } from '@oh-my-huggingface/shared'
+import type { RepoDetail } from '@hubfetch/shared'
 import { formatBytes, formatCount, formatDate, formatParams } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { resolveLocale, useAppStore } from '@/stores/app'

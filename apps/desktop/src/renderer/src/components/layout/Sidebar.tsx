@@ -26,7 +26,7 @@ import { useAppStore } from '@/stores/app'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
-import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint } from '@hubfetch/shared'
 
 interface NavItem {
   to: string

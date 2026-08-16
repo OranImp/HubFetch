@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
-import type { RepoKind, RepoSort } from '@oh-my-huggingface/shared'
+import type { RepoKind, RepoSort } from '@hubfetch/shared'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'

@@ -3,7 +3,7 @@
  * pushes deltas through `evt:inference`, correlated by caller-provided id.
  */
 import type { InferenceClient } from '@huggingface/inference'
-import type { InferenceRequest, InferenceResult } from '@oh-my-huggingface/shared'
+import type { InferenceRequest, InferenceResult } from '@hubfetch/shared'
 import { createProxiedFetch, getHubNetworkOptions } from '../hub'
 import type { InferenceDeps } from './types'
 

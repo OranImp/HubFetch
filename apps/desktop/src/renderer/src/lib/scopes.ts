@@ -1,4 +1,4 @@
-import type { AuthState } from '@oh-my-huggingface/shared'
+import type { AuthState } from '@hubfetch/shared'
 
 /** Capability strings used to gate specific UI areas for legacy OAuth sessions. */
 export const MANAGE_REPOS_SCOPE = 'manage-repos'

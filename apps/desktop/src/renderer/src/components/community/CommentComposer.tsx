@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import { Button } from '@/components/ui/button'
 import { useToasts } from '@/components/ui/toaster'
 import { MarkdownEditor } from '@/components/browse/MarkdownEditor'

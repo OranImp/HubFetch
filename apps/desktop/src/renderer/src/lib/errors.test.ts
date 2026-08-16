@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TFunction } from 'i18next'
-import { HUB_SESSION_REQUIRED_CODE } from '@oh-my-huggingface/shared'
+import { HUB_SESSION_REQUIRED_CODE } from '@hubfetch/shared'
 import {
   classifyError,
   describeError,

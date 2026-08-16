@@ -4,12 +4,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
-import {
-  hubBlobUrl,
-  hubRelativeUrl,
-  normalizeHubEndpoint,
-  type RepoKind
-} from '@oh-my-huggingface/shared'
+import { hubBlobUrl, hubRelativeUrl, normalizeHubEndpoint, type RepoKind } from '@hubfetch/shared'
 import { openExternal } from '@/lib/ipc'
 import { normalizeShikiLanguage } from '@/lib/file-kinds'
 import { CodeBlock } from '@/components/browse/CodeBlock'

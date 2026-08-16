@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ArrowDownToLine, ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react'
 import type { AsyncBuffer, FileMetaData } from 'hyparquet'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import {
   bytesToDataUri,

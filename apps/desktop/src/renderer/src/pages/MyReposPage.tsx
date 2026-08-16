@@ -11,7 +11,7 @@ import {
   ShieldAlert,
   UserX
 } from 'lucide-react'
-import { normalizeHubEndpoint, type MyRepoEntry, type RepoKind } from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint, type MyRepoEntry, type RepoKind } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { cn, formatBytes, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

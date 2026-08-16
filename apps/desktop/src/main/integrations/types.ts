@@ -1,4 +1,4 @@
-import type { IpcEventChannel, IpcEventPayload } from '@oh-my-huggingface/shared'
+import type { IpcEventChannel, IpcEventPayload } from '@hubfetch/shared'
 
 export type Broadcast = <C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>) => void
 

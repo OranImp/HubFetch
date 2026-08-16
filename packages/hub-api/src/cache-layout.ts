@@ -5,7 +5,7 @@
  */
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 
 const KIND_FOLDER_PREFIX: Record<RepoKind, string> = {
   model: 'models',

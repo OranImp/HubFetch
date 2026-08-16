@@ -22,7 +22,7 @@ import type {
   RepoKind,
   RepoSummary,
   UserSearchResult
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import { cn, formatCount } from '@/lib/utils'
 import { openRepo } from '@/lib/repo-open'
 import { Button } from '@/components/ui/button'

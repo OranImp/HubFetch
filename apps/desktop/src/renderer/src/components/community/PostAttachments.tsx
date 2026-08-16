@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { PostAttachment } from '@oh-my-huggingface/shared'
+import type { PostAttachment } from '@hubfetch/shared'
 import { cn } from '@/lib/utils'
 import { Lightbox } from '@/components/ui/lightbox'
 

@@ -72,10 +72,10 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.2.7
         version: 5.2.7
-      '@oh-my-huggingface/hub-api':
+      '@hubfetch/hub-api':
         specifier: workspace:*
         version: link:../../packages/hub-api
-      '@oh-my-huggingface/shared':
+      '@hubfetch/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@playwright/test':
@@ -222,15 +222,15 @@ importers:
 
   packages/hub-api:
     dependencies:
+      '@hubfetch/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@huggingface/hub':
         specifier: ^2.13.2
         version: 2.13.2
       '@huggingface/inference':
         specifier: ^4.13.22
         version: 4.13.22
-      '@oh-my-huggingface/shared':
-        specifier: workspace:*
-        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^26.1.1
@@ -1739,6 +1739,7 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abbrev@4.0.0:
     resolution: {integrity: sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA==}

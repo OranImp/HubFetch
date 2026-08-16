@@ -4,7 +4,7 @@ import { invoke, openExternal } from '@/lib/ipc'
 import { useToasts } from '@/components/ui/toaster'
 import { useHubSession } from '@/hooks/use-hub-session'
 import { useAppStore } from '@/stores/app'
-import { hubUserUrl, normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import { hubUserUrl, normalizeHubEndpoint } from '@hubfetch/shared'
 
 export interface WatchSyncTarget {
   username: string

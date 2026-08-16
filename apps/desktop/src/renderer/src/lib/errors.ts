@@ -6,7 +6,7 @@
  * the raw error via console.error — describeError is for the human.
  */
 import type { TFunction } from 'i18next'
-import { HUB_SESSION_REQUIRED_CODE } from '@oh-my-huggingface/shared'
+import { HUB_SESSION_REQUIRED_CODE } from '@hubfetch/shared'
 
 export type ErrorKind =
   'auth' | 'gated' | 'notFound' | 'rateLimit' | 'server' | 'network' | 'unknown'

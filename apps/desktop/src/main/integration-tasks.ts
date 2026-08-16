@@ -13,7 +13,7 @@ import type {
   UploadStartRequest,
   UploadWarning,
   UploadWarningCode
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import type { NotificationService } from './notifications'
 import { runExport } from './integrations/export'
 import {

@@ -4,15 +4,15 @@ import { lstat, readdir, realpath, rm } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { app } from 'electron'
-import { computeSpeedShare } from '@oh-my-huggingface/shared'
+import { computeSpeedShare } from '@hubfetch/shared'
 import type {
   DownloadFileState,
   DownloadRequest,
   DownloadStatus,
   DownloadTask
-} from '@oh-my-huggingface/shared'
-import type { HubClient } from '@oh-my-huggingface/hub-api'
-import { RESOLVE_PREFIX, defaultCacheDir, repoCachePaths } from '@oh-my-huggingface/hub-api'
+} from '@hubfetch/shared'
+import type { HubClient } from '@hubfetch/hub-api'
+import { RESOLVE_PREFIX, defaultCacheDir, repoCachePaths } from '@hubfetch/hub-api'
 import type { AppDatabase } from './db'
 import { resolveSystemProxyUrl } from './hub'
 import type { NotificationService } from './notifications'

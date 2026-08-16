@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Database, ExternalLink } from 'lucide-react'
-import type { DatasetRows } from '@oh-my-huggingface/shared'
+import type { DatasetRows } from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { hubRepoUrl, normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import { hubRepoUrl, normalizeHubEndpoint } from '@hubfetch/shared'
 import { useAppStore } from '@/stores/app'
 
 const PAGE_SIZE = 25

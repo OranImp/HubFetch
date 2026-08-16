@@ -8,7 +8,7 @@ import {
   type PaperSummary,
   type PostSummary,
   type RepoSummary
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { describeError } from '@/lib/errors'
 import { Button } from '@/components/ui/button'

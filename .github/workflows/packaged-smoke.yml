@@ -104,8 +104,8 @@ jobs:
             builder_arguments+=("-c.mac.identity=OhMyHF-Release")
           fi
           {
-            pnpm --filter oh-my-huggingface-desktop exec electron-vite build
-            pnpm --filter oh-my-huggingface-desktop exec electron-builder \
+            pnpm --filter hubfetch-desktop exec electron-vite build
+            pnpm --filter hubfetch-desktop exec electron-builder \
               "${builder_arguments[@]}"
           } 2>&1 | tee ".ci-logs/build-${{ matrix.platform }}.log"
 
@@ -115,11 +115,11 @@ jobs:
           set -euo pipefail
           set -o pipefail
           if [[ "${{ matrix.platform }}" == "linux" ]]; then
-            xvfb-run --auto-servernum pnpm --filter oh-my-huggingface-desktop exec \
+            xvfb-run --auto-servernum pnpm --filter hubfetch-desktop exec \
               playwright test --config=playwright.packaged.config.ts \
               2>&1 | tee ".ci-logs/smoke-${{ matrix.platform }}.log"
           else
-            pnpm --filter oh-my-huggingface-desktop exec \
+            pnpm --filter hubfetch-desktop exec \
               playwright test --config=playwright.packaged.config.ts \
               2>&1 | tee ".ci-logs/smoke-${{ matrix.platform }}.log"
           fi

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowDownToLine, ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { invoke } from '@/lib/ipc'
 import { formatBytes } from '@/lib/utils'

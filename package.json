@@ -1,6 +1,6 @@
 {
-  "name": "oh-my-huggingface",
-  "version": "0.0.9",
+  "name": "hubfetch",
+  "version": "0.2.0",
   "private": true,
   "description": "Unofficial cross-platform desktop client for the Hugging Face Hub",
   "license": "Apache-2.0",
@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter oh-my-huggingface-desktop dev",
+    "dev": "pnpm --filter hubfetch-desktop dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --max-warnings=0",
@@ -17,9 +17,9 @@
     "format:check": "prettier --check .",
     "test": "node scripts/run-tests.mjs",
     "test:release-tools": "node --test .github/scripts/release-tools/release-tools.test.mjs",
-    "test:coverage": "pnpm --filter oh-my-huggingface-desktop test:coverage",
+    "test:coverage": "pnpm --filter hubfetch-desktop test:coverage",
     "verify:syntax-build": "node scripts/verify-syntax-build.mjs",
-    "i18n:extract": "pnpm --filter oh-my-huggingface-desktop i18n:extract",
+    "i18n:extract": "pnpm --filter hubfetch-desktop i18n:extract",
     "postinstall": "node scripts/rebuild-native.mjs"
   },
   "devDependencies": {

@@ -17,7 +17,7 @@ import {
   normalizeHubEndpoint,
   type RepoKind,
   type UserSearchResult
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { cn } from '@/lib/utils'
 import { useDebounced } from '@/hooks/use-debounced'

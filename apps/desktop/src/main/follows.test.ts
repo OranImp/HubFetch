@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { HubClient } from '@oh-my-huggingface/hub-api'
+import type { HubClient } from '@hubfetch/hub-api'
 import { FollowsPoller } from './follows'
 import type { Library } from './library'
 import type { NotificationService } from './notifications'

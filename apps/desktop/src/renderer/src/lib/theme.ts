@@ -1,4 +1,4 @@
-import type { ThemeSetting } from '@oh-my-huggingface/shared'
+import type { ThemeSetting } from '@hubfetch/shared'
 
 const media = window.matchMedia('(prefers-color-scheme: dark)')
 let current: ThemeSetting = 'system'

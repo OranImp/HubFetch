@@ -18,11 +18,7 @@ import {
   Trash2,
   X
 } from 'lucide-react'
-import {
-  hubCollectionUrl,
-  normalizeHubEndpoint,
-  type CollectionItem
-} from '@oh-my-huggingface/shared'
+import { hubCollectionUrl, normalizeHubEndpoint, type CollectionItem } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { WRITE_COLLECTIONS_SCOPE, scopeMissing } from '@/lib/scopes'
 import { hubThemeColor } from '@/lib/theme-colors'

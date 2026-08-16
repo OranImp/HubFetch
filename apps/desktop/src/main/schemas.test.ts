@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ipcRequestSchemas, settingsExportFileSchema } from '@oh-my-huggingface/shared'
+import { ipcRequestSchemas, settingsExportFileSchema } from '@hubfetch/shared'
 
 /**
  * The IPC request schemas are the input-validation boundary for the main

@@ -30,8 +30,8 @@ import type {
   SpaceVariable,
   UserOverview,
   UserProfile
-} from '@oh-my-huggingface/shared'
-import { hubRelativeUrl } from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { hubRelativeUrl } from '@hubfetch/shared'
 
 /** Plural URL segment per repo kind (kept local: client.ts imports this module). */
 const REPO_URL_SEGMENT: Record<RepoKind, string> = {

@@ -1,8 +1,4 @@
-import {
-  hubBlobUrl as buildHubBlobUrl,
-  hubResolveUrl,
-  type RepoKind
-} from '@oh-my-huggingface/shared'
+import { hubBlobUrl as buildHubBlobUrl, hubResolveUrl, type RepoKind } from '@hubfetch/shared'
 
 /** How a repo file should be previewed in the renderer. */
 export type FileKind =

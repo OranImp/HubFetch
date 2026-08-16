@@ -1,6 +1,6 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
-import type { DefaultHome } from '@oh-my-huggingface/shared'
+import type { DefaultHome } from '@hubfetch/shared'
 import { queryClient } from '@/lib/query'
 import { useAppStore } from '@/stores/app'
 import { AppShell } from '@/components/layout/AppShell'

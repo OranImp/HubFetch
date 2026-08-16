@@ -1,5 +1,5 @@
-import type { Locale } from '@oh-my-huggingface/shared'
-import { SUPPORTED_LOCALES } from '@oh-my-huggingface/shared'
+import type { Locale } from '@hubfetch/shared'
+import { SUPPORTED_LOCALES } from '@hubfetch/shared'
 import en from './locales/en.json'
 import zhCN from './locales/zh-CN.json'
 import zhTW from './locales/zh-TW.json'

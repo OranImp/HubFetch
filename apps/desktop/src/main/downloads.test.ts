@@ -9,8 +9,8 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { repoCachePaths } from '@oh-my-huggingface/hub-api'
-import { computeSpeedShare } from '@oh-my-huggingface/shared'
+import { repoCachePaths } from '@hubfetch/hub-api'
+import { computeSpeedShare } from '@hubfetch/shared'
 
 vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test' } }))
 

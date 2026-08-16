@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowDownToLine, FileQuestion } from 'lucide-react'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import { repoFileUrl } from '@/components/browse/MarkdownView'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'

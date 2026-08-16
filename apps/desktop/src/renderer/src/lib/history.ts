@@ -1,4 +1,4 @@
-import type { HistoryItem, RepoKind } from '@oh-my-huggingface/shared'
+import type { HistoryItem, RepoKind } from '@hubfetch/shared'
 
 export type KindFilter = 'all' | RepoKind
 

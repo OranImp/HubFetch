@@ -16,10 +16,10 @@ import type {
   HubSessionConnectResult,
   TokenSignInResult,
   UserProfile
-} from '@oh-my-huggingface/shared'
-import { hubRelativeUrl } from '@oh-my-huggingface/shared'
-import type { HubClient } from '@oh-my-huggingface/hub-api'
-import { isForbidden, isUnauthorized } from '@oh-my-huggingface/hub-api'
+} from '@hubfetch/shared'
+import { hubRelativeUrl } from '@hubfetch/shared'
+import type { HubClient } from '@hubfetch/hub-api'
+import { isForbidden, isUnauthorized } from '@hubfetch/hub-api'
 import type { AppDatabase } from './db'
 
 /**

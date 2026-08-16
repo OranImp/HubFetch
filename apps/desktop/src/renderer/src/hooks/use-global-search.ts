@@ -6,8 +6,8 @@ import type {
   RepoKind,
   RepoSummary,
   UserSearchResult
-} from '@oh-my-huggingface/shared'
-import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { normalizeHubEndpoint } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { useDebounced } from '@/hooks/use-debounced'
 import { useAppStore } from '@/stores/app'

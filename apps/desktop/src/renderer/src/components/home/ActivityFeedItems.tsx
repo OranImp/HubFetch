@@ -1,12 +1,7 @@
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { Boxes, Database, GitPullRequest, LayoutGrid, MessageSquare } from 'lucide-react'
-import type {
-  ActivityDiscussion,
-  ActivityItem,
-  RepoKind,
-  RepoSummary
-} from '@oh-my-huggingface/shared'
+import type { ActivityDiscussion, ActivityItem, RepoKind, RepoSummary } from '@hubfetch/shared'
 import { formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'

@@ -15,11 +15,7 @@ import {
   MessageSquare,
   ShieldAlert
 } from 'lucide-react'
-import {
-  hubRelativeUrl,
-  normalizeHubEndpoint,
-  type HubNotification
-} from '@oh-my-huggingface/shared'
+import { hubRelativeUrl, normalizeHubEndpoint, type HubNotification } from '@hubfetch/shared'
 import { describeError, isAuthError } from '@/lib/errors'
 import { invoke, openExternal } from '@/lib/ipc'
 import { cn, formatRelativeTime } from '@/lib/utils'

@@ -9,7 +9,7 @@ import type {
   InboxItem,
   RepoKind,
   RepoSummary
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import type { AppDatabase } from './db'
 
 const DEFAULT_HISTORY_LIMIT: HistoryLimit = 200

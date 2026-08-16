@@ -1,4 +1,4 @@
-import type { RendererApi } from '@oh-my-huggingface/shared'
+import type { RendererApi } from '@hubfetch/shared'
 
 declare global {
   interface Window {

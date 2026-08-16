@@ -22,8 +22,8 @@ import type {
   RepoKind,
   RepoSummary,
   UserOverview
-} from '@oh-my-huggingface/shared'
-import { hubSettingsUrl, hubUserUrl, normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { hubSettingsUrl, hubUserUrl, normalizeHubEndpoint } from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { formatCount, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

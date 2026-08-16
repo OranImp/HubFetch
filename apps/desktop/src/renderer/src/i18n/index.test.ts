@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { SUPPORTED_LOCALES } from '@oh-my-huggingface/shared'
+import { SUPPORTED_LOCALES } from '@hubfetch/shared'
 import { NAMESPACES, initI18n } from './index'
 
 const localesDir = join(__dirname, 'locales')

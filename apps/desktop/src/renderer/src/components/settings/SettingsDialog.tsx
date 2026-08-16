@@ -30,8 +30,8 @@ import type {
   RepoOpenTarget,
   RepoSort,
   UiDensity
-} from '@oh-my-huggingface/shared'
-import { hubSettingsUrl, normalizeHubEndpoint, SUPPORTED_LOCALES } from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { hubSettingsUrl, normalizeHubEndpoint, SUPPORTED_LOCALES } from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { ACCENT_SWATCH } from '@/lib/appearance'
 import { changeLanguage } from '@/i18n'

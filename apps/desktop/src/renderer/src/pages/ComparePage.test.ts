@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isValidRepoId } from '@oh-my-huggingface/shared'
+import { isValidRepoId } from '@hubfetch/shared'
 
 // ComparePage validates typed model ids with the shared predicate (which
 // mirrors the `repoId` IPC schema); these cases pin down what it accepts.

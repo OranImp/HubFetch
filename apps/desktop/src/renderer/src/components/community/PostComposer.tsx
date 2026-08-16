@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useToasts } from '@/components/ui/toaster'
 import { MarkdownEditor } from '@/components/browse/MarkdownEditor'
 import { useHubSession } from '@/hooks/use-hub-session'
-import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint } from '@hubfetch/shared'
 import { useAppStore } from '@/stores/app'
 
 /**

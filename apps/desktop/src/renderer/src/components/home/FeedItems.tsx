@@ -11,7 +11,7 @@ import {
   MessageSquare,
   ThumbsUp
 } from 'lucide-react'
-import type { PaperSummary, PostSummary, RepoKind, RepoSummary } from '@oh-my-huggingface/shared'
+import type { PaperSummary, PostSummary, RepoKind, RepoSummary } from '@hubfetch/shared'
 import { openExternal } from '@/lib/ipc'
 import { cn, formatCount, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

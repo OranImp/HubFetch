@@ -4,8 +4,8 @@
  * notifications. Runs entirely in the main process on a timer; each poll is a
  * handful of cached API calls.
  */
-import type { Follow, InboxItem, RepoKind } from '@oh-my-huggingface/shared'
-import type { HubClient } from '@oh-my-huggingface/hub-api'
+import type { Follow, InboxItem, RepoKind } from '@hubfetch/shared'
+import type { HubClient } from '@hubfetch/hub-api'
 import type { Library } from './library'
 import type { NotificationService } from './notifications'
 import type { SettingsStore } from './settings'

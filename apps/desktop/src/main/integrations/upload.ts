@@ -1,8 +1,8 @@
 /** Upload execution over a main-process-owned, immutable file manifest. */
 import { lstat, open, realpath, stat, type FileHandle } from 'node:fs/promises'
 import { isAbsolute, relative, sep } from 'node:path'
-import { DEFAULT_ENDPOINT } from '@oh-my-huggingface/hub-api'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import { DEFAULT_ENDPOINT } from '@hubfetch/hub-api'
+import type { RepoKind } from '@hubfetch/shared'
 import { createProxiedFetch, getHubNetworkOptions } from '../hub'
 
 const EMIT_INTERVAL_MS = 100

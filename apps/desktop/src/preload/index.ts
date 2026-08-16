@@ -6,8 +6,8 @@ import type {
   IpcRequest,
   IpcResponse,
   RendererApi
-} from '@oh-my-huggingface/shared'
-import { IPC_EVENT_CHANNELS, IPC_INVOKE_CHANNELS } from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { IPC_EVENT_CHANNELS, IPC_INVOKE_CHANNELS } from '@hubfetch/shared'
 
 const invokeChannels = new Set<string>(IPC_INVOKE_CHANNELS)
 const eventChannels = new Set<string>(IPC_EVENT_CHANNELS)

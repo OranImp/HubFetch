@@ -11,7 +11,7 @@ import {
   Trash2,
   X
 } from 'lucide-react'
-import type { DownloadStatus, DownloadTask } from '@oh-my-huggingface/shared'
+import type { DownloadStatus, DownloadTask } from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { cn, formatBytes } from '@/lib/utils'

@@ -21,7 +21,7 @@ import type {
   DiscussionType,
   DiscussionStatusFilter,
   RepoKind
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { diffTotals, isDiffTruncated, parseUnifiedDiff } from '@/lib/diff'
 import { appendQuote } from '@/lib/quote'

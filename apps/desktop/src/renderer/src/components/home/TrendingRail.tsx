@@ -3,12 +3,7 @@ import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { ArrowDownToLine, Boxes, Database, Heart, LayoutGrid, TrendingUp } from 'lucide-react'
-import {
-  normalizeHubEndpoint,
-  type Page,
-  type RepoKind,
-  type RepoSummary
-} from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint, type Page, type RepoKind, type RepoSummary } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { cn, formatCount, formatRelativeTime } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'

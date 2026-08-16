@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { ProSparkleIcon } from '@/components/profile/ProSparkleIcon'
-import { hubRelativeUrl } from '@oh-my-huggingface/shared'
+import { hubRelativeUrl } from '@hubfetch/shared'
 import { useAppStore } from '@/stores/app'
 
 /** The hub sometimes returns avatar paths relative to the site root. */

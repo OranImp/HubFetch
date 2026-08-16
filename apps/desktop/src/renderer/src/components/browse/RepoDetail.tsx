@@ -2,12 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDownToLine, ExternalLink, Heart, Star } from 'lucide-react'
-import {
-  hubRepoUrl,
-  normalizeHubEndpoint,
-  type RepoKind,
-  type RepoSummary
-} from '@oh-my-huggingface/shared'
+import { hubRepoUrl, normalizeHubEndpoint, type RepoKind, type RepoSummary } from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { cn, formatCount } from '@/lib/utils'
 import { useSettledValue } from '@/hooks/use-settled-value'

@@ -11,8 +11,8 @@ import {
   RefreshCw,
   Trash2
 } from 'lucide-react'
-import { COMMIT_SHA_RE, staleRevisionsOf } from '@oh-my-huggingface/shared'
-import type { CachedRepo, RepoKind } from '@oh-my-huggingface/shared'
+import { COMMIT_SHA_RE, staleRevisionsOf } from '@hubfetch/shared'
+import type { CachedRepo, RepoKind } from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { cn, formatBytes, formatRelativeTime } from '@/lib/utils'

@@ -6,8 +6,8 @@ import type {
   RepoKind,
   RepoSort,
   SettingsPatch
-} from '@oh-my-huggingface/shared'
-import { DEFAULT_SETTINGS } from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
+import { DEFAULT_SETTINGS } from '@hubfetch/shared'
 import type { SpaceHardware } from '@/lib/catalog'
 import type { ParamBucket } from '@/lib/utils'
 import { applyAppearance } from '@/lib/appearance'

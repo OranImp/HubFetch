@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { staleRevisionsOf } from '@oh-my-huggingface/shared'
-import type { CachedRepo, CachedRevision } from '@oh-my-huggingface/shared'
+import { staleRevisionsOf } from '@hubfetch/shared'
+import type { CachedRepo, CachedRevision } from '@hubfetch/shared'
 
 const COMMIT_A = 'a'.repeat(40)
 const COMMIT_B = 'b'.repeat(40)

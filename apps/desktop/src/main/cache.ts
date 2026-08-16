@@ -2,8 +2,8 @@ import { existsSync } from 'node:fs'
 import { lstat, readFile, readdir, readlink, realpath, rm, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { Worker } from 'node:worker_threads'
-import { defaultCacheDir, repoCachePaths } from '@oh-my-huggingface/hub-api'
-import { isValidRepoId, type CacheReport, type RepoKind } from '@oh-my-huggingface/shared'
+import { defaultCacheDir, repoCachePaths } from '@hubfetch/hub-api'
+import { isValidRepoId, type CacheReport, type RepoKind } from '@hubfetch/shared'
 import type { SettingsStore } from './settings'
 
 const COMMIT_HASH = /^[0-9a-f]{40}$/

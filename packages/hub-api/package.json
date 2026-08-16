@@ -1,6 +1,6 @@
 {
-  "name": "@oh-my-huggingface/hub-api",
-  "version": "0.0.9",
+  "name": "@hubfetch/hub-api",
+  "version": "0.2.0",
   "private": true,
   "description": "Pure-TypeScript Hugging Face Hub API client (zero Electron dependencies)",
   "license": "Apache-2.0",
@@ -18,7 +18,7 @@
   "dependencies": {
     "@huggingface/hub": "^2.13.2",
     "@huggingface/inference": "^4.13.22",
-    "@oh-my-huggingface/shared": "workspace:*"
+    "@hubfetch/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

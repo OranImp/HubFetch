@@ -13,7 +13,7 @@ import { QueryErrorState } from '@/components/errors/QueryErrorState'
 import { PaperComments } from '@/components/community/PaperComments'
 import { UpvoteButton } from '@/components/community/UpvoteButton'
 import { resolveLocale, useAppStore } from '@/stores/app'
-import { hubPaperUrl, normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import { hubPaperUrl, normalizeHubEndpoint } from '@hubfetch/shared'
 
 const ROW_HEIGHT = 64
 

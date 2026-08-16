@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AppUpdateState } from '@oh-my-huggingface/shared'
+import type { AppUpdateState } from '@hubfetch/shared'
 import { resolveUpdateClient, UpdateManager, type UpdateClient } from './updater'
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {

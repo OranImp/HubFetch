@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { normalizeHubEndpoint, type RepoKind, type RepoSummary } from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint, type RepoKind, type RepoSummary } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { useAppStore } from '@/stores/app'
 

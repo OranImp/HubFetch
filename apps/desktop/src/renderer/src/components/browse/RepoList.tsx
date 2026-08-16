@@ -8,7 +8,7 @@ import {
   type RepoKind,
   type RepoSummary,
   type SearchQuery
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { describeError } from '@/lib/errors'
 import { hardwareBucketOf } from '@/lib/catalog'

@@ -1,5 +1,5 @@
 /**
- * Registers every IPC handler from the typed contract in @oh-my-huggingface/shared.
+ * Registers every IPC handler from the typed contract in @hubfetch/shared.
  * Each payload is validated (zod) before any work happens; channels that accept no
  * payload reject anything non-null. No string channels appear outside the contract.
  */
@@ -13,16 +13,16 @@ import type {
   IpcInvokeChannel,
   IpcRequest,
   IpcResponse
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import {
   DEFAULT_SETTINGS,
   SUPPORTED_LOCALES,
   isAllowedExternalUrl,
   ipcRequestSchemas,
   settingsExportFileSchema
-} from '@oh-my-huggingface/shared'
-import { defaultCacheDir, HubApiError } from '@oh-my-huggingface/hub-api'
-import type { HubClient } from '@oh-my-huggingface/hub-api'
+} from '@hubfetch/shared'
+import { defaultCacheDir, HubApiError } from '@hubfetch/hub-api'
+import type { HubClient } from '@hubfetch/hub-api'
 import type { AuthManager } from './auth'
 import { buildHubClient } from './hub'
 import { captureHubSessionCookie } from './hub-session'

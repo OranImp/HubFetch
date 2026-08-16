@@ -1,4 +1,4 @@
-import { hubRepoUrl, type RepoKind, type RepoOpenTarget } from '@oh-my-huggingface/shared'
+import { hubRepoUrl, type RepoKind, type RepoOpenTarget } from '@hubfetch/shared'
 import { openExternal } from '@/lib/ipc'
 
 const KIND_PATH: Record<RepoKind, string> = {

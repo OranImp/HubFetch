@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { HistoryItem, RepoKind } from '@oh-my-huggingface/shared'
+import type { HistoryItem, RepoKind } from '@hubfetch/shared'
 import { filterHistoryItems } from '@/lib/history'
 
 function historyItem(repoId: string, kind: RepoKind): HistoryItem {

@@ -1,8 +1,4 @@
-import type {
-  AppUpdateErrorCode,
-  AppUpdateOperation,
-  AppUpdateState
-} from '@oh-my-huggingface/shared'
+import type { AppUpdateErrorCode, AppUpdateOperation, AppUpdateState } from '@hubfetch/shared'
 
 interface UpdateInfo {
   version: string

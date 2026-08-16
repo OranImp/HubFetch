@@ -11,7 +11,7 @@ import {
   hubUserUrl,
   isAllowedExternalUrl,
   normalizeHubEndpoint
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 
 describe('Hub URL helpers', () => {
   it('normalizes the default and configured endpoints', () => {

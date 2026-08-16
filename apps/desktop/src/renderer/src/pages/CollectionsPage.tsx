@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToasts } from '@/components/ui/toaster'
 import { resolveLocale, useAppStore } from '@/stores/app'
 import { WRITE_COLLECTIONS_SCOPE, scopeMissing } from '@/lib/scopes'
-import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint } from '@hubfetch/shared'
 
 /** My collections: card grid + create dialog (/collections). */
 export function CollectionsPage(): React.JSX.Element {

@@ -4,7 +4,7 @@ import type {
   IpcInvokeChannel,
   IpcRequest,
   IpcResponse
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 
 /** Typed access to the preload bridge. The renderer's only doorway to the world. */
 export function invoke<C extends IpcInvokeChannel>(

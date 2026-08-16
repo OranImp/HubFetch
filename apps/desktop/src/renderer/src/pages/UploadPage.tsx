@@ -7,7 +7,7 @@ import type {
   UploadIntegrationTask,
   UploadSelection,
   UploadWarningCode
-} from '@oh-my-huggingface/shared'
+} from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { formatBytes } from '@/lib/utils'

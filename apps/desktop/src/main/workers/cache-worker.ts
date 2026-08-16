@@ -9,8 +9,8 @@
 import { lstatSync, readFileSync, readdirSync, readlinkSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parentPort, workerData } from 'node:worker_threads'
-import type { CacheReport, CachedRepo, CachedRevision } from '@oh-my-huggingface/shared'
-import { parseRepoFolderName } from '@oh-my-huggingface/hub-api'
+import type { CacheReport, CachedRepo, CachedRevision } from '@hubfetch/shared'
+import { parseRepoFolderName } from '@hubfetch/hub-api'
 
 function safeReaddir(dir: string): string[] {
   try {

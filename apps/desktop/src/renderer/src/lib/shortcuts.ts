@@ -35,4 +35,4 @@ export function shortcutList(isMac: boolean): ShortcutDef[] {
     { group: 'palette', labelKey: 'paletteClose', keys: ['Esc'] }
   ]
 }
-import { NAVIGATION_SHORTCUTS } from '@oh-my-huggingface/shared'
+import { NAVIGATION_SHORTCUTS } from '@hubfetch/shared'

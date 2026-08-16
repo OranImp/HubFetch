@@ -80,9 +80,9 @@ pnpm build          # production build of every package
 Platform packaging (from `apps/desktop`):
 
 ```sh
-pnpm --filter oh-my-huggingface-desktop build:linux   # AppImage + deb
-pnpm --filter oh-my-huggingface-desktop build:mac     # dmg (ad-hoc signed)
-pnpm --filter oh-my-huggingface-desktop build:win     # nsis
+pnpm --filter hubfetch-desktop build:linux   # AppImage + deb
+pnpm --filter hubfetch-desktop build:mac     # dmg (ad-hoc signed)
+pnpm --filter hubfetch-desktop build:win     # nsis
 ```
 
 ### Sign-in
@@ -114,9 +114,9 @@ the `v0.2.0` tag or draft release. Publishing happens only after the remote asse
 ## Architecture
 
 ```
-packages/shared     @oh-my-huggingface/shared    shared types + typed IPC contract
-packages/hub-api    @oh-my-huggingface/hub-api   pure-TS Hub API client (zero Electron deps)
-apps/desktop        oh-my-huggingface-desktop    electron-vite app (main / preload / renderer)
+packages/shared     @hubfetch/shared    shared types + typed IPC contract
+packages/hub-api    @hubfetch/hub-api   pure-TS Hub API client (zero Electron deps)
+apps/desktop        hubfetch-desktop    electron-vite app (main / preload / renderer)
 ```
 
 - The **main process** owns all network, downloads, cache scanning, and polling (via `hub-api`);
@@ -134,6 +134,16 @@ apps/desktop        oh-my-huggingface-desktop    electron-vite app (main / prelo
 See [CONTRIBUTING.md](CONTRIBUTING.md). Translations are especially welcome — locales live in
 `apps/desktop/src/renderer/src/i18n/locales/<lang>/` (renderer) and
 `apps/desktop/src/main/i18n/locales/` (native menus & notifications).
+
+## Upstream
+
+HubFetch is an independent, community-built fork of the upstream
+[Oh My HuggingFace](https://github.com/fzlzjerry/ohmyhf) desktop client
+(read-only remote: `https://github.com/fzlzjerry/ohmyhf.git`, Apache-2.0, imported as an
+untouched `v0.0.9` snapshot — see [UPSTREAM_SOURCE.md](UPSTREAM_SOURCE.md) for full import
+provenance). The upstream remote is kept **read-only**; all HubFetch development happens in this
+repository at `https://github.com/OranImp/HubFetch`. Neither project is affiliated with or
+endorsed by Hugging Face, Inc.
 
 ## License
 

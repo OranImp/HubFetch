@@ -13,8 +13,8 @@ import {
   User,
   X
 } from 'lucide-react'
-import type { FollowTargetType, InboxItem } from '@oh-my-huggingface/shared'
-import { normalizeHubEndpoint } from '@oh-my-huggingface/shared'
+import type { FollowTargetType, InboxItem } from '@hubfetch/shared'
+import { normalizeHubEndpoint } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

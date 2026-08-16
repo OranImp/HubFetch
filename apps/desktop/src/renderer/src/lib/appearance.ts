@@ -1,4 +1,4 @@
-import type { AccentPreset, AppSettings } from '@oh-my-huggingface/shared'
+import type { AccentPreset, AppSettings } from '@hubfetch/shared'
 
 /** Focus-ring / ::selection hue per accent. `default` keeps the app's stock blue-500. */
 export const ACCENT_FOCUS: Record<AccentPreset, string> = {

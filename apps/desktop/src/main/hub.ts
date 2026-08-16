@@ -1,6 +1,6 @@
 import { app, session, type Session } from 'electron'
 import { ProxyAgent, fetch as undiciFetch } from 'undici'
-import { HubClient } from '@oh-my-huggingface/hub-api'
+import { HubClient } from '@hubfetch/hub-api'
 
 export interface HubHolder {
   current: HubClient

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import type { NotebookCell, NotebookOutput, ParsedNotebook } from '@/lib/notebook'
 import { CodeBlock } from '@/components/browse/CodeBlock'
 import { MarkdownView } from '@/components/browse/MarkdownView'

@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
-import {
-  normalizeHubEndpoint,
-  type HubNotification,
-  type InboxItem
-} from '@oh-my-huggingface/shared'
+import { normalizeHubEndpoint, type HubNotification, type InboxItem } from '@hubfetch/shared'
 import { isAuthError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { cn, formatRelativeTime } from '@/lib/utils'

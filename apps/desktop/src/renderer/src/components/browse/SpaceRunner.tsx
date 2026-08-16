@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, MonitorOff, RotateCw } from 'lucide-react'
-import type { RepoDetail } from '@oh-my-huggingface/shared'
+import type { RepoDetail } from '@hubfetch/shared'
 import { openExternal } from '@/lib/ipc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { hubRepoUrl } from '@oh-my-huggingface/shared'
+import { hubRepoUrl } from '@hubfetch/shared'
 import { useAppStore } from '@/stores/app'
 
 const ERROR_STAGES = new Set(['BUILD_ERROR', 'CONFIG_ERROR', 'RUNTIME_ERROR'])

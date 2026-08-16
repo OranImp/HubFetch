@@ -32,7 +32,7 @@ import {
   UploadCloud,
   User
 } from 'lucide-react'
-import type { RepoKind, RepoSort, RepoSummary } from '@oh-my-huggingface/shared'
+import type { RepoKind, RepoSort, RepoSummary } from '@hubfetch/shared'
 import { LIBRARIES, LICENSES, PARAM_BUCKETS, TASKS } from '@/lib/catalog'
 import type { ParamBucket } from '@/lib/utils'
 import { formatCount } from '@/lib/utils'

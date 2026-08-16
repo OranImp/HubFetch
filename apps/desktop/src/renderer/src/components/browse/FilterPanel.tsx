@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import type { RepoKind } from '@oh-my-huggingface/shared'
+import type { RepoKind } from '@hubfetch/shared'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'

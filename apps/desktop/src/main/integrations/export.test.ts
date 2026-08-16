@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { repoCachePaths } from '@oh-my-huggingface/hub-api'
+import { repoCachePaths } from '@hubfetch/hub-api'
 import { runExport } from './export'
 
 const COMMIT = 'a'.repeat(40)

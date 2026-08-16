@@ -66,7 +66,7 @@ jobs:
       - name: Ubuntu E2E
         run: |
           set -o pipefail
-          xvfb-run --auto-servernum pnpm --filter oh-my-huggingface-desktop test:e2e \
+          xvfb-run --auto-servernum pnpm --filter hubfetch-desktop test:e2e \
             2>&1 | tee .ci-logs/e2e.log
 
       - name: Upload verification diagnostics

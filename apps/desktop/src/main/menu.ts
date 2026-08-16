@@ -1,5 +1,5 @@
 import { Menu, app, dialog, shell, type MenuItemConstructorOptions } from 'electron'
-import { NAVIGATION_SHORTCUTS } from '@oh-my-huggingface/shared'
+import { NAVIGATION_SHORTCUTS } from '@hubfetch/shared'
 import type { MainI18n } from './i18n'
 
 const REPO_URL = 'https://github.com/oh-my-hf/ohmyhf'
