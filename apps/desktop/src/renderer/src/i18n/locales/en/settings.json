@@ -128,15 +128,25 @@
     "downloadWarning": "In-flight downloads may keep the previous endpoint or proxy until they are paused and resumed.",
     "hubEndpoint": "Hub endpoint",
     "invalidUrl": "Enter a valid http:// or https:// URL, or leave blank.",
-    "proxyUrl": "HTTP(S) proxy",
     "reset": "Reset to default",
     "resetEndpoint": "Hub endpoint reset to default.",
-    "resetProxy": "Proxy cleared.",
     "saved": "Network settings saved.",
     "test": "Test connection",
     "testFail": "Connection failed: {{error}}",
-    "testOk": "Connected to the Hub successfully.",
-    "title": "Network"
+    "title": "Network",
+    "proxy": {
+      "modeLabel": "Proxy mode",
+      "modeSystem": "System",
+      "modeDirect": "Direct",
+      "modeManual": "Manual",
+      "hintSystem": "Follow the operating system's proxy settings.",
+      "hintDirect": "Bypass all proxies and connect directly.",
+      "hintManual": "Use a fixed HTTP(S) proxy server.",
+      "manualLabel": "HTTP(S) proxy URL",
+      "invalid": "Enter a valid http:// or https:// URL with a host and port and no path, query, or credentials.",
+      "testOkLatency": "Connected in {{ms}} ms.",
+      "resetProxy": "Proxy reset to default."
+    }
   },
   "notifications": {
     "enabled": "System notifications",

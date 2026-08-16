@@ -6,6 +6,7 @@ import {
   CircleCheck,
   CircleX,
   FolderOpen,
+  Globe,
   Pause,
   Play,
   Trash2,
@@ -15,6 +16,7 @@ import type { DownloadStatus, DownloadTask } from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { cn, formatBytes } from '@/lib/utils'
+import { snapshotDisplay } from '@/lib/proxy'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -33,6 +35,18 @@ const STATUS_DOT: Record<DownloadStatus, string> = {
 }
 
 type Action = 'downloads:pause' | 'downloads:resume' | 'downloads:cancel' | 'downloads:remove'
+
+/** Localized label for the FROZEN proxy snapshot shown in the task detail. */
+function proxyTaskLabel(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  snapshot: DownloadTask['proxy']
+): string {
+  const display = snapshotDisplay(snapshot)
+  if (display.mode === 'manual' && display.url !== null) {
+    return t('downloads:taskProxyManual', { url: display.url })
+  }
+  return t('downloads:taskProxy', { mode: t(`downloads:proxyModes.${display.mode}`) })
+}
 
 type BulkAction = 'downloads:pauseAll' | 'downloads:resumeAll' | 'downloads:clearCompleted'
 
@@ -97,6 +111,12 @@ function TaskCard({ task }: { task: DownloadTask }): React.JSX.Element {
           <span className="text-ink-faint">
             {t('downloads:revision', { revision: task.revision })}
           </span>
+          {task.proxy && (
+            <span className="flex min-w-0 items-center gap-1 text-ink-faint">
+              <Globe className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{proxyTaskLabel(t, task.proxy)}</span>
+            </span>
+          )}
           {verified && (
             <span className="flex items-center gap-1 text-success">
               <CircleCheck className="size-3.5" aria-hidden />

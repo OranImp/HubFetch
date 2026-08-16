@@ -45,5 +45,29 @@
   },
   "title": "下载",
   "verified": "sha256 校验通过",
-  "checksumsVerified": "校验和验证通过"
+  "checksumsVerified": "校验和验证通过",
+  "create": {
+    "title": "下载选项",
+    "description": "选择此下载的连接方式。选择在下载开始时确定，并对该任务保持不变。",
+    "useDefault": "使用设置默认值",
+    "useDefaultHint": "当前：{{mode}}",
+    "modeLabel": "代理模式",
+    "modeSystem": "系统",
+    "modeDirect": "直连",
+    "modeManual": "手动",
+    "hintSystem": "使用操作系统的代理设置。",
+    "hintDirect": "绕过所有代理，直接连接。",
+    "hintManual": "使用固定的 HTTP(S) 代理服务器。",
+    "manualLabel": "HTTP(S) 代理地址",
+    "invalid": "请输入有效的 http:// 或 https:// 地址，需包含主机和端口，且不含路径、查询参数或凭据。",
+    "start": "开始下载",
+    "cancel": "取消"
+  },
+  "proxyModes": {
+    "system": "系统",
+    "direct": "直连",
+    "manual": "手动"
+  },
+  "taskProxy": "代理：{{mode}}",
+  "taskProxyManual": "代理：手动（{{url}}）"
 }

@@ -46,5 +46,29 @@
   },
   "title": "Téléchargements",
   "verified": "sha256 vérifié",
-  "checksumsVerified": "sommes de contrôle vérifiées"
+  "checksumsVerified": "sommes de contrôle vérifiées",
+  "create": {
+    "title": "Options de téléchargement",
+    "description": "Choisissez comment ce téléchargement se connecte. Le choix est figé au démarrage du téléchargement et reste fixe pour cette tâche.",
+    "useDefault": "Utiliser le réglage par défaut",
+    "useDefaultHint": "Actuellement : {{mode}}",
+    "modeLabel": "Mode proxy",
+    "modeSystem": "Système",
+    "modeDirect": "Direct",
+    "modeManual": "Manuel",
+    "hintSystem": "Utiliser les paramètres de proxy du système d'exploitation.",
+    "hintDirect": "Contourner tous les proxys et se connecter directement.",
+    "hintManual": "Utiliser un serveur proxy HTTP(S) fixe.",
+    "manualLabel": "URL du proxy HTTP(S)",
+    "invalid": "Saisissez une URL http:// ou https:// valide avec un hôte et un port, sans chemin, requête ni identifiants.",
+    "start": "Démarrer le téléchargement",
+    "cancel": "Annuler"
+  },
+  "proxyModes": {
+    "system": "Système",
+    "direct": "Direct",
+    "manual": "Manuel"
+  },
+  "taskProxy": "Proxy : {{mode}}",
+  "taskProxyManual": "Proxy : Manuel ({{url}})"
 }

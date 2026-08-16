@@ -128,15 +128,25 @@
     "downloadWarning": "進行中のダウンロードは、一時停止して再開するまで以前のエンドポイントやプロキシを使い続ける場合があります。",
     "hubEndpoint": "Hubエンドポイント",
     "invalidUrl": "有効なhttp://またはhttps://のURLを入力するか、空欄のままにしてください。",
-    "proxyUrl": "HTTP(S)プロキシ",
     "reset": "デフォルトにリセット",
     "resetEndpoint": "Hubエンドポイントをデフォルトにリセットしました。",
-    "resetProxy": "プロキシをクリアしました。",
     "saved": "ネットワーク設定を保存しました。",
     "test": "接続をテスト",
     "testFail": "接続に失敗しました: {{error}}",
-    "testOk": "Hubへの接続に成功しました。",
-    "title": "ネットワーク"
+    "title": "ネットワーク",
+    "proxy": {
+      "modeLabel": "プロキシモード",
+      "modeSystem": "システム",
+      "modeDirect": "直接接続",
+      "modeManual": "手動",
+      "hintSystem": "オペレーティングシステムのプロキシ設定を使用します。",
+      "hintDirect": "すべてのプロキシをバイパスして直接接続します。",
+      "hintManual": "固定の HTTP(S) プロキシサーバーを使用します。",
+      "manualLabel": "HTTP(S) プロキシ URL",
+      "invalid": "有効な http:// または https:// の URL を入力してください。ホストとポートを含み、パス、クエリ、認証情報は含めないでください。",
+      "testOkLatency": "{{ms}} ミリ秒で接続できました。",
+      "resetProxy": "プロキシをデフォルトにリセットしました。"
+    }
   },
   "notifications": {
     "enabled": "システム通知",

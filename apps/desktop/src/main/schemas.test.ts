@@ -202,6 +202,42 @@ describe('ipcRequestSchemas', () => {
     )
   })
 
+  it('accepts mode-aware proxy overrides for network:testConnection', () => {
+    const schema = ipcRequestSchemas['network:testConnection']!
+    // Omitted body = probe the applied settings (system/manual as persisted).
+    expect(schema.safeParse(undefined).success).toBe(true)
+    expect(schema.safeParse({}).success).toBe(true)
+    // All three closed override modes are valid draft selections.
+    expect(schema.safeParse({ proxy: { mode: 'system' } }).success).toBe(true)
+    expect(schema.safeParse({ proxy: { mode: 'direct' } }).success).toBe(true)
+    expect(
+      schema.safeParse({ proxy: { mode: 'manual', url: 'http://127.0.0.1:7897' } }).success
+    ).toBe(true)
+    // Endpoint drafts still follow the http(s)/null rule.
+    expect(schema.safeParse({ endpoint: 'https://hf-mirror.com' }).success).toBe(true)
+    expect(schema.safeParse({ endpoint: null, proxy: { mode: 'direct' } }).success).toBe(true)
+    expect(schema.safeParse({ endpoint: 'ftp://bad.example' }).success).toBe(false)
+  })
+
+  it('rejects non-closed or credential-bearing proxy drafts for network:testConnection', () => {
+    const schema = ipcRequestSchemas['network:testConnection']!
+    // A free-form mode string is never accepted.
+    expect(schema.safeParse({ proxy: { mode: 'auto' } }).success).toBe(false)
+    expect(schema.safeParse({ proxy: { mode: 'manual' } }).success).toBe(false)
+    expect(schema.safeParse({ proxy: 'http://127.0.0.1:7897' }).success).toBe(false)
+    // Credentials in a manual draft URL are rejected before any probe.
+    expect(
+      schema.safeParse({ proxy: { mode: 'manual', url: 'http://user:pass@127.0.0.1:7897' } })
+        .success
+    ).toBe(false)
+    // The legacy nullable proxyUrl field is gone; strict mode rejects it.
+    expect(schema.safeParse({ proxyUrl: 'http://127.0.0.1:7897' }).success).toBe(false)
+    // Direct/System drafts must not smuggle a URL.
+    expect(
+      schema.safeParse({ proxy: { mode: 'direct', url: 'http://127.0.0.1:7897' } }).success
+    ).toBe(false)
+  })
+
   it('accepts hub quicksearch query channels and rejects empty/oversized', () => {
     for (const channel of [
       'hub:searchOrgs',

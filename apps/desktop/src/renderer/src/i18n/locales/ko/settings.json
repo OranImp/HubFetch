@@ -128,15 +128,25 @@
     "downloadWarning": "진행 중인 다운로드는 일시 중지 후 재개할 때까지 이전 엔드포인트 또는 프록시를 유지할 수 있습니다.",
     "hubEndpoint": "Hub 엔드포인트",
     "invalidUrl": "유효한 http:// 또는 https:// URL을 입력하거나 비워 두세요.",
-    "proxyUrl": "HTTP(S) 프록시",
     "reset": "기본값으로 재설정",
     "resetEndpoint": "Hub 엔드포인트가 기본값으로 재설정되었습니다.",
-    "resetProxy": "프록시가 지워졌습니다.",
     "saved": "네트워크 설정이 저장되었습니다.",
     "test": "연결 테스트",
     "testFail": "연결에 실패했습니다: {{error}}",
-    "testOk": "Hub에 성공적으로 연결되었습니다.",
-    "title": "네트워크"
+    "title": "네트워크",
+    "proxy": {
+      "modeLabel": "프록시 모드",
+      "modeSystem": "시스템",
+      "modeDirect": "직접 연결",
+      "modeManual": "수동",
+      "hintSystem": "운영 체제의 프록시 설정을 사용합니다.",
+      "hintDirect": "모든 프록시를 우회하고 직접 연결합니다.",
+      "hintManual": "고정 HTTP(S) 프록시 서버를 사용합니다.",
+      "manualLabel": "HTTP(S) 프록시 URL",
+      "invalid": "호스트와 포트가 포함되고 경로, 쿼리 또는 자격 증명이 없는 유효한 http:// 또는 https:// URL을 입력하세요.",
+      "testOkLatency": "{{ms}}ms 안에 연결되었습니다.",
+      "resetProxy": "프록시가 기본값으로 재설정되었습니다."
+    }
   },
   "notifications": {
     "enabled": "시스템 알림",

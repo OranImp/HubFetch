@@ -2,13 +2,20 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowDownToLine, ChevronRight, File, FileSearch, Folder, Share, X } from 'lucide-react'
-import type { ExportIntegrationTask, ExportTool, FileTreeEntry, RepoKind } from '@hubfetch/shared'
+import type {
+  DownloadProxyOverride,
+  ExportIntegrationTask,
+  ExportTool,
+  FileTreeEntry,
+  RepoKind
+} from '@hubfetch/shared'
 import { normalizeHubEndpoint } from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
 import { cn, formatBytes } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DownloadCreateDialog } from '@/components/downloads/DownloadCreateDialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +71,7 @@ export function FileTreeView({
   // component — by repoId.
   const [selected, setSelected] = useState<FileTreeEntry | null>(null)
   const endpointKey = normalizeHubEndpoint(useAppStore((state) => state.settings.hubEndpoint))
+  const settings = useAppStore((state) => state.settings)
   const push = useToasts((s) => s.push)
 
   const tree = useQuery({
@@ -89,11 +97,18 @@ export function FileTreeView({
   )
 
   const download = useMutation({
-    mutationFn: (files: string[]) =>
-      invoke('downloads:start', { request: { repoId, kind, files } }),
+    mutationFn: (args: { files: string[]; proxy: DownloadProxyOverride | null }) =>
+      invoke('downloads:start', {
+        request:
+          args.proxy === null
+            ? { repoId, kind, files: args.files }
+            : { repoId, kind, files: args.files, proxy: args.proxy }
+      }),
     onSuccess: () => push(t('detail:downloadStarted'), 'success'),
     onError: (err) => push(t('detail:downloadFailed', { error: err.message }), 'error')
   })
+  // Dialog target files; null = dialog closed.
+  const [createTarget, setCreateTarget] = useState<string[] | null>(null)
   const exportRun = useMutation({
     mutationFn: (args: { tool: ExportTool; filePath: string }) =>
       invoke('export:start', {
@@ -117,7 +132,7 @@ export function FileTreeView({
         icon: ArrowDownToLine,
         disabled: download.isPending,
         run: async () => {
-          await download.mutateAsync([selected.path])
+          await download.mutateAsync({ files: [selected.path], proxy: null })
         }
       }
     ]
@@ -328,7 +343,7 @@ export function FileTreeView({
                       className="size-6 text-ink-faint"
                       aria-label={t('detail:files.download')}
                       loading={download.isPending}
-                      onClick={() => download.mutate([entry.path])}
+                      onClick={() => setCreateTarget([entry.path])}
                     >
                       <ArrowDownToLine className="size-3.5" aria-hidden />
                     </Button>
@@ -357,7 +372,7 @@ export function FileTreeView({
             kind={kind}
             repoId={repoId}
             entry={selected}
-            onDownload={() => download.mutate([selected.path])}
+            onDownload={() => setCreateTarget([selected.path])}
             downloading={download.isPending}
           />
         </div>
@@ -370,6 +385,18 @@ export function FileTreeView({
           />
         </div>
       ) : null}
+
+      <DownloadCreateDialog
+        open={createTarget !== null}
+        onOpenChange={(open) => setCreateTarget(open ? createTarget : null)}
+        settingsProxy={settings.proxy}
+        pending={download.isPending}
+        onConfirm={(proxy) =>
+          download
+            .mutateAsync({ files: createTarget ?? [], proxy })
+            .then(() => setCreateTarget(null))
+        }
+      />
     </div>
   )
 }

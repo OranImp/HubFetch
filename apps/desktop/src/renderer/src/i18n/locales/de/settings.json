@@ -128,15 +128,25 @@
     "downloadWarning": "Laufende Downloads behalten möglicherweise den bisherigen Endpunkt oder Proxy bei, bis sie pausiert und fortgesetzt werden.",
     "hubEndpoint": "Hub-Endpunkt",
     "invalidUrl": "Geben Sie eine gültige http:// oder https:// URL ein, oder lassen Sie das Feld leer.",
-    "proxyUrl": "HTTP(S)-Proxy",
     "reset": "Auf Standard zurücksetzen",
     "resetEndpoint": "Hub-Endpunkt auf Standard zurückgesetzt.",
-    "resetProxy": "Proxy zurückgesetzt.",
     "saved": "Netzwerkeinstellungen gespeichert.",
     "test": "Verbindung testen",
     "testFail": "Verbindung fehlgeschlagen: {{error}}",
-    "testOk": "Erfolgreich mit dem Hub verbunden.",
-    "title": "Netzwerk"
+    "title": "Netzwerk",
+    "proxy": {
+      "modeLabel": "Proxy-Modus",
+      "modeSystem": "System",
+      "modeDirect": "Direkt",
+      "modeManual": "Manuell",
+      "hintSystem": "Die Proxy-Einstellungen des Betriebssystems verwenden.",
+      "hintDirect": "Alle Proxys umgehen und direkt verbinden.",
+      "hintManual": "Einen festen HTTP(S)-Proxy-Server verwenden.",
+      "manualLabel": "HTTP(S)-Proxy-URL",
+      "invalid": "Geben Sie eine gültige http://- oder https://-URL mit Host und Port ein, ohne Pfad, Abfrage oder Anmeldedaten.",
+      "testOkLatency": "In {{ms}} ms verbunden.",
+      "resetProxy": "Proxy auf Standard zurückgesetzt."
+    }
   },
   "notifications": {
     "enabled": "Systembenachrichtigungen",

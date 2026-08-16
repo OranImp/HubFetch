@@ -196,12 +196,15 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
     signOut: z.boolean().optional()
   }),
   // Draft endpoint/proxy from Settings → Network "Test connection"; same URL
-  // rules as the settings patch. Omitted fields fall back to applied settings.
+  // rules as the settings patch. `proxy` is a closed per-draft override — the
+  // mode-aware selection the renderer's ProxySelector produces. Omitted fields
+  // fall back to applied settings.
   'network:testConnection': z
     .object({
       endpoint: z.union([z.url({ protocol: /^https?$/ }), z.null()]).optional(),
-      proxyUrl: z.union([manualProxyUrl, z.null()]).optional()
+      proxy: downloadProxyOverride.optional()
     })
+    .strict()
     .optional(),
   // No hf_ prefix check: fine-grained/org tokens and mirror deployments vary.
   'auth:signInWithToken': z.object({ token: z.string().trim().min(1).max(512) }),

@@ -128,15 +128,25 @@
     "downloadWarning": "Las descargas en curso pueden conservar el punto de conexión o proxy anterior hasta que se pausen y reanuden.",
     "hubEndpoint": "Punto de conexión del Hub",
     "invalidUrl": "Introduzca una URL http:// o https:// válida, o déjelo en blanco.",
-    "proxyUrl": "Proxy HTTP(S)",
     "reset": "Restablecer al valor predeterminado",
     "resetEndpoint": "Punto de conexión del Hub restablecido al valor predeterminado.",
-    "resetProxy": "Proxy borrado.",
     "saved": "Configuración de red guardada.",
     "test": "Probar conexión",
     "testFail": "Error de conexión: {{error}}",
-    "testOk": "Conectado correctamente al Hub.",
-    "title": "Red"
+    "title": "Red",
+    "proxy": {
+      "modeLabel": "Modo de proxy",
+      "modeSystem": "Sistema",
+      "modeDirect": "Directo",
+      "modeManual": "Manual",
+      "hintSystem": "Usa la configuración de proxy del sistema operativo.",
+      "hintDirect": "Omite todos los proxies y conecta directamente.",
+      "hintManual": "Usa un servidor proxy HTTP(S) fijo.",
+      "manualLabel": "URL de proxy HTTP(S)",
+      "invalid": "Introduce una URL http:// o https:// válida con host y puerto, sin ruta, consulta ni credenciales.",
+      "testOkLatency": "Conectado en {{ms}} ms.",
+      "resetProxy": "Proxy restablecido al valor predeterminado."
+    }
   },
   "notifications": {
     "enabled": "Notificaciones del sistema",

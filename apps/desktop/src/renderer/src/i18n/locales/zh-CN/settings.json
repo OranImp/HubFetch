@@ -128,15 +128,25 @@
     "downloadWarning": "进行中的下载可能仍使用旧的 endpoint 或代理，建议暂停后重新开始。",
     "hubEndpoint": "Hub 地址",
     "invalidUrl": "请输入有效的 http:// 或 https:// URL，或留空。",
-    "proxyUrl": "HTTP(S) 代理",
     "reset": "恢复默认",
     "resetEndpoint": "已恢复默认 Hub 地址。",
-    "resetProxy": "已清除代理。",
     "saved": "网络设置已保存。",
     "test": "测试连接",
     "testFail": "连接失败：{{error}}",
-    "testOk": "已成功连接到 Hub。",
-    "title": "网络"
+    "title": "网络",
+    "proxy": {
+      "modeLabel": "代理模式",
+      "modeSystem": "系统",
+      "modeDirect": "直连",
+      "modeManual": "手动",
+      "hintSystem": "使用操作系统的代理设置。",
+      "hintDirect": "绕过所有代理，直接连接。",
+      "hintManual": "使用固定的 HTTP(S) 代理服务器。",
+      "manualLabel": "HTTP(S) 代理地址",
+      "invalid": "请输入有效的 http:// 或 https:// 地址，需包含主机和端口，且不含路径、查询参数或凭据。",
+      "testOkLatency": "连接成功，耗时 {{ms}} 毫秒。",
+      "resetProxy": "代理已重置为默认值。"
+    }
   },
   "notifications": {
     "enabled": "系统通知",

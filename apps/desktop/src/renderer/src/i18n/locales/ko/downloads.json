@@ -45,5 +45,29 @@
   },
   "title": "다운로드",
   "verified": "sha256 확인됨",
-  "checksumsVerified": "체크섬 확인됨"
+  "checksumsVerified": "체크섬 확인됨",
+  "create": {
+    "title": "다운로드 옵션",
+    "description": "이 다운로드의 연결 방식을 선택하세요. 선택은 다운로드 시작 시 확정되며 이 작업에 고정됩니다.",
+    "useDefault": "설정 기본값 사용",
+    "useDefaultHint": "현재: {{mode}}",
+    "modeLabel": "프록시 모드",
+    "modeSystem": "시스템",
+    "modeDirect": "직접 연결",
+    "modeManual": "수동",
+    "hintSystem": "운영 체제의 프록시 설정을 사용합니다.",
+    "hintDirect": "모든 프록시를 우회하고 직접 연결합니다.",
+    "hintManual": "고정 HTTP(S) 프록시 서버를 사용합니다.",
+    "manualLabel": "HTTP(S) 프록시 URL",
+    "invalid": "호스트와 포트가 포함되고 경로, 쿼리 또는 자격 증명이 없는 유효한 http:// 또는 https:// URL을 입력하세요.",
+    "start": "다운로드 시작",
+    "cancel": "취소"
+  },
+  "proxyModes": {
+    "system": "시스템",
+    "direct": "직접 연결",
+    "manual": "수동"
+  },
+  "taskProxy": "프록시: {{mode}}",
+  "taskProxyManual": "프록시: 수동 ({{url}})"
 }

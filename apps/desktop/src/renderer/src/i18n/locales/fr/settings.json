@@ -128,15 +128,25 @@
     "downloadWarning": "Les téléchargements en cours peuvent conserver le point de terminaison ou le proxy précédent jusqu'à ce qu'ils soient mis en pause puis repris.",
     "hubEndpoint": "Point de terminaison du Hub",
     "invalidUrl": "Saisissez une URL http:// ou https:// valide, ou laissez vide.",
-    "proxyUrl": "Proxy HTTP(S)",
     "reset": "Réinitialiser par défaut",
     "resetEndpoint": "Point de terminaison du Hub réinitialisé par défaut.",
-    "resetProxy": "Proxy effacé.",
     "saved": "Paramètres réseau enregistrés.",
     "test": "Tester la connexion",
     "testFail": "Échec de la connexion : {{error}}",
-    "testOk": "Connexion au Hub réussie.",
-    "title": "Réseau"
+    "title": "Réseau",
+    "proxy": {
+      "modeLabel": "Mode proxy",
+      "modeSystem": "Système",
+      "modeDirect": "Direct",
+      "modeManual": "Manuel",
+      "hintSystem": "Utiliser les paramètres de proxy du système d'exploitation.",
+      "hintDirect": "Contourner tous les proxys et se connecter directement.",
+      "hintManual": "Utiliser un serveur proxy HTTP(S) fixe.",
+      "manualLabel": "URL du proxy HTTP(S)",
+      "invalid": "Saisissez une URL http:// ou https:// valide avec un hôte et un port, sans chemin, requête ni identifiants.",
+      "testOkLatency": "Connecté en {{ms}} ms.",
+      "resetProxy": "Proxy réinitialisé par défaut."
+    }
   },
   "notifications": {
     "enabled": "Notifications système",

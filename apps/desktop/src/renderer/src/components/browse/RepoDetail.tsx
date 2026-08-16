@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDownToLine, ExternalLink, Heart, Star } from 'lucide-react'
-import { hubRepoUrl, normalizeHubEndpoint, type RepoKind, type RepoSummary } from '@hubfetch/shared'
+import {
+  hubRepoUrl,
+  normalizeHubEndpoint,
+  type DownloadProxyOverride,
+  type RepoKind,
+  type RepoSummary
+} from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { cn, formatCount } from '@/lib/utils'
 import { useSettledValue } from '@/hooks/use-settled-value'
@@ -10,6 +16,7 @@ import { useCommandActions } from '@/hooks/use-command-actions'
 import { taskHue, taskIcon } from '@/lib/tag-colors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DownloadCreateDialog } from '@/components/downloads/DownloadCreateDialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tag } from '@/components/ui/tag'
@@ -137,7 +144,10 @@ export function RepoDetail({
   })
 
   const download = useMutation({
-    mutationFn: () => invoke('downloads:start', { request: { repoId, kind } }),
+    mutationFn: (args: { proxy: DownloadProxyOverride | null }) =>
+      invoke('downloads:start', {
+        request: args.proxy === null ? { repoId, kind } : { repoId, kind, proxy: args.proxy }
+      }),
     onSuccess: () => push(t('detail:downloadStarted'), 'success'),
     onError: (err) => push(t('detail:downloadFailed', { error: err.message }), 'error')
   })
@@ -149,7 +159,7 @@ export function RepoDetail({
         icon: ArrowDownToLine,
         disabled: download.isPending,
         run: async () => {
-          await download.mutateAsync()
+          await download.mutateAsync({ proxy: null })
         }
       }
     ],
@@ -182,6 +192,8 @@ export function RepoDetail({
   const tabKey = `${kind}:${repoId}`
   const [tabState, setTabState] = useState({ key: tabKey, value: 'card' })
   if (tabState.key !== tabKey) setTabState({ key: tabKey, value: 'card' })
+  // Download-create dialog: proxy selection is resolved only on Start.
+  const [createOpen, setCreateOpen] = useState(false)
   // The discussion/PR currently open inside the Discussions tab, mirrored up
   // by the panel (cleared when it unmounts on tab switch or repo change).
   const [activeDiscussion, setActiveDiscussion] = useState<number | null>(null)
@@ -284,7 +296,7 @@ export function RepoDetail({
             variant="cta"
             size="md"
             loading={download.isPending}
-            onClick={() => download.mutate()}
+            onClick={() => setCreateOpen(true)}
           >
             <ArrowDownToLine className="size-3.5" aria-hidden />
             {t('detail:actions.download')}
@@ -388,6 +400,14 @@ export function RepoDetail({
           </TabsContent>
         )}
       </Tabs>
+
+      <DownloadCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        settingsProxy={settings.proxy}
+        pending={download.isPending}
+        onConfirm={(proxy) => download.mutateAsync({ proxy }).then(() => setCreateOpen(false))}
+      />
     </div>
   )
 }

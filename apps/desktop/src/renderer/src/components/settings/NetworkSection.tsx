@@ -5,22 +5,21 @@ import { Globe, RotateCcw, Wifi } from 'lucide-react'
 import {
   DEFAULT_HUB_ENDPOINT,
   DEFAULT_MANUAL_PROXY_URL,
-  normalizeHubEndpoint,
-  normalizeManualProxyUrl
+  DEFAULT_PROXY_CONFIG,
+  normalizeHubEndpoint
 } from '@hubfetch/shared'
-import type { ProxyConfig } from '@hubfetch/shared'
+import type { ProxyConfig, ProxyMode } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
 import { isHubRemoteQuery } from '@/lib/query'
+import { parseManualProxyDraft, proxyConfigFromDraft, resolveCreateProxy } from '@/lib/proxy'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ProxySelector, type ProxySelectorLabels } from '@/components/settings/ProxySelector'
 import { useToasts } from '@/components/ui/toaster'
 import { useAppStore } from '@/stores/app'
 
-const DEFAULT_PROXY_PLACEHOLDER = 'http://127.0.0.1:7890'
 const ENDPOINT_INPUT_ID = 'settings-network-endpoint'
 const ENDPOINT_ERROR_ID = 'settings-network-endpoint-error'
-const PROXY_INPUT_ID = 'settings-network-proxy'
-const PROXY_ERROR_ID = 'settings-network-proxy-error'
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -39,27 +38,6 @@ function parseOptionalUrl(raw: string): { ok: true; value: string | null } | { o
   return { ok: true, value: trimmed.replace(/\/$/, '') }
 }
 
-/**
- * The Manual proxy URL must be a normalized http(s) host:port with no
- * userinfo/path/query/fragment — the same rule the IPC schema enforces.
- * Empty → system mode; otherwise the normalized URL or an error.
- */
-function parseProxyDraft(raw: string): { ok: true; value: string | null } | { ok: false } {
-  const trimmed = raw.trim()
-  if (trimmed === '') return { ok: true, value: null }
-  const normalized = normalizeManualProxyUrl(trimmed)
-  return normalized === null ? { ok: false } : { ok: true, value: normalized }
-}
-
-/** Closed settings proxy config derived from the single Manual URL field. */
-function proxyConfigFor(manualUrl: string | null, previous: ProxyConfig): ProxyConfig {
-  if (manualUrl === null) {
-    // Empty field = system route; the last Manual URL is retained.
-    return { mode: 'system', manualUrl: previous.manualUrl ?? DEFAULT_MANUAL_PROXY_URL }
-  }
-  return { mode: 'manual', manualUrl }
-}
-
 export function NetworkSection(): React.JSX.Element {
   const { t } = useTranslation(['settings', 'common'])
   const settings = useAppStore((s) => s.settings)
@@ -69,11 +47,11 @@ export function NetworkSection(): React.JSX.Element {
   const push = useToasts((s) => s.push)
 
   const [endpointDraft, setEndpointDraft] = useState(settings.hubEndpoint ?? '')
-  const [proxyDraft, setProxyDraft] = useState(settings.proxy.manualUrl ?? '')
-  const [endpointError, setEndpointError] = useState(false)
-  const [proxyError, setProxyError] = useState(false)
+  const [modeDraft, setModeDraft] = useState<ProxyMode>(settings.proxy.mode)
+  const [manualDraft, setManualDraft] = useState(settings.proxy.manualUrl ?? '')
   const [syncedEndpoint, setSyncedEndpoint] = useState(settings.hubEndpoint)
-  const [syncedProxy, setSyncedProxy] = useState(settings.proxy.manualUrl)
+  const [syncedMode, setSyncedMode] = useState(settings.proxy.mode)
+  const [syncedManual, setSyncedManual] = useState(settings.proxy.manualUrl)
 
   const applyNetworkSettings = async (
     hubEndpoint: string | null,
@@ -107,23 +85,43 @@ export function NetworkSection(): React.JSX.Element {
     setSyncedEndpoint(settings.hubEndpoint)
     setEndpointDraft(settings.hubEndpoint ?? '')
   }
-  if (settings.proxy.manualUrl !== syncedProxy) {
-    setSyncedProxy(settings.proxy.manualUrl)
-    setProxyDraft(settings.proxy.manualUrl ?? '')
+  if (settings.proxy.mode !== syncedMode) {
+    setSyncedMode(settings.proxy.mode)
+    setModeDraft(settings.proxy.mode)
+  }
+  if (settings.proxy.manualUrl !== syncedManual) {
+    setSyncedManual(settings.proxy.manualUrl)
+    setManualDraft(settings.proxy.manualUrl ?? '')
+  }
+
+  // Live inline validation: derived, never stored. The Manual URL rule is the
+  // SHARED normalizeManualProxyUrl — the same one the IPC schema enforces.
+  const endpointParsed = parseOptionalUrl(endpointDraft)
+  const manualParsed = parseManualProxyDraft(manualDraft)
+  const endpointInvalid = !endpointParsed.ok
+  const manualInvalid = modeDraft === 'manual' && (!manualParsed.ok || manualParsed.value === null)
+  const draftsInvalid = endpointInvalid || manualInvalid
+
+  const labels: ProxySelectorLabels = {
+    modeLabel: t('settings:network.proxy.modeLabel'),
+    system: t('settings:network.proxy.modeSystem'),
+    direct: t('settings:network.proxy.modeDirect'),
+    manual: t('settings:network.proxy.modeManual'),
+    hintSystem: t('settings:network.proxy.hintSystem'),
+    hintDirect: t('settings:network.proxy.hintDirect'),
+    hintManual: t('settings:network.proxy.hintManual'),
+    manualLabel: t('settings:network.proxy.manualLabel'),
+    invalid: t('settings:network.proxy.invalid')
   }
 
   const apply = useMutation({
     mutationFn: async () => {
-      const endpoint = parseOptionalUrl(endpointDraft)
-      const proxy = parseProxyDraft(proxyDraft)
-      setEndpointError(!endpoint.ok)
-      setProxyError(!proxy.ok)
-      if (!endpoint.ok || !proxy.ok) {
-        throw new Error(t('settings:network.invalidUrl'))
-      }
+      const built = proxyConfigFromDraft(modeDraft, manualDraft, settings.proxy)
+      if (!built.ok) throw new Error(t('settings:network.proxy.invalid'))
+      if (!endpointParsed.ok) throw new Error(t('settings:network.invalidUrl'))
       await applyNetworkSettings(
-        endpoint.value === null ? null : normalizeHubEndpoint(endpoint.value),
-        proxyConfigFor(proxy.value, settings.proxy)
+        endpointParsed.value === null ? null : normalizeHubEndpoint(endpointParsed.value),
+        built.config
       )
     },
     onSuccess: () => push(t('settings:network.saved'), 'success'),
@@ -132,23 +130,27 @@ export function NetworkSection(): React.JSX.Element {
 
   const test = useMutation({
     // Probe the drafts as typed (untouched drafts equal the applied config),
-    // so type endpoint → Test reflects what Apply would do.
+    // so a mode change + Test reflects what Apply would save. The probe runs
+    // on a throwaway client and never changes the saved value.
     mutationFn: async () => {
-      const endpoint = parseOptionalUrl(endpointDraft)
-      const proxy = parseProxyDraft(proxyDraft)
-      setEndpointError(!endpoint.ok)
-      setProxyError(!proxy.ok)
-      if (!endpoint.ok || !proxy.ok) {
-        throw new Error(t('settings:network.invalidUrl'))
-      }
+      if (!endpointParsed.ok) throw new Error(t('settings:network.invalidUrl'))
+      const override = resolveCreateProxy({
+        useDefault: false,
+        mode: modeDraft,
+        manualUrl: manualDraft
+      })
+      if (!override) throw new Error(t('settings:network.proxy.invalid'))
       return invoke('network:testConnection', {
-        endpoint: endpoint.value === null ? null : normalizeHubEndpoint(endpoint.value),
-        proxyUrl: proxy.value
+        endpoint: endpointParsed.value === null ? null : normalizeHubEndpoint(endpointParsed.value),
+        proxy: override
       })
     },
     onSuccess: (result) => {
-      if (result.ok) push(t('settings:network.testOk'), 'success')
-      else push(t('settings:network.testFail', { error: result.error }), 'error')
+      if (result.ok) {
+        push(t('settings:network.proxy.testOkLatency', { ms: result.latencyMs }), 'success')
+      } else {
+        push(t('settings:network.testFail', { error: result.error }), 'error')
+      }
     },
     onError: (err) => push(err.message, 'error')
   })
@@ -171,14 +173,13 @@ export function NetworkSection(): React.JSX.Element {
             value={endpointDraft}
             placeholder={DEFAULT_HUB_ENDPOINT}
             spellCheck={false}
-            aria-invalid={endpointError}
-            aria-describedby={endpointError ? ENDPOINT_ERROR_ID : undefined}
+            aria-invalid={endpointInvalid}
+            aria-describedby={endpointInvalid ? ENDPOINT_ERROR_ID : undefined}
             onChange={(e) => {
               setEndpointDraft(e.target.value)
-              setEndpointError(false)
             }}
           />
-          {endpointError && (
+          {endpointInvalid && (
             <span id={ENDPOINT_ERROR_ID} className="text-[12px] text-error">
               {t('settings:network.invalidUrl')}
             </span>
@@ -190,7 +191,6 @@ export function NetworkSection(): React.JSX.Element {
             size="sm"
             onClick={() => {
               setEndpointDraft('')
-              setEndpointError(false)
               void applyNetworkSettings(null, settings.proxy).then(() =>
                 push(t('settings:network.resetEndpoint'), 'success')
               )
@@ -203,41 +203,25 @@ export function NetworkSection(): React.JSX.Element {
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
-        <label htmlFor={PROXY_INPUT_ID} className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-medium text-ink-strong">
-            {t('settings:network.proxyUrl')}
-          </span>
-          <Input
-            id={PROXY_INPUT_ID}
-            value={proxyDraft}
-            placeholder={DEFAULT_PROXY_PLACEHOLDER}
-            spellCheck={false}
-            aria-invalid={proxyError}
-            aria-describedby={proxyError ? PROXY_ERROR_ID : undefined}
-            onChange={(e) => {
-              setProxyDraft(e.target.value)
-              setProxyError(false)
-            }}
-          />
-          {proxyError && (
-            <span id={PROXY_ERROR_ID} className="text-[12px] text-error">
-              {t('settings:network.invalidUrl')}
-            </span>
-          )}
-        </label>
+        <ProxySelector
+          mode={modeDraft}
+          manualDraft={manualDraft}
+          onModeChange={setModeDraft}
+          onManualDraftChange={setManualDraft}
+          invalid={manualInvalid}
+          labels={labels}
+          seedPlaceholder={DEFAULT_MANUAL_PROXY_URL}
+        />
         <div className="flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              setProxyDraft('')
-              setProxyError(false)
-              void updateSettings({
-                proxy: {
-                  mode: 'system',
-                  manualUrl: settings.proxy.manualUrl ?? DEFAULT_MANUAL_PROXY_URL
-                }
-              }).then(() => push(t('settings:network.resetProxy'), 'success'))
+              setModeDraft('system')
+              setManualDraft(settings.proxy.manualUrl ?? DEFAULT_MANUAL_PROXY_URL)
+              void updateSettings({ proxy: { ...DEFAULT_PROXY_CONFIG } }).then(() =>
+                push(t('settings:network.proxy.resetProxy'), 'success')
+              )
             }}
           >
             <RotateCcw className="size-3.5" aria-hidden />
@@ -249,7 +233,13 @@ export function NetworkSection(): React.JSX.Element {
       <p className="text-[12px] text-ink-faint">{t('settings:network.downloadWarning')}</p>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="cta" size="sm" loading={apply.isPending} onClick={() => apply.mutate()}>
+        <Button
+          variant="cta"
+          size="sm"
+          loading={apply.isPending}
+          disabled={draftsInvalid}
+          onClick={() => apply.mutate()}
+        >
           <Globe className="size-3.5" aria-hidden />
           {t('settings:network.apply')}
         </Button>
@@ -257,6 +247,7 @@ export function NetworkSection(): React.JSX.Element {
           variant="secondary"
           size="sm"
           loading={test.isPending}
+          disabled={draftsInvalid}
           onClick={() => test.mutate()}
         >
           <Wifi className="size-3.5" aria-hidden />

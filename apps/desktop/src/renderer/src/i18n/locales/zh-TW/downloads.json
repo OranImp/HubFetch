@@ -45,5 +45,29 @@
   },
   "title": "下載項目",
   "verified": "已驗證 sha256",
-  "checksumsVerified": "已驗證校驗碼"
+  "checksumsVerified": "已驗證校驗碼",
+  "create": {
+    "title": "下載選項",
+    "description": "選擇此下載的連線方式。選擇在下載開始時確定，並對該任務保持不變。",
+    "useDefault": "使用設定預設值",
+    "useDefaultHint": "目前：{{mode}}",
+    "modeLabel": "代理模式",
+    "modeSystem": "系統",
+    "modeDirect": "直連",
+    "modeManual": "手動",
+    "hintSystem": "使用作業系統的代理設定。",
+    "hintDirect": "繞過所有代理，直接連線。",
+    "hintManual": "使用固定的 HTTP(S) 代理伺服器。",
+    "manualLabel": "HTTP(S) 代理位址",
+    "invalid": "請輸入有效的 http:// 或 https:// 位址，須包含主機與連接埠，且不含路徑、查詢參數或憑據。",
+    "start": "開始下載",
+    "cancel": "取消"
+  },
+  "proxyModes": {
+    "system": "系統",
+    "direct": "直連",
+    "manual": "手動"
+  },
+  "taskProxy": "代理：{{mode}}",
+  "taskProxyManual": "代理：手動（{{url}}）"
 }

@@ -21,6 +21,7 @@ import type {
   DiscussionSummary,
   DiscussionType,
   CanPostResult,
+  DownloadProxyOverride,
   DownloadRequest,
   DownloadTask,
   ExportStartRequest,
@@ -102,13 +103,14 @@ export interface IpcInvokeContract {
   }
 
   /**
-   * Lightweight Hub reachability check. Draft endpoint/proxy (null = default)
-   * are probed on a temporary client so the user can test before Apply;
-   * omitted fields fall back to the applied settings.
+   * Lightweight Hub reachability check. Draft endpoint/proxy (mode-aware
+   * override; omitted = applied settings) are probed on a temporary client so
+   * the user can test before Apply. The probe never changes the saved value.
+   * `latencyMs` is a sanitized round-trip measure of the probe request.
    */
   'network:testConnection': {
-    req: { endpoint?: string | null; proxyUrl?: string | null }
-    res: { ok: true } | { ok: false; error: string }
+    req: { endpoint?: string | null; proxy?: DownloadProxyOverride }
+    res: { ok: true; latencyMs: number } | { ok: false; error: string }
   }
 
   'hub:search': { req: { query: SearchQuery }; res: Page<RepoSummary> }
