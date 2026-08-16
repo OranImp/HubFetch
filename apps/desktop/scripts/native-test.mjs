@@ -1,6 +1,6 @@
 // apps/desktop/scripts/native-test.mjs
 //
-// Todo 25/26: runs the native test suites under the REAL Electron runtime
+// Todo 25/26/27: runs the native test suites under the REAL Electron runtime
 // (ELECTRON_RUN_AS_NODE=1) so the Electron-ABI build actually loads. Every
 // suite exits 0 only when its assertions pass; this script forwards each real
 // exit code (spawnSync, no cmd %errorlevel% parse-time trap) and stops on the
@@ -13,7 +13,16 @@
 //                                         close, finalizer, handle growth
 //   4. electron-qa-happy.cjs            — loader+real bridge happy path
 //   5. electron-qa-failure.cjs          — typed failure path, no spawns
+//   6. electron-clone-qa-happy.cjs      — Todo 27: real utilityProcess.fork +
+//                                         CloneHost + real Job, cancel to zero
+//   7. electron-clone-qa-failure.cjs    — Todo 27: assign rejected + forged
+//                                         early start + tampered envelope,
+//                                         git-spy stays zero
 // --expose-gc is passed so the finalizer-safety test can force collection.
+//
+// Suites 6-7 run as a REAL Electron main process (no ELECTRON_RUN_AS_NODE):
+// utilityProcess.fork only exists in the real main process. No window is ever
+// created, so they are headless by construction (headless test policy).
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -43,12 +52,31 @@ if (typeof electronPath !== 'string' || !existsSync(electronPath)) {
   process.exit(1)
 }
 
+// runAsNode=true suites run with ELECTRON_RUN_AS_NODE=1; runAsNode=false suites
+// run as a real Electron main process (headless: no window is created).
 const suites = [
-  { name: 'abi-probe', file: 'electron-abi-probe.cjs', exposeGc: false },
-  { name: 'layout-tests', file: 'electron-layout-tests.cjs', exposeGc: false },
-  { name: 'integration-tests', file: 'electron-integration-tests.cjs', exposeGc: true },
-  { name: 'qa-happy', file: 'electron-qa-happy.cjs', exposeGc: false },
-  { name: 'qa-failure', file: 'electron-qa-failure.cjs', exposeGc: false }
+  { name: 'abi-probe', file: 'electron-abi-probe.cjs', exposeGc: false, runAsNode: true },
+  { name: 'layout-tests', file: 'electron-layout-tests.cjs', exposeGc: false, runAsNode: true },
+  {
+    name: 'integration-tests',
+    file: 'electron-integration-tests.cjs',
+    exposeGc: true,
+    runAsNode: true
+  },
+  { name: 'qa-happy', file: 'electron-qa-happy.cjs', exposeGc: false, runAsNode: true },
+  { name: 'qa-failure', file: 'electron-qa-failure.cjs', exposeGc: false, runAsNode: true },
+  {
+    name: 'clone-qa-happy',
+    file: 'electron-clone-qa-happy.cjs',
+    exposeGc: false,
+    runAsNode: false
+  },
+  {
+    name: 'clone-qa-failure',
+    file: 'electron-clone-qa-failure.cjs',
+    exposeGc: false,
+    runAsNode: false
+  }
 ]
 
 for (const suite of suites) {
@@ -64,11 +92,13 @@ for (const suite of suites) {
   const run = spawnSync(electronPath, args, {
     env: {
       ...process.env,
-      ELECTRON_RUN_AS_NODE: '1',
+      ...(suite.runAsNode ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
       TMP: 'E:\\Programs\\Temp',
-      TEMP: 'E:\\Programs\\Temp'
+      TEMP: 'E:\\Programs\\Temp',
+      PLAYWRIGHT_BROWSERS_PATH: 'E:\\Programs\\ms-playwright'
     },
-    stdio: 'inherit'
+    stdio: 'inherit',
+    timeout: 180_000
   })
   if (run.status !== 0) {
     console.error(`[native-test] FAILED suite '${suite.name}' with exit code ${run.status ?? 1}`)
@@ -76,5 +106,5 @@ for (const suite of suites) {
   }
 }
 
-console.log('[native-test] OK: all native suites passed under Electron ABI')
+console.log('[native-test] OK: all native suites passed under Electron')
 process.exit(0)

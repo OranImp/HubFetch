@@ -42,6 +42,7 @@ import {
 import { MainI18n, matchLocale } from './i18n'
 import { IntegrationTaskManager } from './integration-tasks'
 import { registerIpcHandlers } from './ipc'
+import { CloneHost } from './clone/clone-host'
 import { Library } from './library'
 import { createLogCaptures, sanitizeRendererLine } from './log-capture'
 import { buildMenu } from './menu'
@@ -185,6 +186,16 @@ if (!gotLock) {
     // the real Job API and Todo 27 gates the clone start on this probe.
     const hubFetchJobBridge = loadHubFetchJob()
     logger.info('native', `hubfetch_job bridge ${hubFetchJobBridge.status}`)
+
+    // Todo 27: assign-before-start utility-process clone host. Each clone gets
+    // its own Job + idle utility worker; Git is spawned only after the worker's
+    // PID is assigned to the Job, membership confirmed, the immutable envelope
+    // armed, and `start` sent. App shutdown cancels every active clone through
+    // the same bounded path as a user cancel.
+    const cloneHost = new CloneHost({
+      bridge: hubFetchJobBridge,
+      workerModulePath: join(__dirname, 'clone-worker.mjs')
+    })
 
     const db = openDatabase()
     const settings = new SettingsStore(db)
@@ -650,6 +661,11 @@ if (!gotLock) {
       integrationTasks.shutdown()
       follows.stop()
       tray.destroy()
+      // Todo 27: cancel every active clone through the cooperative cancel ->
+      // bounded grace -> Job terminate -> wait-for-empty path, so no Git
+      // descendant outlives the app. Bounded and never awaited: shutdown must
+      // not hang.
+      void cloneHost.shutdown()
       // Release per-task sessions/dispatchers and the app-level fetch pool.
       void transportManager.closeAll()
       void closeDefaultTransportPool()

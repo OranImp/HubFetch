@@ -9,6 +9,7 @@
   "include": [
     "electron.vite.config.ts",
     "src/main/**/*.ts",
+    "src/utility/**/*.ts",
     "src/preload/**/*.ts",
     "../../packages/shared/src/**/*.ts",
     "../../packages/hub-api/src/**/*.ts"

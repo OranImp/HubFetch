@@ -86,6 +86,9 @@ export interface HubFetchJobAddon {
   createKillOnCloseJob(): HubFetchJobHandle
 }
 
+/** Result of creating a REAL kill-on-close Job through the ready bridge. */
+export type CreateJobResult = { ok: true; handle: HubFetchJobHandle } | HubFetchJobOpError
+
 export type HubFetchJobBridge =
   | {
       status: 'ready'
@@ -98,6 +101,13 @@ export type HubFetchJobBridge =
        * the real Job bridge loads AND createKillOnCloseJob() succeeds.
        */
       probeJob(): HubFetchJobOpResult
+      /**
+       * Todo 27: creates a REAL kill-on-close Job handle that lives until the
+       * caller closes it. The CloneHost assigns the utility-process PID to this
+       * Job BEFORE arming the worker, so a Git tree spawned only after `start`
+       * is contained from birth. Typed failure (never throws).
+       */
+      createJob(): CreateJobResult
     }
   | {
       status: 'unavailable'
@@ -341,7 +351,58 @@ export function loadHubFetchJob(opts: HubFetchJobLoaderOptions = {}): HubFetchJo
     status: 'ready',
     addonPath: resolved.path,
     runtimeInfo: classified.runtimeInfo,
-    probeJob: () => probeRealBridge(addon)
+    probeJob: () => probeRealBridge(addon),
+    createJob: () => createRealJob(addon)
+  }
+}
+
+/**
+ * Create a REAL kill-on-close Job through the loaded addon. Typed failure —
+ * never throws — so a broken addon can never crash main. Todo 27's CloneHost
+ * assigns the utility-process PID to this Job before arming the worker.
+ */
+function createRealJob(addon: HubFetchJobAddon): CreateJobResult {
+  try {
+    const created = addon.createKillOnCloseJob()
+    if (!isRecord(created)) {
+      return {
+        ok: false,
+        code: 'HUBFETCH_JOB_BAD_EXPORTS',
+        errorCode: 'bad-exports',
+        message: 'createKillOnCloseJob returned a non-object'
+      }
+    }
+    const handle = created as unknown as HubFetchJobHandle
+    const handleMethods: Array<keyof HubFetchJobHandle> = [
+      'assignProcess',
+      'containsProcess',
+      'activeProcessIds',
+      'terminate',
+      'waitForEmpty',
+      'close'
+    ]
+    for (const method of handleMethods) {
+      if (typeof handle[method] !== 'function') {
+        return {
+          ok: false,
+          code: 'HUBFETCH_JOB_BAD_EXPORTS',
+          errorCode: 'bad-exports',
+          message: `createKillOnCloseJob handle is missing method '${String(method)}'`
+        }
+      }
+    }
+    return { ok: true, handle }
+  } catch (err) {
+    const code =
+      isRecord(err) && typeof err.code === 'string' ? String(err.code) : 'HUBFETCH_JOB_CREATE_THREW'
+    const errorCode =
+      isRecord(err) && typeof err.errorCode === 'string' ? String(err.errorCode) : 'threw'
+    return {
+      ok: false,
+      code,
+      errorCode,
+      message: err instanceof Error ? err.message : String(err)
+    }
   }
 }
 

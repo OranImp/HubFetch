@@ -287,6 +287,73 @@ describe('loadHubFetchJob — typed unavailable contract (no throws)', () => {
   })
 })
 
+describe('ready bridge — createJob (Todo 27)', () => {
+  it('creates a real Job handle through the ready bridge', () => {
+    const handle = validHandle()
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({ ...validModule(), createKillOnCloseJob: () => handle })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      const created = bridge.createJob()
+      expect(created.ok).toBe(true)
+      if (created.ok) expect(created.handle).toBe(handle)
+    }
+  })
+
+  it('returns a typed failure when createKillOnCloseJob throws', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({
+        ...validModule(),
+        createKillOnCloseJob: () => {
+          throw new Error('boom')
+        }
+      })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      const created = bridge.createJob()
+      expect(created.ok).toBe(false)
+      if (!created.ok) expect(created.code).toBe('HUBFETCH_JOB_CREATE_THREW')
+    }
+  })
+
+  it('returns a typed failure for a malformed handle shape', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({ ...validModule(), createKillOnCloseJob: () => ({ nope: true }) })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      const created = bridge.createJob()
+      expect(created.ok).toBe(false)
+      if (!created.ok) expect(created.code).toBe('HUBFETCH_JOB_BAD_EXPORTS')
+    }
+  })
+
+  it('never throws even when the addon misbehaves', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => ({
+        ...validModule(),
+        createKillOnCloseJob: () => {
+          throw new Error('boom')
+        }
+      })
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      expect(() => bridge.createJob()).not.toThrow()
+    }
+  })
+})
+
 describe('getCloneSupport — real-bridge probe (Todo 26)', () => {
   it('enables clone support only when createKillOnCloseJob returns a valid handle', () => {
     const bridge = loadHubFetchJob({

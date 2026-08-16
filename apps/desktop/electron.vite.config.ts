@@ -31,7 +31,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           'download-worker': resolve(__dirname, 'src/main/workers/download-worker.ts'),
-          'cache-worker': resolve(__dirname, 'src/main/workers/cache-worker.ts')
+          'cache-worker': resolve(__dirname, 'src/main/workers/cache-worker.ts'),
+          'clone-worker': resolve(__dirname, 'src/utility/clone-worker.ts')
         }
       }
     }
