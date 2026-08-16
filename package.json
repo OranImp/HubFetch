@@ -18,6 +18,7 @@
     "test": "node scripts/run-tests.mjs",
     "test:release-tools": "node --test .github/scripts/release-tools/release-tools.test.mjs",
     "test:no-updater": "node --test scripts/no-updater.test.mjs",
+    "test:privileges": "node --test scripts/privilege-boundaries.test.mjs",
     "test:coverage": "pnpm --filter hubfetch-desktop test:coverage",
     "verify:syntax-build": "node scripts/verify-syntax-build.mjs",
     "i18n:extract": "pnpm --filter hubfetch-desktop i18n:extract",

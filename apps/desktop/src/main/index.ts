@@ -1,9 +1,27 @@
 import { existsSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
-import { BrowserWindow, app, dialog, nativeTheme, protocol, shell } from 'electron'
+import {
+  BrowserWindow,
+  app,
+  dialog,
+  nativeTheme,
+  protocol,
+  session,
+  shell,
+  type WebContents
+} from 'electron'
 import { HubApiError } from '@hubfetch/hub-api'
 import type { IpcEventChannel, IpcEventPayload } from '@hubfetch/shared'
-import { isAllowedExternalUrl, isValidRepoId } from '@hubfetch/shared'
+import { isValidRepoId } from '@hubfetch/shared'
+import {
+  checkSenderTrust,
+  decideExternalTarget,
+  logBoundary,
+  permissionCheckAllowed,
+  resolveTrustedOrigins,
+  type SenderSnapshot,
+  type TrustedOrigins
+} from './ipc-guard'
 import { AuthManager } from './auth'
 import { mimeForOmhfFile } from './preview-mime'
 import { CacheManager } from './cache'
@@ -53,6 +71,28 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 const isDev = !app.isPackaged
+
+// The only WebContents allowed through every privileged boundary. Trust is
+// never inferred from scheme: the sender must be the app's own top-level
+// frame at exactly the packaged `file:` entry (or the dev-server origin).
+const trustedOrigins: TrustedOrigins = resolveTrustedOrigins(
+  app.isPackaged,
+  join(__dirname, '../renderer/index.html')
+)
+
+function isTrustedWebContents(wc: WebContents | null | undefined): boolean {
+  if (!wc || wc.isDestroyed()) return false
+  const sender: SenderSnapshot = { webContentsId: wc.id, isMainFrame: true, url: wc.getURL() }
+  return checkSenderTrust(trustedOrigins, sender).ok
+}
+
+// The app never uses <webview>; any attachment attempt — from a compromised
+// renderer or a regression — is refused before a single guest page exists.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-attach-webview', (event) => {
+    event.preventDefault()
+  })
+})
 
 // Renderer crash / load-failure recovery: reload this many times before asking
 // the user, with a short pause so a persistent crash can't spin a tight loop.
@@ -140,6 +180,18 @@ if (!gotLock) {
     auth.attachClient(hubHolder.current)
     await applyAppProxy(initial.proxyUrl)
     app.setLoginItemSettings({ openAtLogin: initial.launchAtLogin })
+
+    // Permission policy — default deny. No renderer permission request is ever
+    // granted (Spaces embedded as sandboxed iframes cannot reach the camera,
+    // microphone, fullscreen, geolocation, notifications, or display capture),
+    // and only clipboard writes from the app's own frame stay usable so the
+    // error-detail / raw-URL copy buttons keep working.
+    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => {
+      callback(false)
+    })
+    session.defaultSession.setPermissionCheckHandler((wc, permission) => {
+      return permissionCheckAllowed(isTrustedWebContents(wc), permission)
+    })
 
     // hubfetch://repo/?kind=…&repoId=…&revision=…&path=… → authenticated
     // fetch of the Hub resolve URL through the live hub client (token + proxy
@@ -311,32 +363,35 @@ if (!gotLock) {
       }
     }
 
-    registerIpcHandlers({
-      db,
-      hub,
-      auth,
-      settings,
-      library,
-      downloads,
-      cache,
-      follows,
-      integrationTasks,
-      i18n,
-      rebuildMenu,
-      notificationRegistration,
-      removeNotificationShortcut: () =>
-        removeWindowsNotificationShortcut({
-          isPackaged: app.isPackaged,
-          platform: process.platform,
-          appData: app.getPath('appData'),
-          appName: APP_NAME,
-          existsSync,
-          unlinkSync
-        }),
-      broadcast,
-      applyNetworkSettings,
-      applyDesktopSettings
-    })
+    registerIpcHandlers(
+      {
+        db,
+        hub,
+        auth,
+        settings,
+        library,
+        downloads,
+        cache,
+        follows,
+        integrationTasks,
+        i18n,
+        rebuildMenu,
+        notificationRegistration,
+        removeNotificationShortcut: () =>
+          removeWindowsNotificationShortcut({
+            isPackaged: app.isPackaged,
+            platform: process.platform,
+            appData: app.getPath('appData'),
+            appName: APP_NAME,
+            existsSync,
+            unlinkSync
+          }),
+        broadcast,
+        applyNetworkSettings,
+        applyDesktopSettings
+      },
+      trustedOrigins
+    )
     rebuildMenu()
     if (initial.closeToTray) tray.ensure()
 
@@ -382,16 +437,22 @@ if (!gotLock) {
         tray.ensure()
       })
 
-      // Every external navigation goes through the system browser; the window never leaves the app.
+      // Every external navigation goes through the system browser; the window
+      // never leaves the app. Only allowlisted HTTPS destinations (plus the
+      // configured Hub origin over plaintext HTTP) are handed to the OS; the
+      // internal hubfetch: scheme is never opened externally.
       win.webContents.setWindowOpenHandler(({ url }) => {
-        if (isAllowedExternalUrl(url, settings.get().hubEndpoint)) void shell.openExternal(url)
+        const action = decideExternalTarget(url, settings.get().hubEndpoint)
+        logBoundary('window-open', url, action)
+        if (action === 'open-external') void shell.openExternal(url)
         return { action: 'deny' }
       })
       win.webContents.on('will-navigate', (event, url) => {
-        if (url !== win.webContents.getURL()) {
-          event.preventDefault()
-          if (isAllowedExternalUrl(url, settings.get().hubEndpoint)) void shell.openExternal(url)
-        }
+        if (url === win.webContents.getURL()) return
+        event.preventDefault()
+        const action = decideExternalTarget(url, settings.get().hubEndpoint)
+        logBoundary('will-navigate', url, action)
+        if (action === 'open-external') void shell.openExternal(url)
       })
 
       // A route queued while no window existed cannot be sent at did-finish-load:

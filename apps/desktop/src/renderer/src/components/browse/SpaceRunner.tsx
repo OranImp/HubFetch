@@ -126,7 +126,6 @@ export function SpaceRunner({
           src={`https://${domain}`}
           title={repoId}
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
-          allow="clipboard-read; clipboard-write; microphone; camera; fullscreen"
           className="block h-full w-full border-0 bg-white"
           onLoad={() => setLoaded(true)}
         />

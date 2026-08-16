@@ -43,6 +43,12 @@ import {
   runInferenceStream
 } from './integrations'
 import { matchLocale } from './i18n'
+import {
+  checkSenderTrust,
+  logIpcDenial,
+  type SenderSnapshot,
+  type TrustedOrigins
+} from './ipc-guard'
 
 export interface AppContext {
   db: AppDatabase
@@ -83,13 +89,49 @@ function handle<C extends IpcInvokeChannel>(
       if (!parsed.success) {
         throw new Error(`Invalid payload for ${channel}: ${parsed.error.message}`)
       }
-      return handler(parsed.data as IpcRequest<C>, event)
+      return invokeTrusted(channel, event, () => handler(parsed.data as IpcRequest<C>, event))
     }
     if (payload !== undefined && payload !== null) {
       throw new Error(`Channel ${channel} accepts no payload`)
     }
-    return handler(undefined as IpcRequest<C>, event)
+    return invokeTrusted(channel, event, () => handler(undefined as IpcRequest<C>, event))
   })
+}
+
+// Set once by registerIpcHandlers; every channel registered through `handle`
+// (and any future one) is gated by the central sender-trust boundary below.
+let trustedOrigins: TrustedOrigins = { packagedEntry: '', devOrigin: null }
+
+/**
+ * The single privileged-entry gate for the whole IPC surface. After schema
+ * validation the sender must be the app's own top-level frame at exactly the
+ * trusted renderer URL; anything else is rejected with sanitized logging and
+ * never reaches the service handler. `hubfetch:`/scheme arguments are never
+ * trusted by themselves.
+ */
+function invokeTrusted<C extends IpcInvokeChannel>(
+  channel: C,
+  event: IpcMainInvokeEvent,
+  run: () => Promise<IpcResponse<C>> | IpcResponse<C>
+): Promise<IpcResponse<C>> | IpcResponse<C> {
+  const sender: SenderSnapshot = {
+    webContentsId: event.sender?.id ?? 0,
+    isMainFrame: event.senderFrame === event.sender?.mainFrame,
+    url: event.sender?.getURL() ?? ''
+  }
+  const check = checkSenderTrust(trustedOrigins, sender)
+  if (!check.ok) {
+    logIpcDenial(channel, sender.webContentsId, check.reason)
+    throw new Error(`IPC sender rejected: ${check.reason}`)
+  }
+  return run()
+}
+
+/** The BrowserWindow that owns an IPC sender, when it still exists. */
+function ownerWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
+  if (!event.sender) return null
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return win && !win.isDestroyed() ? win : null
 }
 
 async function applySettingsPatch(
@@ -114,7 +156,8 @@ async function applySettingsPatch(
   return next
 }
 
-export function registerIpcHandlers(ctx: AppContext): void {
+export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): void {
+  trustedOrigins = origins
   /**
    * A 401 from a cookie-backed social write means the captured web session
    * expired or was revoked: auto-disconnect it (broadcasts evt:auth so the
@@ -161,8 +204,12 @@ export function registerIpcHandlers(ctx: AppContext): void {
   // --- settings ---------------------------------------------------------------
   handle('settings:get', () => ctx.settings.get())
   handle('settings:set', async ({ patch }) => applySettingsPatch(ctx, patch))
-  handle('settings:selectCacheDir', async () => {
-    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
+  handle('settings:selectCacheDir', async (_req, event) => {
+    const parent = ownerWindow(event)
+    const options: Electron.OpenDialogOptions = { properties: ['openDirectory'] }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, options)
+      : await dialog.showOpenDialog(options)
     const selected = result.filePaths[0]
     if (result.canceled || !selected) return null
     const entry = await lstat(selected)
@@ -174,11 +221,15 @@ export function registerIpcHandlers(ctx: AppContext): void {
   })
   handle('settings:resetCacheDir', () => applySettingsPatch(ctx, { hfCacheDir: null }))
 
-  handle('settings:export', async () => {
-    const result = await dialog.showSaveDialog({
+  handle('settings:export', async (_req, event) => {
+    const parent = ownerWindow(event)
+    const options: Electron.SaveDialogOptions = {
       defaultPath: 'hubfetch-settings.json',
       filters: [{ name: 'JSON', extensions: ['json'] }]
-    })
+    }
+    const result = parent
+      ? await dialog.showSaveDialog(parent, options)
+      : await dialog.showSaveDialog(options)
     if (result.canceled || !result.filePath) return { canceled: true as const }
     const { hfCacheDir: _machineCacheDir, ...portableSettings } = ctx.settings.get()
     const payload = {
@@ -190,11 +241,15 @@ export function registerIpcHandlers(ctx: AppContext): void {
     return { canceled: false as const, path: result.filePath }
   })
 
-  handle('settings:import', async () => {
-    const result = await dialog.showOpenDialog({
+  handle('settings:import', async (_req, event) => {
+    const parent = ownerWindow(event)
+    const options: Electron.OpenDialogOptions = {
       properties: ['openFile'],
       filters: [{ name: 'JSON', extensions: ['json'] }]
-    })
+    }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, options)
+      : await dialog.showOpenDialog(options)
     const filePath = result.filePaths[0]
     if (result.canceled || !filePath) return { canceled: true as const }
     let raw: unknown
@@ -461,14 +516,17 @@ export function registerIpcHandlers(ctx: AppContext): void {
   handle('auth:signInWithToken', ({ token }) => ctx.auth.signInWithToken(token))
   handle('auth:signOut', () => ctx.auth.signOut())
   // The captured cookie is a secret: it stays in the main process, never logged.
-  handle('auth:connectHubSession', async () => {
+  handle('auth:connectHubSession', async (_req, event) => {
     if (ctx.auth.getState().status !== 'signedIn')
       return { ok: false as const, error: 'invalid' as const }
     const settings = ctx.settings.get()
+    // The login window is modal to the window that asked for it, never an
+    // arbitrary first window.
+    const parent = ownerWindow(event) ?? BrowserWindow.getAllWindows()[0]
     const captured = await captureHubSessionCookie({
       endpoint: ctx.hub.baseUrl,
       proxyUrl: settings.proxyUrl,
-      parent: BrowserWindow.getAllWindows()[0]
+      parent
     })
     if (!captured.ok) return { ok: false as const, error: captured.error }
     return ctx.auth.connectHubSession(captured.cookie)
