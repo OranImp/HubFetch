@@ -1,0 +1,38 @@
+{
+  "actions": "推奨アクション",
+  "cancel": "キャンセル",
+  "category": {
+    "app": "アプリ",
+    "cache": "キャッシュ",
+    "credentials": "認証情報",
+    "database": "データベース",
+    "destination": "保存先",
+    "disk": "ディスク",
+    "git": "Git",
+    "network": "ネットワーク",
+    "notifications": "通知",
+    "symlink": "シンボリックリンク",
+    "system": "システム"
+  },
+  "checksCount": "{{count}} 件のチェック",
+  "durationMs": "{{ms}} ミリ秒",
+  "exportBundle": "サポートバンドルを書き出す",
+  "exportCanceled": "サポートバンドルの書き出しをキャンセルしました",
+  "exportFailed": "サポートバンドルの書き出しに失敗しました",
+  "exported": "サポートバンドルを {{path}} に保存しました",
+  "exporting": "サポートバンドルを書き出しています…",
+  "noResults": {
+    "body": "準備状態チェックを実行するとレポートが表示されます。",
+    "title": "まだチェックはありません"
+  },
+  "rerun": "再チェック",
+  "running": "チェックを実行しています…",
+  "status": {
+    "failure": "失敗",
+    "pass": "合格",
+    "unknown": "不明",
+    "warning": "警告"
+  },
+  "subtitle": "ダウンロード・キャッシュ・ネットワークの準備状態チェック",
+  "title": "診断"
+}

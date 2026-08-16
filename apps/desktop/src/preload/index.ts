@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
+  DiagnosticReport,
+  DiagnosticsBridge,
+  DiagnosticsExportResult,
+  DiagnosticsProgress,
   IpcEventChannel,
   IpcEventPayload,
   IpcInvokeChannel,
@@ -11,6 +15,28 @@ import { IPC_EVENT_CHANNELS, IPC_INVOKE_CHANNELS } from '@hubfetch/shared'
 
 const invokeChannels = new Set<string>(IPC_INVOKE_CHANNELS)
 const eventChannels = new Set<string>(IPC_EVENT_CHANNELS)
+
+const diagnosticsBridge: DiagnosticsBridge = {
+  run(): Promise<DiagnosticReport> {
+    return ipcRenderer.invoke('diagnostics:run') as Promise<DiagnosticReport>
+  },
+  cancel(): Promise<void> {
+    return ipcRenderer.invoke('diagnostics:cancel') as Promise<void>
+  },
+  exportBundle(): Promise<DiagnosticsExportResult> {
+    return ipcRenderer.invoke('diagnostics:export') as Promise<DiagnosticsExportResult>
+  },
+  cancelExport(): Promise<void> {
+    return ipcRenderer.invoke('diagnostics:exportCancel') as Promise<void>
+  },
+  onProgress(listener: (progress: DiagnosticsProgress) => void): () => void {
+    const wrapped = (_event: unknown, payload: DiagnosticsProgress): void => listener(payload)
+    ipcRenderer.on('evt:diagnosticsProgress', wrapped)
+    return () => {
+      ipcRenderer.removeListener('evt:diagnosticsProgress', wrapped)
+    }
+  }
+}
 
 /**
  * The minimal, typed bridge. Only channels defined in the shared contract can be
@@ -35,7 +61,8 @@ const api: RendererApi = {
     return () => {
       ipcRenderer.removeListener(channel, wrapped)
     }
-  }
+  },
+  diagnostics: diagnosticsBridge
 }
 
 contextBridge.exposeInMainWorld('hubfetch', api)

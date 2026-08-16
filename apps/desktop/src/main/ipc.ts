@@ -52,6 +52,8 @@ import {
   type TrustedOrigins
 } from './ipc-guard'
 import { redactor } from './security/log'
+import type { DiagnosticsCoordinator } from './diagnostics-coordinator'
+import { SupportBundleError } from './support-bundle'
 
 export interface AppContext {
   db: AppDatabase
@@ -76,6 +78,7 @@ export interface AppContext {
     next: { launchAtLogin: boolean; closeToTray: boolean; theme: string },
     prev: { launchAtLogin: boolean; closeToTray: boolean; theme: string }
   ) => void
+  diagnostics: DiagnosticsCoordinator
 }
 
 function handle<C extends IpcInvokeChannel>(
@@ -635,5 +638,43 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   )
   handle('inference:cancel', ({ id }) => {
     cancelInference(id)
+  })
+
+  // --- diagnostics (plan Todo 24) ------------------------------------------------
+  // The run/export/cancel surface is fully validated by the central `handle`
+  // wrapper (schema + sender trust). The export path is returned ONLY after the
+  // archive was finalized and sentinel-scanned; temp paths never cross IPC.
+  handle('diagnostics:run', () => ctx.diagnostics.run())
+  handle('diagnostics:cancel', () => {
+    ctx.diagnostics.cancelRun()
+  })
+  handle('diagnostics:export', async (_req, event) => {
+    const parent = ownerWindow(event)
+    const options: Electron.SaveDialogOptions = {
+      title: 'Export support bundle',
+      defaultPath: `hubfetch-support-bundle.zip`,
+      filters: [{ name: 'ZIP', extensions: ['zip'] }]
+    }
+    const result = parent
+      ? await dialog.showSaveDialog(parent, options)
+      : await dialog.showSaveDialog(options)
+    if (result.canceled || !result.filePath) return { canceled: true as const }
+    try {
+      const bundle = await ctx.diagnostics.exportBundle(result.filePath)
+      return {
+        canceled: false as const,
+        path: bundle.path,
+        memberCount: bundle.memberCount,
+        bytesWritten: bundle.bytesWritten
+      }
+    } catch (err) {
+      if (err instanceof SupportBundleError && err.code === 'canceled') {
+        return { canceled: true as const }
+      }
+      throw err
+    }
+  })
+  handle('diagnostics:exportCancel', () => {
+    ctx.diagnostics.cancelExport()
   })
 }

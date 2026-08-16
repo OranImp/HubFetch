@@ -1,0 +1,38 @@
+{
+  "actions": "Recommended action",
+  "cancel": "Cancel",
+  "category": {
+    "app": "App",
+    "cache": "Cache",
+    "credentials": "Credentials",
+    "database": "Database",
+    "destination": "Destination",
+    "disk": "Disk",
+    "git": "Git",
+    "network": "Network",
+    "notifications": "Notifications",
+    "symlink": "Symlinks",
+    "system": "System"
+  },
+  "checksCount": "{{count}} checks",
+  "durationMs": "{{ms}} ms",
+  "exportBundle": "Export support bundle",
+  "exportCanceled": "Support bundle export canceled",
+  "exportFailed": "Support bundle export failed",
+  "exported": "Support bundle saved to {{path}}",
+  "exporting": "Exporting support bundle…",
+  "noResults": {
+    "body": "Run the readiness checks to see a report.",
+    "title": "No checks yet"
+  },
+  "rerun": "Re-run checks",
+  "running": "Running checks…",
+  "status": {
+    "failure": "Failure",
+    "pass": "Pass",
+    "unknown": "Unknown",
+    "warning": "Warning"
+  },
+  "subtitle": "Readiness checks for downloads, cache, and network",
+  "title": "Diagnostics"
+}

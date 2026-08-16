@@ -211,10 +211,16 @@ export class DiagnosticsService {
   }
 
   /** Run every probe once and return a schema-validated, bounded report. */
-  async run(signal?: AbortSignal): Promise<DiagnosticReport> {
+  async run(
+    signal?: AbortSignal,
+    onProgress?: (progress: { completed: number; total: number; currentId: string }) => void
+  ): Promise<DiagnosticReport> {
+    const probes = this.probes()
     const checks: DiagnosticCheck[] = []
-    for (const probe of this.probes()) {
+    for (let index = 0; index < probes.length; index += 1) {
+      const probe = probes[index] as ProbeDef
       checks.push(await this.runProbe(probe, signal))
+      onProgress?.({ completed: index + 1, total: probes.length, currentId: probe.id })
     }
     checks.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     const report: DiagnosticReport = {

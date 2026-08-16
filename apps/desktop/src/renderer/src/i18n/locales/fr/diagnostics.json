@@ -1,0 +1,38 @@
+{
+  "actions": "Action recommandée",
+  "cancel": "Annuler",
+  "category": {
+    "app": "Application",
+    "cache": "Cache",
+    "credentials": "Identifiants",
+    "database": "Base de données",
+    "destination": "Destination",
+    "disk": "Disque",
+    "git": "Git",
+    "network": "Réseau",
+    "notifications": "Notifications",
+    "symlink": "Liens symboliques",
+    "system": "Système"
+  },
+  "checksCount": "{{count}} vérifications",
+  "durationMs": "{{ms}} ms",
+  "exportBundle": "Exporter le bundle de support",
+  "exportCanceled": "Export du bundle de support annulé",
+  "exportFailed": "Échec de l’export du bundle de support",
+  "exported": "Bundle de support enregistré dans {{path}}",
+  "exporting": "Export du bundle de support…",
+  "noResults": {
+    "body": "Exécutez les vérifications de préparation pour voir un rapport.",
+    "title": "Aucune vérification pour l’instant"
+  },
+  "rerun": "Revérifier",
+  "running": "Vérifications en cours…",
+  "status": {
+    "failure": "Échec",
+    "pass": "Réussi",
+    "unknown": "Inconnu",
+    "warning": "Avertissement"
+  },
+  "subtitle": "Vérifications de préparation pour les téléchargements, le cache et le réseau",
+  "title": "Diagnostic"
+}

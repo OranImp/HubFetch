@@ -11,6 +11,7 @@ import { CollectionPage } from '@/pages/CollectionPage'
 import { CollectionsPage } from '@/pages/CollectionsPage'
 import { ComparePage } from '@/pages/ComparePage'
 import { DownloadsPage } from '@/pages/DownloadsPage'
+import { DiagnosticsPage } from '@/pages/DiagnosticsPage'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { HomePage } from '@/pages/HomePage'
@@ -57,6 +58,7 @@ export function App(): React.JSX.Element {
               {/* Collection slugs contain a slash (owner/name-id), hence the splat. */}
               <Route path="collections/*" element={<CollectionPage />} />
               <Route path="downloads" element={<DownloadsPage />} />
+              <Route path="diagnostics" element={<DiagnosticsPage />} />
               <Route path="cache" element={<CachePage />} />
               <Route path="inbox" element={<InboxPage />} />
               <Route path="compare" element={<ComparePage />} />

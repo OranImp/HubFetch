@@ -1107,3 +1107,31 @@ export interface DiagnosticReport {
   checks: DiagnosticCheck[]
   completedAt: string
 }
+
+/**
+ * Progress/cancel surface for the diagnostics run and support-bundle export
+ * (plan Todo 24). Every string field is already redacted and path-sanitized in
+ * the main process before it crosses IPC.
+ */
+export interface DiagnosticsProgress {
+  /** Which in-flight operation the progress belongs to. */
+  phase: 'run' | 'export'
+  /** 0..1 overall progress within the phase. */
+  percent: number
+  /** Redacted human-readable status text. */
+  status: string
+  /** When phase=run: probes completed so far. */
+  completedChecks?: number
+  /** When phase=run: total probes to run. */
+  totalChecks?: number
+  /** When phase=export: the member being serialized. */
+  member?: string
+}
+
+/**
+ * Typed outcome of one support-bundle export. The ZIP path is returned ONLY
+ * after the archive was fully written, sentinel-scanned, and atomically
+ * renamed into place — the renderer never learns a temp path.
+ */
+export type DiagnosticsExportResult =
+  { canceled: true } | { canceled: false; path: string; memberCount: number; bytesWritten: number }

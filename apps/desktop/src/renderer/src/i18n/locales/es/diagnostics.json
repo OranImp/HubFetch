@@ -1,0 +1,38 @@
+{
+  "actions": "Acción recomendada",
+  "cancel": "Cancelar",
+  "category": {
+    "app": "Aplicación",
+    "cache": "Caché",
+    "credentials": "Credenciales",
+    "database": "Base de datos",
+    "destination": "Destino",
+    "disk": "Disco",
+    "git": "Git",
+    "network": "Red",
+    "notifications": "Notificaciones",
+    "symlink": "Enlaces simbólicos",
+    "system": "Sistema"
+  },
+  "checksCount": "{{count}} comprobaciones",
+  "durationMs": "{{ms}} ms",
+  "exportBundle": "Exportar paquete de soporte",
+  "exportCanceled": "Exportación del paquete de soporte cancelada",
+  "exportFailed": "No se pudo exportar el paquete de soporte",
+  "exported": "Paquete de soporte guardado en {{path}}",
+  "exporting": "Exportando paquete de soporte…",
+  "noResults": {
+    "body": "Ejecute las comprobaciones de preparación para ver un informe.",
+    "title": "Aún no hay comprobaciones"
+  },
+  "rerun": "Volver a comprobar",
+  "running": "Ejecutando comprobaciones…",
+  "status": {
+    "failure": "Error",
+    "pass": "Correcto",
+    "unknown": "Desconocido",
+    "warning": "Advertencia"
+  },
+  "subtitle": "Comprobaciones de preparación para descargas, caché y red",
+  "title": "Diagnóstico"
+}

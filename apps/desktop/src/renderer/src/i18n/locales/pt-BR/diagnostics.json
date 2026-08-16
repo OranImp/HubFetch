@@ -1,0 +1,38 @@
+{
+  "actions": "Ação recomendada",
+  "cancel": "Cancelar",
+  "category": {
+    "app": "Aplicativo",
+    "cache": "Cache",
+    "credentials": "Credenciais",
+    "database": "Banco de dados",
+    "destination": "Destino",
+    "disk": "Disco",
+    "git": "Git",
+    "network": "Rede",
+    "notifications": "Notificações",
+    "symlink": "Links simbólicos",
+    "system": "Sistema"
+  },
+  "checksCount": "{{count}} verificações",
+  "durationMs": "{{ms}} ms",
+  "exportBundle": "Exportar pacote de suporte",
+  "exportCanceled": "Exportação do pacote de suporte cancelada",
+  "exportFailed": "Falha ao exportar o pacote de suporte",
+  "exported": "Pacote de suporte salvo em {{path}}",
+  "exporting": "Exportando pacote de suporte…",
+  "noResults": {
+    "body": "Execute as verificações de prontidão para ver um relatório.",
+    "title": "Nenhuma verificação ainda"
+  },
+  "rerun": "Verificar novamente",
+  "running": "Executando verificações…",
+  "status": {
+    "failure": "Falha",
+    "pass": "Aprovado",
+    "unknown": "Desconhecido",
+    "warning": "Aviso"
+  },
+  "subtitle": "Verificações de prontidão para downloads, cache e rede",
+  "title": "Diagnóstico"
+}

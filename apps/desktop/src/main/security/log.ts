@@ -6,26 +6,51 @@
  * through the shared `redactor` (which consults the shared `secretRegistry`)
  * before the console call. Errors render as redacted cause chains; structured
  * details render as redacted JSON-safe values.
+ *
+ * Todo 24: the same redacted line is mirrored into the bounded main.log
+ * capture (see log-capture.ts) so the support bundle carries it verbatim.
  */
 import { Redactor } from './redaction'
 import { secretRegistry } from './secret-registry'
+import type { LogCapture } from '../log-capture'
 
 /** Process-wide redactor wired to the process-wide secret registry. */
 export const redactor = new Redactor(secretRegistry)
 
 export class RedactedLogger {
+  private capture: LogCapture | null = null
+
   constructor(private readonly renderer: Redactor = redactor) {}
 
+  /** Attach the bounded main.log capture; idempotent. */
+  attach(capture: LogCapture | null): void {
+    this.capture = capture
+  }
+
   warn(scope: string, message: string, ...details: unknown[]): void {
-    console.warn(this.prefix(scope, message), ...details.map((detail) => this.render(detail)))
+    this.emit('warn', scope, message, details)
   }
 
   error(scope: string, message: string, ...details: unknown[]): void {
-    console.error(this.prefix(scope, message), ...details.map((detail) => this.render(detail)))
+    this.emit('error', scope, message, details)
   }
 
   info(scope: string, message: string, ...details: unknown[]): void {
-    console.info(this.prefix(scope, message), ...details.map((detail) => this.render(detail)))
+    this.emit('info', scope, message, details)
+  }
+
+  private emit(
+    level: 'warn' | 'error' | 'info',
+    scope: string,
+    message: string,
+    details: unknown[]
+  ): void {
+    const prefix = this.prefix(scope, message)
+    const rendered = details.map((detail) => this.render(detail))
+    // Console call shape is part of the Todo 22 contract: (prefix, ...details).
+    console[level](prefix, ...rendered)
+    const line = rendered.length === 0 ? prefix : `${prefix} ${rendered.join(' ')}`
+    this.capture?.append(line)
   }
 
   private prefix(scope: string, message: string): string {

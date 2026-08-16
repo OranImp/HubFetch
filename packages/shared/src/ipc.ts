@@ -16,6 +16,9 @@ import type {
   CollectionSummary,
   DatasetRows,
   DatasetSplit,
+  DiagnosticReport,
+  DiagnosticsExportResult,
+  DiagnosticsProgress,
   DiscussionDetail,
   DiscussionStatusFilter,
   DiscussionSummary,
@@ -496,6 +499,25 @@ export interface IpcInvokeContract {
   /** Streams deltas through the `evt:inference` channel, correlated by id. */
   'inference:stream': { req: { id: string; request: InferenceRequest }; res: void }
   'inference:cancel': { req: { id: string }; res: void }
+
+  /**
+   * Run every readiness probe once and return the bounded, redacted report.
+   * Progress is pushed through `evt:diagnosticsProgress` (phase `run`); a
+   * `diagnostics:cancel` aborts the in-flight run (remaining probes resolve
+   * as canceled/unknown in the report).
+   */
+  'diagnostics:run': { req: void; res: DiagnosticReport }
+  /** Abort the in-flight diagnostics run. */
+  'diagnostics:cancel': { req: void; res: void }
+  /**
+   * Build and finalize a sanitized support-bundle ZIP via the native save
+   * dialog. `res.path` is present only after successful finalization —
+   * temp/partial archive paths never reach the renderer. Progress is pushed
+   * through `evt:diagnosticsProgress` (phase `export`).
+   */
+  'diagnostics:export': { req: void; res: DiagnosticsExportResult }
+  /** Abort an in-flight support-bundle export (cleans temp, no archive kept). */
+  'diagnostics:exportCancel': { req: void; res: void }
 }
 
 export type IpcInvokeChannel = keyof IpcInvokeContract
@@ -511,6 +533,8 @@ export interface IpcEventContract {
   'evt:navigate': string
   'evt:integrationTasks': IntegrationTask[]
   'evt:inference': InferenceStreamEvent
+  /** Progress/cancel events for the diagnostics run and support-bundle export. */
+  'evt:diagnosticsProgress': DiagnosticsProgress
 }
 
 export type IpcEventChannel = keyof IpcEventContract
@@ -657,7 +681,11 @@ export const IPC_INVOKE_CHANNELS = [
   'integrationTasks:revealOutput',
   'inference:run',
   'inference:stream',
-  'inference:cancel'
+  'inference:cancel',
+  'diagnostics:run',
+  'diagnostics:cancel',
+  'diagnostics:export',
+  'diagnostics:exportCancel'
 ] as const satisfies readonly IpcInvokeChannel[]
 
 // Compile-time drift guard: every channel in the IpcInvokeChannels type map must
@@ -676,7 +704,8 @@ export const IPC_EVENT_CHANNELS: readonly IpcEventChannel[] = [
   'evt:inbox',
   'evt:navigate',
   'evt:integrationTasks',
-  'evt:inference'
+  'evt:inference',
+  'evt:diagnosticsProgress'
 ] as const
 
 /** Shape of the API exposed on `window.hubfetch` by the preload script. */
@@ -687,4 +716,25 @@ export interface RendererApi {
     channel: C,
     listener: (payload: IpcEventPayload<C>) => void
   ): () => void
+  /**
+   * Typed diagnostics surface exposed as `window.hubfetch.diagnostics.*`.
+   * Every method delegates to the central validated invoke path — it is a
+   * convenience namespace, never a bypass of sender validation.
+   */
+  diagnostics: DiagnosticsBridge
+}
+
+/**
+ * Typed diagnostics bridge on the preload. All operations are cancellable and
+ * stream progress through `evt:diagnosticsProgress`; the export result only
+ * ever carries the final, fully finalized archive path.
+ */
+export interface DiagnosticsBridge {
+  run(): Promise<DiagnosticReport>
+  cancel(): Promise<void>
+  /** Open the save dialog, export, and return the finalized path on success. */
+  exportBundle(): Promise<DiagnosticsExportResult>
+  cancelExport(): Promise<void>
+  /** Subscribe to run/export progress; returns an unsubscribe function. */
+  onProgress(listener: (progress: DiagnosticsProgress) => void): () => void
 }

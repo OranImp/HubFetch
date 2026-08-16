@@ -10,6 +10,7 @@ import enCollections from './locales/en/collections.json'
 import enCommon from './locales/en/common.json'
 import enCompare from './locales/en/compare.json'
 import enDetail from './locales/en/detail.json'
+import enDiagnostics from './locales/en/diagnostics.json'
 import enDownloads from './locales/en/downloads.json'
 import enErrors from './locales/en/errors.json'
 import enHistory from './locales/en/history.json'
@@ -30,6 +31,7 @@ import zhCNCollections from './locales/zh-CN/collections.json'
 import zhCNCommon from './locales/zh-CN/common.json'
 import zhCNCompare from './locales/zh-CN/compare.json'
 import zhCNDetail from './locales/zh-CN/detail.json'
+import zhCNDiagnostics from './locales/zh-CN/diagnostics.json'
 import zhCNDownloads from './locales/zh-CN/downloads.json'
 import zhCNErrors from './locales/zh-CN/errors.json'
 import zhCNHistory from './locales/zh-CN/history.json'
@@ -50,6 +52,7 @@ import zhTWCollections from './locales/zh-TW/collections.json'
 import zhTWCommon from './locales/zh-TW/common.json'
 import zhTWCompare from './locales/zh-TW/compare.json'
 import zhTWDetail from './locales/zh-TW/detail.json'
+import zhTWDiagnostics from './locales/zh-TW/diagnostics.json'
 import zhTWDownloads from './locales/zh-TW/downloads.json'
 import zhTWErrors from './locales/zh-TW/errors.json'
 import zhTWHistory from './locales/zh-TW/history.json'
@@ -70,6 +73,7 @@ import jaCollections from './locales/ja/collections.json'
 import jaCommon from './locales/ja/common.json'
 import jaCompare from './locales/ja/compare.json'
 import jaDetail from './locales/ja/detail.json'
+import jaDiagnostics from './locales/ja/diagnostics.json'
 import jaDownloads from './locales/ja/downloads.json'
 import jaErrors from './locales/ja/errors.json'
 import jaHistory from './locales/ja/history.json'
@@ -90,6 +94,7 @@ import koCollections from './locales/ko/collections.json'
 import koCommon from './locales/ko/common.json'
 import koCompare from './locales/ko/compare.json'
 import koDetail from './locales/ko/detail.json'
+import koDiagnostics from './locales/ko/diagnostics.json'
 import koDownloads from './locales/ko/downloads.json'
 import koErrors from './locales/ko/errors.json'
 import koHistory from './locales/ko/history.json'
@@ -110,6 +115,7 @@ import deCollections from './locales/de/collections.json'
 import deCommon from './locales/de/common.json'
 import deCompare from './locales/de/compare.json'
 import deDetail from './locales/de/detail.json'
+import deDiagnostics from './locales/de/diagnostics.json'
 import deDownloads from './locales/de/downloads.json'
 import deErrors from './locales/de/errors.json'
 import deHistory from './locales/de/history.json'
@@ -130,6 +136,7 @@ import esCollections from './locales/es/collections.json'
 import esCommon from './locales/es/common.json'
 import esCompare from './locales/es/compare.json'
 import esDetail from './locales/es/detail.json'
+import esDiagnostics from './locales/es/diagnostics.json'
 import esDownloads from './locales/es/downloads.json'
 import esErrors from './locales/es/errors.json'
 import esHistory from './locales/es/history.json'
@@ -150,6 +157,7 @@ import frCollections from './locales/fr/collections.json'
 import frCommon from './locales/fr/common.json'
 import frCompare from './locales/fr/compare.json'
 import frDetail from './locales/fr/detail.json'
+import frDiagnostics from './locales/fr/diagnostics.json'
 import frDownloads from './locales/fr/downloads.json'
 import frErrors from './locales/fr/errors.json'
 import frHistory from './locales/fr/history.json'
@@ -170,6 +178,7 @@ import ptBRCollections from './locales/pt-BR/collections.json'
 import ptBRCommon from './locales/pt-BR/common.json'
 import ptBRCompare from './locales/pt-BR/compare.json'
 import ptBRDetail from './locales/pt-BR/detail.json'
+import ptBRDiagnostics from './locales/pt-BR/diagnostics.json'
 import ptBRDownloads from './locales/pt-BR/downloads.json'
 import ptBRErrors from './locales/pt-BR/errors.json'
 import ptBRHistory from './locales/pt-BR/history.json'
@@ -192,6 +201,7 @@ export const NAMESPACES = [
   'common',
   'compare',
   'detail',
+  'diagnostics',
   'downloads',
   'errors',
   'history',
@@ -216,6 +226,7 @@ const resources = {
     common: enCommon,
     compare: enCompare,
     detail: enDetail,
+    diagnostics: enDiagnostics,
     downloads: enDownloads,
     errors: enErrors,
     history: enHistory,
@@ -238,6 +249,7 @@ const resources = {
     common: zhCNCommon,
     compare: zhCNCompare,
     detail: zhCNDetail,
+    diagnostics: zhCNDiagnostics,
     downloads: zhCNDownloads,
     errors: zhCNErrors,
     history: zhCNHistory,
@@ -260,6 +272,7 @@ const resources = {
     common: zhTWCommon,
     compare: zhTWCompare,
     detail: zhTWDetail,
+    diagnostics: zhTWDiagnostics,
     downloads: zhTWDownloads,
     errors: zhTWErrors,
     history: zhTWHistory,
@@ -282,6 +295,7 @@ const resources = {
     common: jaCommon,
     compare: jaCompare,
     detail: jaDetail,
+    diagnostics: jaDiagnostics,
     downloads: jaDownloads,
     errors: jaErrors,
     history: jaHistory,
@@ -304,6 +318,7 @@ const resources = {
     common: koCommon,
     compare: koCompare,
     detail: koDetail,
+    diagnostics: koDiagnostics,
     downloads: koDownloads,
     errors: koErrors,
     history: koHistory,
@@ -326,6 +341,7 @@ const resources = {
     common: deCommon,
     compare: deCompare,
     detail: deDetail,
+    diagnostics: deDiagnostics,
     downloads: deDownloads,
     errors: deErrors,
     history: deHistory,
@@ -348,6 +364,7 @@ const resources = {
     common: esCommon,
     compare: esCompare,
     detail: esDetail,
+    diagnostics: esDiagnostics,
     downloads: esDownloads,
     errors: esErrors,
     history: esHistory,
@@ -370,6 +387,7 @@ const resources = {
     common: frCommon,
     compare: frCompare,
     detail: frDetail,
+    diagnostics: frDiagnostics,
     downloads: frDownloads,
     errors: frErrors,
     history: frHistory,
@@ -392,6 +410,7 @@ const resources = {
     common: ptBRCommon,
     compare: ptBRCompare,
     detail: ptBRDetail,
+    diagnostics: ptBRDiagnostics,
     downloads: ptBRDownloads,
     errors: ptBRErrors,
     history: ptBRHistory,

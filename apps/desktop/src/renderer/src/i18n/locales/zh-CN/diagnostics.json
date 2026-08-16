@@ -1,0 +1,38 @@
+{
+  "actions": "建议操作",
+  "cancel": "取消",
+  "category": {
+    "app": "应用",
+    "cache": "缓存",
+    "credentials": "凭据",
+    "database": "数据库",
+    "destination": "目标位置",
+    "disk": "磁盘",
+    "git": "Git",
+    "network": "网络",
+    "notifications": "通知",
+    "symlink": "符号链接",
+    "system": "系统"
+  },
+  "checksCount": "{{count}} 项检查",
+  "durationMs": "{{ms}} 毫秒",
+  "exportBundle": "导出支持包",
+  "exportCanceled": "支持包导出已取消",
+  "exportFailed": "支持包导出失败",
+  "exported": "支持包已保存到 {{path}}",
+  "exporting": "正在导出支持包…",
+  "noResults": {
+    "body": "运行就绪检查即可查看报告。",
+    "title": "尚未检查"
+  },
+  "rerun": "重新检查",
+  "running": "正在运行检查…",
+  "status": {
+    "failure": "失败",
+    "pass": "通过",
+    "unknown": "未知",
+    "warning": "警告"
+  },
+  "subtitle": "检查下载、缓存与网络的就绪状态",
+  "title": "诊断"
+}

@@ -10,7 +10,7 @@ import {
   shell,
   type WebContents
 } from 'electron'
-import { HubApiError } from '@hubfetch/hub-api'
+import { HubApiError, defaultCacheDir } from '@hubfetch/hub-api'
 import type { IpcEventChannel, IpcEventPayload, ProxyConfig } from '@hubfetch/shared'
 import { isValidRepoId } from '@hubfetch/shared'
 import {
@@ -26,11 +26,15 @@ import { AuthManager } from './auth'
 import { mimeForOmhfFile } from './preview-mime'
 import { CacheManager } from './cache'
 import { openDatabase } from './db'
+import { DiagnosticsCoordinator } from './diagnostics-coordinator'
+import { createDefaultEnv } from './diagnostics-env'
+import { sanitizePathText } from './diagnostics-env'
 import { DownloadManager } from './downloads'
 import { FollowsPoller } from './follows'
 import {
   createHubClient,
   createHubProxy,
+  createProxiedFetch,
   rebuildHubClient,
   snapshotFromConfig,
   type HubHolder
@@ -39,10 +43,11 @@ import { MainI18n, matchLocale } from './i18n'
 import { IntegrationTaskManager } from './integration-tasks'
 import { registerIpcHandlers } from './ipc'
 import { Library } from './library'
+import { createLogCaptures, sanitizeRendererLine } from './log-capture'
 import { buildMenu } from './menu'
 import { NotificationService } from './notifications'
 import { applyAppProxy } from './proxy'
-import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride } from './runtime-paths'
+import { APP_NAME, APP_USER_MODEL_ID, applyUserDataOverride, userDataDir } from './runtime-paths'
 import { SettingsStore } from './settings'
 import { logger } from './security/log'
 import { secretRegistry } from './security/secret-registry'
@@ -113,6 +118,12 @@ const RENDER_RECOVERY_DELAY_MS = 1000
 // and settings all land under the override. The legacy user-data override
 // variable is deliberately NOT honored.
 applyUserDataOverride()
+
+// Bounded main/renderer log captures feed the support-bundle's `logs/*.log`
+// members (plan Todo 24). Main lines are already redacted by the logger;
+// renderer console lines are redacted + path-sanitized at the capture site.
+const logCaptures = createLogCaptures(userDataDir())
+logger.attach(logCaptures.main)
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   // Callers include timers (download progress, inference delta flushes); a send that
@@ -377,6 +388,46 @@ if (!gotLock) {
       }
     }
 
+    // Diagnostics + support-bundle coordinator (plan Todo 24). The env is built
+    // fresh per run so settings/proxy changes apply immediately; the reachability
+    // probe rides the same snapshot-aware proxied fetch as every other request.
+    const diagnostics = new DiagnosticsCoordinator({
+      envFactory: () =>
+        createDefaultEnv({
+          appInfo: {
+            version: app.getVersion(),
+            buildKind: app.isPackaged ? 'packaged' : 'development',
+            electronVersion: process.versions.electron ?? ''
+          },
+          notificationRegistration: () => notificationRegistration,
+          dbHealth: async (signal) => {
+            signal.throwIfAborted()
+            try {
+              db.prepare('SELECT 1').get()
+              return { ok: true }
+            } catch (error) {
+              return {
+                ok: false,
+                error: sanitizePathText(error instanceof Error ? error.message : String(error))
+              }
+            }
+          },
+          cacheDir: () => settings.get().hfCacheDir ?? defaultCacheDir(),
+          destinationDir: () => settings.get().hfCacheDir ?? defaultCacheDir(),
+          hubEndpoint: settings.get().hubEndpoint ?? undefined,
+          fetchImpl: createProxiedFetch(snapshotFromConfig(settings.get().proxy)),
+          proxyRoute: () => settings.get().proxy.mode
+        }),
+      settings: () => settings.get(),
+      tasks: () => downloads.list(),
+      logReader: () => ({ main: logCaptures.main.read(), renderer: logCaptures.renderer.read() }),
+      flushLogs: async () => {
+        await logCaptures.main.flush()
+        await logCaptures.renderer.flush()
+      },
+      broadcast: (progress) => broadcast('evt:diagnosticsProgress', progress)
+    })
+
     registerIpcHandlers(
       {
         db,
@@ -402,7 +453,8 @@ if (!gotLock) {
           }),
         broadcast,
         applyNetworkSettings,
-        applyDesktopSettings
+        applyDesktopSettings,
+        diagnostics
       },
       trustedOrigins
     )
@@ -443,6 +495,12 @@ if (!gotLock) {
       })
 
       win.on('ready-to-show', () => win.show())
+
+      // Renderer console output feeds the bounded renderer.log capture for the
+      // support bundle; every line is redacted + path-sanitized at this boundary.
+      win.webContents.on('console-message', (details) => {
+        logCaptures.renderer.append(sanitizeRendererLine(details.message))
+      })
 
       win.on('close', (event) => {
         if (isQuitting || !settings.get().closeToTray) return

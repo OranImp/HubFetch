@@ -1,0 +1,38 @@
+{
+  "actions": "建議操作",
+  "cancel": "取消",
+  "category": {
+    "app": "應用",
+    "cache": "快取",
+    "credentials": "憑證",
+    "database": "資料庫",
+    "destination": "目標位置",
+    "disk": "磁碟",
+    "git": "Git",
+    "network": "網路",
+    "notifications": "通知",
+    "symlink": "符號連結",
+    "system": "系統"
+  },
+  "checksCount": "{{count}} 項檢查",
+  "durationMs": "{{ms}} 毫秒",
+  "exportBundle": "匯出支援套件",
+  "exportCanceled": "支援套件匯出已取消",
+  "exportFailed": "支援套件匯出失敗",
+  "exported": "支援套件已儲存到 {{path}}",
+  "exporting": "正在匯出支援套件…",
+  "noResults": {
+    "body": "執行就緒檢查即可查看報告。",
+    "title": "尚未檢查"
+  },
+  "rerun": "重新檢查",
+  "running": "正在執行檢查…",
+  "status": {
+    "failure": "失敗",
+    "pass": "通過",
+    "unknown": "未知",
+    "warning": "警告"
+  },
+  "subtitle": "檢查下載、快取與網路的就緒狀態",
+  "title": "診斷"
+}

@@ -10,6 +10,7 @@ import {
   FileText,
   FolderGit2,
   HardDrive,
+  HeartPulse,
   History,
   Home,
   Inbox,
@@ -160,6 +161,7 @@ export function Sidebar(): React.JSX.Element {
     { to: '/collections', labelKey: 'collections', icon: Bookmark },
     { to: '/downloads', labelKey: 'downloads', icon: ArrowDownToLine, badge: activeDownloads },
     { to: '/cache', labelKey: 'cache', icon: HardDrive },
+    { to: '/diagnostics', labelKey: 'diagnostics', icon: HeartPulse },
     { to: '/inbox', labelKey: 'inbox', icon: Inbox, badge: unread },
     { to: '/compare', labelKey: 'compare', icon: Columns3 },
     { to: '/upload', labelKey: 'upload', icon: UploadCloud }

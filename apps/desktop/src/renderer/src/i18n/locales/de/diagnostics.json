@@ -1,0 +1,38 @@
+{
+  "actions": "Empfohlene Aktion",
+  "cancel": "Abbrechen",
+  "category": {
+    "app": "App",
+    "cache": "Cache",
+    "credentials": "Anmeldedaten",
+    "database": "Datenbank",
+    "destination": "Zielort",
+    "disk": "Datenträger",
+    "git": "Git",
+    "network": "Netzwerk",
+    "notifications": "Benachrichtigungen",
+    "symlink": "Symlinks",
+    "system": "System"
+  },
+  "checksCount": "{{count}} Prüfungen",
+  "durationMs": "{{ms}} ms",
+  "exportBundle": "Support-Paket exportieren",
+  "exportCanceled": "Export des Support-Pakets abgebrochen",
+  "exportFailed": "Export des Support-Pakets fehlgeschlagen",
+  "exported": "Support-Paket gespeichert unter {{path}}",
+  "exporting": "Support-Paket wird exportiert…",
+  "noResults": {
+    "body": "Führen Sie die Bereitschaftsprüfungen aus, um einen Bericht zu sehen.",
+    "title": "Noch keine Prüfungen"
+  },
+  "rerun": "Erneut prüfen",
+  "running": "Prüfungen werden ausgeführt…",
+  "status": {
+    "failure": "Fehler",
+    "pass": "Bestanden",
+    "unknown": "Unbekannt",
+    "warning": "Warnung"
+  },
+  "subtitle": "Bereitschaftsprüfungen für Downloads, Cache und Netzwerk",
+  "title": "Diagnose"
+}
