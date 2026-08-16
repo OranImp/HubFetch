@@ -28,11 +28,15 @@ import { randomBytes } from 'node:crypto'
 import { mkdir, open, readdir, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  CLONE_ERROR_CODES,
+  CLONE_PROGRESS_PHASES,
   cloneRepoKindSchema,
   cloneRevisionSchema,
   deriveCloneUrl,
   isDerivedCloneUrl,
   isValidCloneNamespaceName,
+  type CloneErrorCode,
+  type CloneProgressPhase,
   type CloneRepoKind,
   type CloneRevision,
   type CloneTransport
@@ -40,22 +44,12 @@ import {
 import { Redactor } from '../security/redaction'
 import type { GitProxyContract } from '../git-proxy'
 
+export { CLONE_ERROR_CODES, CLONE_PROGRESS_PHASES }
+export type { CloneErrorCode, CloneProgressPhase }
+
 // ---------------------------------------------------------------------------
 // Progress parsing
 // ---------------------------------------------------------------------------
-
-/** Closed set of documented clone progress phases (Git + Git-Xet). */
-export const CLONE_PROGRESS_PHASES = [
-  'enumerating',
-  'counting',
-  'compressing',
-  'receiving',
-  'resolving',
-  'updating',
-  'checkout',
-  'xet'
-] as const
-export type CloneProgressPhase = (typeof CLONE_PROGRESS_PHASES)[number]
 
 /** One parsed progress record. `percent` is 0..100 and `done <= total`. */
 export interface GitProgressRecord {
@@ -229,21 +223,6 @@ export class BoundedCloneDiagnostics {
 // ---------------------------------------------------------------------------
 // Error mapping
 // ---------------------------------------------------------------------------
-
-/** Typed clone failure codes. */
-export const CLONE_ERROR_CODES = [
-  'dependency',
-  'auth',
-  'gated',
-  'not-found',
-  'network',
-  'proxy',
-  'disk',
-  'destination',
-  'cancelled',
-  'internal'
-] as const
-export type CloneErrorCode = (typeof CLONE_ERROR_CODES)[number]
 
 /** Structured failure used to raise a typed CloneExecutionError. */
 export interface CloneFailure {

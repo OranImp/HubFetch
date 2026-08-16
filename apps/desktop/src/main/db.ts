@@ -95,6 +95,50 @@ export const MIGRATIONS: string[] = [
   UPDATE downloads
      SET proxy_mode = CASE WHEN proxy_url IS NULL THEN 'system' ELSE 'manual' END
    WHERE proxy_mode IS NULL;
+  `,
+  `
+  -- Clone attempts (plan Todo 31): one row = ONE immutable attempt of a clone.
+  -- A retry inserts a NEW linked row (attempt+1, retry_of=parent) into a fresh
+  -- or empty destination; terminal rows are never mutated. Every enum column
+  -- carries a CHECK so a token, pipe name, credential URL, or raw stderr can
+  -- never satisfy the schema at the engine level; revision_json must be valid
+  -- JSON (the store writes only serialized, schema-validated revisions). The
+  -- FIFO order is (created_at, id); at most one row is active (running or
+  -- cancelling) at a time.
+  CREATE TABLE clone_tasks (
+    id TEXT PRIMARY KEY,
+    attempt INTEGER NOT NULL CHECK (attempt >= 1),
+    repo_kind TEXT NOT NULL CHECK (repo_kind IN ('model', 'dataset', 'space')),
+    repo_id TEXT NOT NULL CHECK (length(repo_id) BETWEEN 1 AND 255),
+    revision_json TEXT CHECK (revision_json IS NULL OR json_valid(revision_json)),
+    transport TEXT NOT NULL CHECK (transport IN ('https', 'ssh')),
+    destination TEXT NOT NULL CHECK (length(destination) BETWEEN 1 AND 1024),
+    auth TEXT NOT NULL CHECK (auth IN ('none', 'app-token', 'system')),
+    proxy_mode TEXT NOT NULL CHECK (proxy_mode IN ('system', 'direct', 'manual')),
+    proxy_url TEXT,
+    status TEXT NOT NULL CHECK (
+      status IN ('queued', 'running', 'cancelling', 'completed', 'failed', 'cancelled', 'interrupted')
+    ),
+    error_code TEXT CHECK (
+      error_code IS NULL OR
+      error_code IN ('dependency', 'auth', 'gated', 'not-found', 'network', 'proxy', 'disk', 'destination', 'cancelled', 'internal')
+    ),
+    error TEXT,
+    progress_phase TEXT CHECK (
+      progress_phase IS NULL OR
+      progress_phase IN ('enumerating', 'counting', 'compressing', 'receiving', 'resolving', 'updating', 'checkout', 'xet')
+    ),
+    progress_percent INTEGER NOT NULL DEFAULT 0 CHECK (progress_percent >= 0 AND progress_percent <= 100),
+    progress_done INTEGER NOT NULL DEFAULT 0 CHECK (progress_done >= 0),
+    progress_total INTEGER NOT NULL DEFAULT 0 CHECK (progress_total >= 0),
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT,
+    retry_of TEXT REFERENCES clone_tasks(id)
+  );
+  CREATE INDEX idx_clone_tasks_status_created ON clone_tasks (status, created_at, id);
+  CREATE INDEX idx_clone_tasks_retry_of ON clone_tasks (retry_of);
   `
 ]
 

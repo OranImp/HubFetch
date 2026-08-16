@@ -76,13 +76,13 @@ describe('openDatabase migration orchestration', () => {
     const db = latestInstance()
 
     expect(db.userVersion).toBe(MIGRATIONS.length)
-    // Every migration SQL ran in order, ending with the proxy_mode migration.
+    // Every migration SQL ran in order, ending with the clone_tasks migration.
     expect(db.execs).toEqual([...MIGRATIONS])
-    expect(db.execs.at(-1)).toContain('ALTER TABLE downloads ADD COLUMN proxy_mode TEXT')
-    expect(db.execs.at(-1)).toContain('SET proxy_mode = CASE WHEN proxy_url IS NULL')
+    expect(db.execs.at(-1)).toContain('CREATE TABLE clone_tasks')
+    expect(db.execs.at(-1)).toContain('CREATE INDEX idx_clone_tasks_status_created')
   })
 
-  it('upgrades an upstream v2 fixture: runs only the proxy migration and remaps settings', () => {
+  it('upgrades an upstream v2 fixture: runs the remaining migrations and remaps settings', () => {
     const db = new dbMock.MockDatabase(':memory:')
     db.userVersion = 2
     db.kv.set(
@@ -93,7 +93,7 @@ describe('openDatabase migration orchestration', () => {
     migrate(db as never)
 
     expect(db.userVersion).toBe(MIGRATIONS.length)
-    expect(db.execs).toEqual([MIGRATIONS[2]])
+    expect(db.execs).toEqual([MIGRATIONS[2], MIGRATIONS[3]])
     const upgraded = JSON.parse(db.kv.get('settings')!) as Record<string, unknown>
     expect(upgraded).not.toHaveProperty('proxyUrl')
     expect(upgraded.proxy).toEqual({ mode: 'manual', manualUrl: 'http://127.0.0.1:7890' })
@@ -183,6 +183,78 @@ describe('migration SQL on a real SQLite engine', () => {
     expect(columns).toContain('proxy_mode')
     expect(columns).toContain('proxy_url')
     expect(columns).toContain('endpoint')
+    db.close()
+  })
+
+  it('creates clone_tasks with the status/created and retry indexes on a fresh database', () => {
+    const db = new DatabaseSync(':memory:')
+    for (const sql of MIGRATIONS) db.exec(sql)
+
+    const table = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'clone_tasks'")
+      .get()
+    expect(table).toBeDefined()
+    const columns = db
+      .prepare('PRAGMA table_info(clone_tasks)')
+      .all()
+      .map((column) => column.name)
+    expect(columns).toEqual(
+      expect.arrayContaining([
+        'id',
+        'attempt',
+        'repo_kind',
+        'repo_id',
+        'revision_json',
+        'transport',
+        'destination',
+        'auth',
+        'proxy_mode',
+        'proxy_url',
+        'status',
+        'error_code',
+        'error',
+        'progress_phase',
+        'progress_percent',
+        'progress_done',
+        'progress_total',
+        'created_at',
+        'started_at',
+        'updated_at',
+        'completed_at',
+        'retry_of'
+      ])
+    )
+    const indexes = db
+      .prepare("PRAGMA index_list('clone_tasks')")
+      .all()
+      .map((index) => index.name)
+    expect(indexes).toEqual(
+      expect.arrayContaining(['idx_clone_tasks_status_created', 'idx_clone_tasks_retry_of'])
+    )
+    db.close()
+  })
+
+  it('upgrades a v3 database to v4: adds clone_tasks and leaves downloads rows intact', () => {
+    const db = new DatabaseSync(':memory:')
+    db.exec(MIGRATIONS[0]!)
+    db.exec(MIGRATIONS[1]!)
+    db.exec(MIGRATIONS[2]!)
+    db.exec('PRAGMA user_version = 3')
+    db.exec(
+      `INSERT INTO downloads (id, repo_id, kind, revision, status, total_bytes, received_bytes, files_json, created_at) VALUES
+         ('d', 'org/d', 'model', 'main', 'completed', 1, 1, '[]', '2026-01-01T00:00:00.000Z')`
+    )
+
+    db.exec(MIGRATIONS[3]!)
+
+    const cloneTable = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'clone_tasks'")
+      .get()
+    expect(cloneTable).toBeDefined()
+    const download = db.prepare('SELECT status FROM downloads WHERE id = ?').get('d') as {
+      status: string
+    }
+    expect(download.status).toBe('completed')
     db.close()
   })
 })
