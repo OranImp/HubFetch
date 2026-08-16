@@ -31,10 +31,13 @@ function healthyRoute(argv: readonly string[]): CommandOutcome {
   const [cmd, sub] = [argv[0], argv[1]]
   if (cmd === 'git' && sub === '--version') return okCommand('git version 2.47.0.windows.1')
   if (cmd === 'git' && sub === 'xet') return okCommand('git-xet version 0.14.0')
+  if (cmd === 'git' && sub === 'credential-manager')
+    return okCommand('Git Credential Manager version 2.5.1')
   if (cmd === 'git' && sub === 'config') {
     if (argv.includes('--get-regexp')) return okCommand('file\tfilter.xet.process\tgit-xet filter')
     if (argv.includes('--get-all')) return okCommand('file\tmanager')
   }
+  if (cmd === 'ssh' && sub === '-V') return okCommand('OpenSSH_9.8p1 for Windows')
   return okCommand('', 1)
 }
 
@@ -67,7 +70,7 @@ describe('QA happy — every dependency healthy', () => {
     const report = await new DiagnosticsService(healthyEnv()).run()
     console.log('[qa-happy] report.completedAt:', report.completedAt)
     console.log(
-      `[qa-happy] report.checks: ${report.checks.length} (expected 14) — ordered ${report.checks
+      `[qa-happy] report.checks: ${report.checks.length} (expected 16) — ordered ${report.checks
         .map((c) => c.id)
         .join(', ')}`
     )
@@ -86,7 +89,7 @@ describe('QA happy — every dependency healthy', () => {
     const serialized = JSON.stringify(report)
     expect(serialized).not.toContain('C:\\Users\\qa')
     expect(serialized).not.toContain('AppData')
-    expect(report.checks).toHaveLength(14)
+    expect(report.checks).toHaveLength(16)
     for (const check of report.checks) {
       expect(['pass', 'warning', 'failure', 'unknown']).toContain(check.status)
       expect(check.durationMs).toBeLessThanOrEqual(DEFAULT_PROBE_TIMEOUT_MS)

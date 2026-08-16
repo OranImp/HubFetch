@@ -58,6 +58,13 @@ export interface CommandOutcome {
   exitCode: number | null
   stdout: string
   stderr: string
+  /**
+   * Node error code from the spawn failure (e.g. `ENOENT` for a missing
+   * binary vs `EACCES`/`EPERM` for an execution-denied one). Only set when
+   * `status === 'launch-error'`; consumers must treat it as advisory and
+   * redact it before it crosses any process boundary.
+   */
+  errorCode?: string
 }
 
 export interface CommandRunOptions {
@@ -164,9 +171,12 @@ export async function runCommandBounded(
     child.stderr?.on('data', (chunk: Buffer) => {
       if (stderr.length < maxOutputBytes) stderr += chunk.toString('utf8')
     })
-    child.on('error', () => {
-      // ENOENT for a missing binary etc. — never a mutation, just unavailability.
-      finish({ status: 'launch-error', exitCode: null, stdout, stderr })
+    child.on('error', (error) => {
+      // ENOENT for a missing binary, EACCES/EPERM for an execution-denied one
+      // etc. — never a mutation, just unavailability. The Node code is kept so
+      // callers can tell "not installed" apart from "execution denied".
+      const code = (error as NodeJS.ErrnoException).code
+      finish({ status: 'launch-error', exitCode: null, stdout, stderr, errorCode: code })
     })
     child.on('close', (code) => {
       finish({ status: 'completed', exitCode: code, stdout, stderr })

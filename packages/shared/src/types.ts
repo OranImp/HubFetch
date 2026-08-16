@@ -1080,7 +1080,9 @@ export const DIAGNOSTIC_REASON_CODES = [
   'disabled',
   'unsupported',
   'bounded',
-  'nonzero'
+  'nonzero',
+  'denied',
+  'outdated'
 ] as const
 export type DiagnosticReasonCode = (typeof DIAGNOSTIC_REASON_CODES)[number]
 

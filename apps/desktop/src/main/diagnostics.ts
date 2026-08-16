@@ -27,13 +27,13 @@ import { normalizeHubEndpoint } from '@hubfetch/shared'
 import type { Redactor } from './security/redaction'
 import { redactor as processRedactor } from './security/log'
 import type {
-  CommandOutcome,
   DiagnosticsEnv,
   DirectoryProbeOutcome,
   ProcessInfo,
   ReachabilityOutcome
 } from './diagnostics-env'
 import { sanitizePathText } from './diagnostics-env'
+import { GitDiagnostics } from './git-diagnostics'
 
 export type { DiagnosticsEnv } from './diagnostics-env'
 export {
@@ -66,6 +66,8 @@ export interface DiagnosticsOptions {
   criticalDiskBytes?: number
   /** Redactor for all probe output (default: the process-wide redactor). */
   redactor?: Redactor
+  /** Injectable Git/Git-Xet/credential readiness probe (default: bound to env). */
+  gitDiagnostics?: GitDiagnostics
 }
 
 const DEFAULT_LOW_MEMORY_BYTES = 512 * 1024 * 1024
@@ -176,24 +178,6 @@ function formatMebibytes(bytes: number): string {
   return `${Math.floor(bytes / (1024 * 1024))} MB`
 }
 
-const SEMVER_PATTERN = /\b\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.-]+)?\b/
-
-function extractSemver(text: string): string | null {
-  return SEMVER_PATTERN.exec(text)?.[0] ?? null
-}
-
-function isLaunchError(outcome: CommandOutcome): boolean {
-  return outcome.status === 'launch-error'
-}
-
-function isZeroExit(outcome: CommandOutcome): boolean {
-  return outcome.status === 'completed' && outcome.exitCode === 0
-}
-
-function isExitOne(outcome: CommandOutcome): boolean {
-  return outcome.status === 'completed' && outcome.exitCode === 1
-}
-
 /**
  * Main diagnostics service. Construct with an environment (fake adapters in
  * tests, `createDefaultEnv` in production wiring) and run to get a typed,
@@ -203,11 +187,19 @@ export class DiagnosticsService {
   private readonly env: DiagnosticsEnv
   private readonly options: DiagnosticsOptions
   private readonly redactor: Redactor
+  private readonly gitDiagnostics: GitDiagnostics
 
   constructor(env: DiagnosticsEnv, options: DiagnosticsOptions = {}) {
     this.env = env
     this.options = options
     this.redactor = options.redactor ?? processRedactor
+    this.gitDiagnostics =
+      options.gitDiagnostics ??
+      new GitDiagnostics({
+        runner: {
+          runCommand: (argv, opts) => this.env.runCommand(argv, opts)
+        }
+      })
   }
 
   /** Run every probe once and return a schema-validated, bounded report. */
@@ -317,7 +309,9 @@ export class DiagnosticsService {
       this.probeNetwork(),
       this.probeGitVersion(),
       this.probeGitXet(),
+      this.probeGitGcm(),
       this.probeGitCredentials(),
+      this.probeGitSsh(),
       this.probeDb()
     ]
   }
@@ -665,29 +659,43 @@ export class DiagnosticsService {
       id: 'git.version',
       category: 'git',
       label: 'Git',
-      run: async (signal) => {
-        const outcome = await this.env.runCommand(['git', '--version'], { signal })
-        if (isLaunchError(outcome)) {
-          return {
-            status: 'failure',
-            reasonCode: 'missing',
-            message: 'Git is not installed',
-            action: 'Install Git (winget install --id Git.Git -e) and recheck.'
-          }
-        }
-        if (isZeroExit(outcome)) {
-          const version = extractSemver(outcome.stdout)
-          return {
-            status: 'pass',
-            reasonCode: 'ok',
-            message: 'Git is installed',
-            detail: version ?? outcome.stdout.trim()
-          }
-        }
-        return {
-          status: 'failure',
-          reasonCode: 'nonzero',
-          message: `git --version exited with code ${outcome.exitCode ?? 'unknown'}`
+      run: async () => {
+        const diag = await this.gitDiagnostics.check()
+        switch (diag.git.status) {
+          case 'installed':
+            return {
+              status: 'pass',
+              reasonCode: 'ok',
+              message: 'Git is installed',
+              detail: diag.git.version ?? 'version not parseable'
+            }
+          case 'missing':
+            return {
+              status: 'failure',
+              reasonCode: 'missing',
+              message: 'Git is not installed',
+              action: 'Install Git (winget install --id Git.Git -e) and recheck.'
+            }
+          case 'denied':
+            return {
+              status: 'failure',
+              reasonCode: 'denied',
+              message: 'Git could not be executed',
+              action: 'Allow HubFetch to run Git (antivirus or execution policy) and recheck.'
+            }
+          case 'timeout':
+            return {
+              status: 'failure',
+              reasonCode: 'timeout',
+              message: '`git --version` did not respond in time',
+              action: 'Recheck after confirming `git --version` returns promptly.'
+            }
+          case 'nonzero':
+            return {
+              status: 'failure',
+              reasonCode: 'nonzero',
+              message: '`git --version` exited with a nonzero code'
+            }
         }
       }
     }
@@ -698,52 +706,109 @@ export class DiagnosticsService {
       id: 'git.xet',
       category: 'git',
       label: 'Git-Xet',
-      run: async (signal) => {
-        const outcome = await this.env.runCommand(['git', 'xet', '--version'], {
-          signal
-        })
-        if (isLaunchError(outcome)) {
-          return {
-            status: 'warning',
-            reasonCode: 'missing',
-            message: 'Git-Xet is not installed',
-            action: 'Install Git-Xet (winget install --id git-xet.git-xet -e) to clone Xet repos.'
-          }
+      run: async () => {
+        const diag = await this.gitDiagnostics.check()
+        switch (diag.xet.status) {
+          case 'configured':
+            return {
+              status: 'pass',
+              reasonCode: 'ok',
+              message: 'Git-Xet filters are configured',
+              detail: diag.xet.version
+                ? `${diag.xet.filterCount} filter.xet.* entries; Git-Xet ${diag.xet.version}`
+                : `${diag.xet.filterCount} filter.xet.* entries`
+            }
+          case 'old':
+            return {
+              status: 'warning',
+              reasonCode: 'outdated',
+              message: `Git-Xet ${diag.xet.version ?? 'version unknown'} is older than the supported version`,
+              action: 'Upgrade Git-Xet (winget install --id git-xet.git-xet -e) and recheck.'
+            }
+          case 'uninitialized':
+            return {
+              status: 'warning',
+              reasonCode: 'unconfigured',
+              message: 'Git-Xet is installed but its filters are not configured',
+              action: 'Run `git xet install` in a terminal, then recheck.'
+            }
+          case 'missing':
+            return {
+              status: 'warning',
+              reasonCode: 'missing',
+              message: 'Git-Xet is not installed',
+              action: 'Install Git-Xet (winget install --id git-xet.git-xet -e) to clone Xet repos.'
+            }
+          case 'timeout':
+            return {
+              status: 'warning',
+              reasonCode: 'timeout',
+              message: 'The Git-Xet version probe timed out',
+              action: 'Recheck after confirming `git xet version` returns promptly.'
+            }
+          case 'nonzero':
+            return {
+              status: 'warning',
+              reasonCode: 'nonzero',
+              message: 'Git-Xet reported an error while reading its version'
+            }
+          case 'unknown':
+            return {
+              status: 'warning',
+              reasonCode: 'unavailable',
+              message: 'Git-Xet readiness could not be determined'
+            }
         }
-        if (!isZeroExit(outcome)) {
-          // `git xet` is not a git command -> subcommand missing (nonzero), else
-          // the tool failed to report a version.
-          return {
-            status: 'warning',
-            reasonCode: 'missing',
-            message: 'Git-Xet is not available',
-            action: 'Install Git-Xet (winget install --id git-xet.git-xet -e) to clone Xet repos.'
-          }
-        }
-        const filters = await this.env.runCommand(
-          ['git', 'config', '--show-origin', '--get-regexp', '^filter\\.xet\\.'],
-          { signal }
-        )
-        if (isExitOne(filters)) {
-          return {
-            status: 'warning',
-            reasonCode: 'unconfigured',
-            message: 'Git-Xet is installed but its filters are not configured',
-            action: 'Run `git xet install` in a terminal, then recheck.'
-          }
-        }
-        if (!isZeroExit(filters)) {
-          return {
-            status: 'warning',
-            reasonCode: 'unconfigured',
-            message: 'The Git-Xet filter configuration could not be read'
-          }
-        }
-        return {
-          status: 'pass',
-          reasonCode: 'ok',
-          message: 'Git-Xet filters are configured',
-          detail: `${filters.stdout.trim().split(/\r?\n/).filter(Boolean).length} filter.xet.* entries`
+      }
+    }
+  }
+
+  private probeGitGcm(): ProbeDef {
+    return {
+      id: 'git.gcm',
+      category: 'credentials',
+      label: 'Git Credential Manager',
+      run: async () => {
+        const diag = await this.gitDiagnostics.check()
+        switch (diag.gcm.status) {
+          case 'available':
+            return {
+              status: 'pass',
+              reasonCode: 'ok',
+              message: 'Git Credential Manager is available',
+              detail: diag.gcm.version ?? 'version not parseable'
+            }
+          case 'missing':
+            return {
+              status: 'warning',
+              reasonCode: 'missing',
+              message: 'Git Credential Manager is not installed',
+              action: 'Install Git Credential Manager to store HTTPS credentials safely.'
+            }
+          case 'denied':
+            return {
+              status: 'warning',
+              reasonCode: 'denied',
+              message: 'Git Credential Manager could not be executed'
+            }
+          case 'timeout':
+            return {
+              status: 'warning',
+              reasonCode: 'timeout',
+              message: 'The Git Credential Manager probe timed out'
+            }
+          case 'nonzero':
+            return {
+              status: 'warning',
+              reasonCode: 'nonzero',
+              message: 'Git Credential Manager reported an error'
+            }
+          case 'unknown':
+            return {
+              status: 'unknown',
+              reasonCode: 'unavailable',
+              message: 'Git Credential Manager could not be checked (Git not found)'
+            }
         }
       }
     }
@@ -754,53 +819,97 @@ export class DiagnosticsService {
       id: 'git.credentials',
       category: 'credentials',
       label: 'Git credentials',
-      run: async (signal) => {
-        const outcome = await this.env.runCommand(
-          ['git', 'config', '--show-origin', '--get-all', 'credential.helper'],
-          { signal }
-        )
-        if (isLaunchError(outcome)) {
-          return {
-            status: 'unknown',
-            reasonCode: 'unavailable',
-            message: 'Git credential helpers could not be checked (Git not found)'
+      run: async () => {
+        const diag = await this.gitDiagnostics.check()
+        switch (diag.credentials.status) {
+          case 'configured': {
+            const note = diag.credentials.hasGcm
+              ? `${diag.credentials.helperCount} helper(s), including Git Credential Manager`
+              : `${diag.credentials.helperCount} helper(s)`
+            return {
+              status: 'pass',
+              reasonCode: 'ok',
+              message: 'Git credential helpers are configured',
+              detail: note
+            }
           }
-        }
-        if (isZeroExit(outcome)) {
-          // `--show-origin --get-all` emits one `origin\tvalue` line per helper.
-          const helpers = outcome.stdout
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => line.split('\t').pop() ?? line)
-          const plaintext = helpers.some((helper) => helper.startsWith('store'))
-          if (plaintext) {
+          case 'plaintext':
             return {
               status: 'warning',
               reasonCode: 'plaintext-helper',
               message: 'A plaintext Git credential helper is configured',
               action: 'Configure Git Credential Manager instead of the plaintext store helper.'
             }
-          }
-          return {
-            status: 'pass',
-            reasonCode: 'ok',
-            message: 'Git credential helpers are configured',
-            detail: helpers.join(', ')
-          }
+          case 'none':
+            return {
+              status: 'warning',
+              reasonCode: 'no-credential-helper',
+              message: 'No Git credential helper is configured',
+              action: 'Configure Git Credential Manager to store credentials safely.'
+            }
+          case 'timeout':
+            return {
+              status: 'unknown',
+              reasonCode: 'timeout',
+              message: 'The Git credential configuration probe timed out'
+            }
+          case 'unknown':
+            return {
+              status: 'unknown',
+              reasonCode: 'unavailable',
+              message: 'The Git credential configuration could not be read'
+            }
         }
-        if (isExitOne(outcome)) {
-          return {
-            status: 'warning',
-            reasonCode: 'no-credential-helper',
-            message: 'No Git credential helper is configured',
-            action: 'Configure Git Credential Manager to store credentials safely.'
-          }
-        }
-        return {
-          status: 'unknown',
-          reasonCode: 'probe-error',
-          message: 'The Git credential configuration could not be read'
+      }
+    }
+  }
+
+  private probeGitSsh(): ProbeDef {
+    return {
+      id: 'git.ssh',
+      category: 'credentials',
+      label: 'SSH',
+      run: async () => {
+        const diag = await this.gitDiagnostics.check()
+        switch (diag.ssh.status) {
+          case 'available':
+            return {
+              status: 'pass',
+              reasonCode: 'ok',
+              message: 'SSH is available',
+              detail: diag.ssh.version ?? undefined
+            }
+          case 'missing':
+            return {
+              status: 'warning',
+              reasonCode: 'missing',
+              message: 'SSH is not installed',
+              action: 'Install the OpenSSH client to clone repositories over SSH.'
+            }
+          case 'denied':
+            return {
+              status: 'warning',
+              reasonCode: 'denied',
+              message: 'SSH could not be executed'
+            }
+          case 'timeout':
+            return {
+              status: 'warning',
+              reasonCode: 'timeout',
+              message: 'The SSH probe timed out'
+            }
+          case 'nonzero':
+            return {
+              status: 'warning',
+              reasonCode: 'nonzero',
+              message: 'SSH reported an error'
+            }
+          case 'unknown':
+            return {
+              status: 'unknown',
+              reasonCode: 'unavailable',
+              message: 'SSH availability could not be determined'
+            }
         }
       }
     }

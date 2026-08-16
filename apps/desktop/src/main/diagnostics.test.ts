@@ -69,10 +69,13 @@ function routeCommand(argv: readonly string[]): CommandOutcome {
   const [cmd, sub] = [argv[0], argv[1]]
   if (cmd === 'git' && sub === '--version') return okCommand('git version 2.47.0.windows.1')
   if (cmd === 'git' && sub === 'xet') return okCommand('git-xet version 0.14.0')
+  if (cmd === 'git' && sub === 'credential-manager')
+    return okCommand('Git Credential Manager version 2.5.1')
   if (cmd === 'git' && sub === 'config') {
     if (argv.includes('--get-regexp')) return okCommand('file\tfilter.xet.process\tgit-xet filter')
     if (argv.includes('--get-all')) return okCommand('file\tmanager\nfile\tmanager-core')
   }
+  if (cmd === 'ssh' && sub === '-V') return okCommand('OpenSSH_9.8p1 for Windows')
   return okCommand('', 1)
 }
 
@@ -201,7 +204,7 @@ describe('every probe maps timeout to failure and cancel to unknown', () => {
       checkReachability: hang
     })
     const report = await service(env, { probeTimeoutMs: 30 }).run()
-    expect(report.checks).toHaveLength(14)
+    expect(report.checks).toHaveLength(16)
     for (const check of report.checks) {
       if (
         check.id === 'app.identity' ||
@@ -591,9 +594,12 @@ describe('no mutation and repeated-run stability', () => {
     }
     const readOnlyPrefixes = [
       ['git', '--version'],
+      ['git', 'xet', 'version'],
       ['git', 'xet', '--version'],
       ['git', 'config', '--show-origin', '--get-regexp'],
-      ['git', 'config', '--show-origin', '--get-all', 'credential.helper']
+      ['git', 'config', '--show-origin', '--get-all', 'credential.helper'],
+      ['git', 'credential-manager', 'version'],
+      ['ssh', '-V']
     ]
     for (const argv of commands) {
       expect(readOnlyPrefixes.some((prefix) => prefix.every((part, i) => argv[i] === part))).toBe(

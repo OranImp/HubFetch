@@ -6,8 +6,11 @@
  * qa-failure.txt. No network — every adapter is fake.
  */
 import { describe, expect, it } from 'vitest'
+import { join } from 'node:path'
 import type { CommandOutcome, DiagnosticsEnv } from './diagnostics-env'
+import { runCommandBounded } from './diagnostics-env'
 import { DiagnosticsService } from './diagnostics'
+import { GitDiagnostics } from './git-diagnostics'
 import { Redactor } from './security/redaction'
 import { SecretRegistry } from './security/secret-registry'
 
@@ -121,6 +124,44 @@ describe('QA failure — each failure is typed, actionable, and secret-free', ()
     console.log(`[qa-failure] notifications.registration => ${check.status}/${check.reasonCode}`)
     expect(check.status).toBe('failure')
     expect(check.reasonCode).toBe('unsupported')
+  })
+
+  it('missing Git-Xet + hanging helper yield typed failure/timeout without a hang', async () => {
+    // Real spawn-based fixture: `git xet` is missing AND the credential
+    // config probe hangs. The per-probe bounds must produce a typed `missing`
+    // (git.xet) and a typed `timeout` (git.credentials) — no app hang, no
+    // config mutation (the fixture install guard never fires).
+    const fixture = join(__dirname, 'fixtures', 'git', 'git-no-xet-hang.cjs')
+    const env = baseEnv()
+    env.runCommand = async (argv) =>
+      argv[1] === 'xet' ? okCommand("git: 'xet' is not a git command", 1) : healthyRoute(argv)
+    const gitDiagnostics = new GitDiagnostics({
+      runner: { runCommand: (argv, opts) => runCommandBounded(argv, opts) },
+      gitCommand: [process.execPath, fixture],
+      sshCommand: [process.execPath, join(__dirname, 'fixtures', 'git', 'ssh-ok.cjs')],
+      timeoutMs: 400
+    })
+    const started = Date.now()
+    const report = await new DiagnosticsService(env, { gitDiagnostics }).run()
+    const elapsed = Date.now() - started
+    const xet = report.checks.find((c) => c.id === 'git.xet')!
+    const creds = report.checks.find((c) => c.id === 'git.credentials')!
+    console.log(`[qa-failure] git.xet => ${xet.status}/${xet.reasonCode} — action: ${xet.action}`)
+    console.log(
+      `[qa-failure] git.credentials => ${creds.status}/${creds.reasonCode} — duration ${creds.durationMs}ms`
+    )
+    console.log(`[qa-failure] total git probes elapsed: ${elapsed}ms (no hang)`)
+    expect(xet.status).toBe('warning')
+    expect(xet.reasonCode).toBe('missing')
+    expect(xet.action).toContain('winget install --id git-xet.git-xet')
+    expect(creds.status).toBe('unknown')
+    expect(creds.reasonCode).toBe('timeout')
+    expect(creds.durationMs).toBeLessThanOrEqual(400 * 8 + 2000)
+    // The hanging helper never left a running child behind: the report came
+    // back bounded and no raw config path leaked into any failure output.
+    const serialized = JSON.stringify(report)
+    expect(serialized).not.toContain('alice')
+    expect(serialized).not.toContain('.gitconfig')
   })
 
   it('a registered token and personal path never appear in any failure output', async () => {
