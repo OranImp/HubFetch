@@ -1,7 +1,8 @@
 # Releasing
 
-Releases are built and verified before GitHub receives a tag or draft release. The workflow supports
-both a release commit on `main` and a side-effect-free manual dry-run.
+HubFetch ships a single **unsigned Windows x64 ZIP**. Releases are built and verified before GitHub
+receives a tag or draft release. The workflow supports both a release commit on `main` and a
+side-effect-free manual dry-run.
 
 ## Release contract
 
@@ -16,6 +17,12 @@ A push to `main` starts a real release only when the head commit subject matches
 `[RELEASE] Vx.y.z`. The `V` is optional and case-insensitive, and the parsed version must equal all
 four manifest versions. Other pushes finish after detection without creating release resources.
 
+The release artifact is exactly one file: `HubFetch-<version>-windows-x64.zip`, built unsigned via
+electron-builder's `zip` target (`win.target: zip`, `arch: x64`). There is no installer, no
+`portable` target, no macOS/Linux packaging, and no updater/feed metadata. The ZIP ships alongside
+`HubFetch-<version>-windows-x64.zip.sha256` (SHA-256 checksum) and `release-assets.json` (artifact
+inventory), which preflight writes and publish verifies against the remote asset list.
+
 ## Cutting a release
 
 1. Update all four manifest versions in one change and run the full local verification suite.
@@ -23,27 +30,31 @@ four manifest versions. Other pushes finish after detection without creating rel
 3. Monitor `.github/workflows/release.yml`. It runs these gates in order:
    - **detect** parses the version and verifies the four manifests;
    - **verify** runs production dependency audit, format, lint, typecheck, coverage, build, and the
-     full Ubuntu E2E suite;
-   - **build** packages macOS, Windows, and Linux with `--publish never`, then runs the packaged
-     smoke test on each platform;
-   - **preflight** checks required installers, every referenced file, and its
-     SHA-512 value;
-   - **publish** creates or resumes the draft, uploads only preflight-approved assets, downloads
-     them again to verify the remote asset set and hashes, and only then removes draft status.
+     full Windows E2E suite;
+   - **build** packages the unsigned Windows x64 ZIP with `--publish never`, then runs the packaged
+     smoke test;
+   - **preflight** checks that exactly the one Windows x64 ZIP is present (rejecting installers,
+     updater metadata, and other platforms), writes the SHA-256 checksum and the artifact inventory;
+   - **publish** creates or resumes the draft, uploads only preflight-approved assets (ZIP +
+     SHA-256), downloads them again to verify the remote asset set and hashes, and only then removes
+     draft status.
 
-Only `publish` has `contents: write`. A failure in any earlier stage cannot create a tag or GitHub
+Every runner is `windows-latest`; all release tooling is Node (no bash/jq requirement). Only
+`publish` has `contents: write`. A failure in any earlier stage cannot create a tag or GitHub
 Release.
 
-The regular CI workflow runs the full Ubuntu E2E suite for every pull request. After verification,
-pushes to `main` also run the reusable macOS, Windows, and Linux packaged smoke matrix with
-publishing disabled.
+## Unsigned disclosure
+
+The Windows x64 ZIP is **unsigned**. Windows SmartScreen may warn on first launch; users choose
+"More info → Run anyway" and verify the downloaded ZIP against its published SHA-256. There is no
+code-signing requirement in the build, no signing secret in CI, and the release notes disclose this
+explicitly. See [docs/signing.md](docs/signing.md).
 
 ## Dry-run
 
 Run the **Release** workflow manually with `dry_run=true` (the default). It executes verification,
-all three platform builds, packaged smoke tests, and preflight, but it never creates a tag, draft, or
-published release. Dry-run macOS artifacts use the configured ad-hoc identity; real releases require
-the `MAC_CSC_LINK` and `MAC_CSC_KEY_PASSWORD` secrets described in [signing.md](signing.md).
+the Windows build, the packaged smoke test, and preflight, but it never creates a tag, draft, or
+published release.
 
 Use dry-run before changing release automation.
 
@@ -67,5 +78,5 @@ HubFetch has no self-update capability (plan Todo 16 removed it). There is no `e
 no `publish` metadata in `electron-builder.yml`, and the release produces no `latest.yml`,
 `app-update.yml`, or `.blockmap` artifacts. Release preflight therefore does not validate updater
 manifests; updates are manual — users install a newer build from the GitHub Releases page. Keep the
-release's installable artifacts and their SHA-512 hashes consistent so manual downloads verify
+release's installable artifact and its SHA-256 checksum consistent so manual downloads verify
 cleanly.

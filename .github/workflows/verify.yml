@@ -6,10 +6,17 @@ on:
 permissions:
   contents: read
 
+# Every gate below runs on Windows only (GitHub windows-latest). The `bash`
+# shell is Git Bash, which ships with GitHub's Windows runners; no Linux/macOS
+# runner or xvfb is used. Playwright Electron runs headless on Windows.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   verify:
-    name: Format, lint, typecheck, coverage, build, Ubuntu E2E
-    runs-on: ubuntu-latest
+    name: Format, lint, typecheck, coverage, build, Windows E2E
+    runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - name: Check out source
@@ -50,6 +57,9 @@ jobs:
       - name: Test release safety tooling
         run: pnpm test:release-tools
 
+      - name: Test no-updater policy
+        run: pnpm test:no-updater
+
       - name: Unit tests with coverage
         run: |
           set -o pipefail
@@ -63,10 +73,10 @@ jobs:
       - name: Verify strict-CSP syntax highlighting bundle
         run: pnpm verify:syntax-build
 
-      - name: Ubuntu E2E
+      - name: Windows E2E
         run: |
           set -o pipefail
-          xvfb-run --auto-servernum pnpm --filter hubfetch-desktop test:e2e \
+          pnpm --filter hubfetch-desktop test:e2e \
             2>&1 | tee .ci-logs/e2e.log
 
       - name: Upload verification diagnostics

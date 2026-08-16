@@ -22,7 +22,8 @@
     "test:coverage": "pnpm --filter hubfetch-desktop test:coverage",
     "verify:syntax-build": "node scripts/verify-syntax-build.mjs",
     "i18n:extract": "pnpm --filter hubfetch-desktop i18n:extract",
-    "postinstall": "node scripts/rebuild-native.mjs"
+    "postinstall": "node scripts/rebuild-native.mjs",
+    "package:win": "pnpm --filter hubfetch-desktop package:win"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

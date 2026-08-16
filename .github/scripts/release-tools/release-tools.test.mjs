@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -16,6 +16,87 @@ function asset(name, contents) {
     size: Buffer.byteLength(contents),
     sha512: createHash('sha512').update(contents).digest('base64')
   }
+}
+
+// ============================================================================
+// Mock git/gh toolchain (Todo 17): publish-release.mjs is a Node script, so
+// these tests no longer spawn bash. On Windows the HUBFETCH_TOOLCHAIN_DIR
+// resolution picks up git.cmd/gh.cmd shims that delegate to Node mocks; on
+// POSIX hosts it picks up the executable `git`/`gh` shims.
+// ============================================================================
+
+const GIT_MOCK = `import { appendFileSync } from 'node:fs'
+
+const effects = process.env.EFFECTS_FILE
+const args = process.argv.slice(2)
+if (effects) appendFileSync(effects, \`git \${args.join(' ')}\n\`)
+switch (args[0]) {
+  case 'ls-remote': process.exit(2)
+  case 'describe': process.exit(1)
+  case 'log': process.stdout.write('- verified change (abc1234)\\n'); process.exit(0)
+  case 'push': process.exit(0)
+  case 'fetch': process.exit(0)
+  case 'rev-list': process.stdout.write(\`\${process.env.GIT_REV_LIST_SHA ?? ''}\\n\`); process.exit(0)
+  default: process.exit(97)
+}
+`
+
+const GH_MOCK = `import { appendFileSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const effects = process.env.EFFECTS_FILE
+const args = process.argv.slice(2)
+if (effects) appendFileSync(effects, \`gh \${args.join(' ')}\n\`)
+if (args[0] === 'release' && args[1] === 'view') {
+  const marker = process.env.CREATED_MARKER
+  if (marker && existsSync(marker)) {
+    const info = { databaseId: 999, isDraft: true, targetCommitish: process.env.TARGET_COMMITISH ?? '', url: 'https://example.invalid' }
+    process.stdout.write(\`\${JSON.stringify(info)}\\n\`)
+    process.exit(0)
+  }
+  if (process.env.STALE_DRAFT_JSON) {
+    process.stdout.write(\`\${process.env.STALE_DRAFT_JSON}\\n\`)
+    process.exit(0)
+  }
+  process.exit(1)
+}
+if (args[0] === 'release' && args[1] === 'create') {
+  if (process.env.CREATED_MARKER) writeFileSync(process.env.CREATED_MARKER, '')
+  process.exit(0)
+}
+if (args[0] === 'api') process.exit(0)
+if (args[0] === 'release' && args[1] === 'upload') process.exit(0)
+if (args[0] === 'release' && args[1] === 'download') {
+  const dirIndex = args.indexOf('--dir')
+  if (dirIndex !== -1) {
+    const target = args[dirIndex + 1]
+    mkdirSync(target, { recursive: true })
+    if (process.env.ASSET_SOURCE) copyFileSync(process.env.ASSET_SOURCE, join(target, 'app.zip'))
+  }
+  process.exit(0)
+}
+if (args[0] === 'release' && args[1] === 'edit') process.exit(0)
+process.exit(94)
+`
+
+function writeMockTool(binDirectory, name, mockSource) {
+  writeFileSync(join(binDirectory, `mock-${name}.mjs`), mockSource, 'utf8')
+  writeFileSync(
+    join(binDirectory, `${name}.cmd`),
+    `@echo off\r\n"${process.execPath}" "%~dp0mock-${name}.mjs" %*\r\n`,
+    'utf8'
+  )
+  const posixShim = `#!/bin/sh\nexec "${process.execPath}" "$(dirname "$0")/mock-${name}.mjs" "$@"\n`
+  writeFileSync(join(binDirectory, name), posixShim, 'utf8')
+  chmodSync(join(binDirectory, name), 0o755)
+}
+
+function runPublish(version, commit, assetDirectory, manifestPath, extraEnv) {
+  return spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'publish-release.mjs'), version, commit, assetDirectory, manifestPath],
+    { cwd: repositoryRoot, encoding: 'utf8', env: { ...process.env, ...extraEnv } }
+  )
 }
 
 test('verify-assets rejects Windows path separators in manifest names', () => {
@@ -58,43 +139,25 @@ test('publish refuses a stale draft target before any remote mutation', () => {
     JSON.stringify({ schemaVersion: 1, version: '1.2.3', assets: [asset(name, contents)] })
   )
 
-  const gitPath = join(binDirectory, 'git')
-  writeFileSync(gitPath, '#!/bin/sh\nif [ "$1" = "ls-remote" ]; then exit 2; fi\nexit 97\n')
-  chmodSync(gitPath, 0o755)
+  writeMockTool(binDirectory, 'git', GIT_MOCK)
+  writeMockTool(binDirectory, 'gh', GH_MOCK)
 
   const oldCommit = '0'.repeat(40)
-  const ghPath = join(binDirectory, 'gh')
-  writeFileSync(
-    ghPath,
-    `#!/bin/sh
-printf '%s\\n' "$*" >> "$EFFECTS_FILE"
-if [ "$1" = "release" ] && [ "$2" = "view" ]; then
-  printf '%s\\n' '{"isDraft":true,"targetCommitish":"${oldCommit}","url":"https://example.invalid"}'
-  exit 0
-fi
-exit 96
-`
-  )
-  chmodSync(ghPath, 0o755)
-
   const commit = 'a'.repeat(40)
-  const result = spawnSync(
-    'bash',
-    [join(toolsDirectory, 'publish-release.sh'), '1.2.3', commit, assetDirectory, manifestPath],
-    {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        PATH: `${binDirectory}:${process.env.PATH}`,
-        EFFECTS_FILE: effectsFile,
-        GH_TOKEN: 'test-token',
-        GITHUB_REPOSITORY: 'owner/repo',
-        GITHUB_RUN_ID: '123',
-        RUNNER_TEMP: runnerTemp
-      }
-    }
-  )
+  const result = runPublish('1.2.3', commit, assetDirectory, manifestPath, {
+    HUBFETCH_TOOLCHAIN_DIR: binDirectory,
+    PATH: `${binDirectory}${delimiter}${process.env.PATH}`,
+    EFFECTS_FILE: effectsFile,
+    STALE_DRAFT_JSON: JSON.stringify({
+      isDraft: true,
+      targetCommitish: oldCommit,
+      url: 'https://example.invalid'
+    }),
+    GH_TOKEN: 'test-token',
+    GITHUB_REPOSITORY: 'owner/repo',
+    GITHUB_RUN_ID: '123',
+    RUNNER_TEMP: runnerTemp
+  })
 
   assert.notEqual(result.status, 0)
   assert.match(result.stderr, /targets .* not/)
@@ -123,85 +186,22 @@ test('a fresh draft creates and verifies its tag only after remote assets pass',
     JSON.stringify({ schemaVersion: 1, version: '1.2.3', assets: [asset(name, contents)] })
   )
 
+  writeMockTool(binDirectory, 'git', GIT_MOCK)
+  writeMockTool(binDirectory, 'gh', GH_MOCK)
+
   const commit = 'b'.repeat(40)
-  const gitPath = join(binDirectory, 'git')
-  writeFileSync(
-    gitPath,
-    `#!/bin/sh
-printf 'git %s\\n' "$*" >> "$EFFECTS_FILE"
-case "$1" in
-  ls-remote) exit 2 ;;
-  describe) exit 1 ;;
-  log) printf '%s\\n' '- verified change (abc1234)'; exit 0 ;;
-  push) exit 0 ;;
-  fetch) exit 0 ;;
-  rev-list) printf '%s\\n' '${commit}'; exit 0 ;;
-esac
-exit 95
-`
-  )
-  chmodSync(gitPath, 0o755)
-
-  // A fresh draft's tag is not a resolvable git ref until publish, so
-  // `gh release view` must work by release name both before AND right after
-  // `gh release create` (publish-release.sh looks the id up again post-create
-  // to address asset listing/deletion by numeric id instead of by tag, since
-  // the tag-scoped REST endpoint 404s until the ref exists). This mock tracks
-  // creation with a marker file so "view" only succeeds once "create" ran,
-  // matching real gh behavior.
   const createdMarker = join(fixture, 'created')
-  const ghPath = join(binDirectory, 'gh')
-  writeFileSync(
-    ghPath,
-    `#!/bin/sh
-printf 'gh %s\\n' "$*" >> "$EFFECTS_FILE"
-if [ "$1" = "release" ] && [ "$2" = "view" ]; then
-  if [ -f "$CREATED_MARKER" ]; then
-    printf '%s\\n' '{"databaseId":999}'
-    exit 0
-  fi
-  exit 1
-fi
-if [ "$1" = "release" ] && [ "$2" = "create" ]; then touch "$CREATED_MARKER"; exit 0; fi
-if [ "$1" = "api" ]; then exit 0; fi
-if [ "$1" = "release" ] && [ "$2" = "upload" ]; then exit 0; fi
-if [ "$1" = "release" ] && [ "$2" = "download" ]; then
-  copy_next=0
-  for arg in "$@"; do
-    if [ "$copy_next" = "1" ]; then
-      mkdir -p "$arg"
-      cp "$ASSET_SOURCE" "$arg/app.zip"
-      break
-    fi
-    if [ "$arg" = "--dir" ]; then copy_next=1; fi
-  done
-  exit 0
-fi
-if [ "$1" = "release" ] && [ "$2" = "edit" ]; then exit 0; fi
-exit 94
-`
-  )
-  chmodSync(ghPath, 0o755)
-
-  const result = spawnSync(
-    'bash',
-    [join(toolsDirectory, 'publish-release.sh'), '1.2.3', commit, assetDirectory, manifestPath],
-    {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        PATH: `${binDirectory}:${process.env.PATH}`,
-        ASSET_SOURCE: assetPath,
-        CREATED_MARKER: createdMarker,
-        EFFECTS_FILE: effectsFile,
-        GH_TOKEN: 'test-token',
-        GITHUB_REPOSITORY: 'owner/repo',
-        GITHUB_RUN_ID: '456',
-        RUNNER_TEMP: runnerTemp
-      }
-    }
-  )
+  const result = runPublish('1.2.3', commit, assetDirectory, manifestPath, {
+    HUBFETCH_TOOLCHAIN_DIR: binDirectory,
+    ASSET_SOURCE: assetPath,
+    CREATED_MARKER: createdMarker,
+    GIT_REV_LIST_SHA: commit,
+    EFFECTS_FILE: effectsFile,
+    GH_TOKEN: 'test-token',
+    GITHUB_REPOSITORY: 'owner/repo',
+    GITHUB_RUN_ID: '456',
+    RUNNER_TEMP: runnerTemp
+  })
 
   assert.equal(result.status, 0, result.stderr)
   const effects = readFileSync(effectsFile, 'utf8')
@@ -296,6 +296,8 @@ test('identity contract: electron-builder appId/productName/repository are HubFe
   // The self-update capability and its GitHub release-feed metadata were removed
   // (plan Todo 16): electron-builder must carry no publish/update-feed block.
   assert.doesNotMatch(builder, /^publish:\s*$/m, 'electron-builder publish block must be absent')
+  // Todo 17: the builder must satisfy the Windows-x64-zip-only packaging contract.
+  assert.deepEqual(builderViolations(builder), [], builderViolations(builder).join('\n'))
   assert.equal(readManifests().desktop.homepage, 'https://github.com/OranImp/HubFetch')
 })
 
@@ -321,4 +323,325 @@ test('identity contract negative fixtures: upstream identifiers are rejected', (
       `fixture bearing "${id}" must be rejected, got: ${JSON.stringify(violations)}`
     )
   }
+})
+
+// ============================================================================
+// Todo 17 Windows-x64-ZIP-only packaging contract.
+// ============================================================================
+
+const FORBIDDEN_BUILDER_TOP_LEVEL = ['nsis', 'mac', 'linux', 'appImage', 'publish']
+const FORBIDDEN_BUILDER_TOKENS = [
+  'portable',
+  'forceCodeSigning',
+  'hardenedRuntime',
+  'gatekeeperAssess',
+  'entitlements',
+  'afterPack',
+  'Squirrel',
+  'blockmap',
+  'latest-mac.yml',
+  'latest-linux.yml',
+  'app-update.yml',
+  'winCodeSign',
+  'certificate',
+  'signtool',
+  'azureSign',
+  'signAndEditExecutable',
+  'dmg',
+  'AppImage',
+  '.deb'
+]
+
+function stripYamlComments(text) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => {
+      const trimmed = line.trimStart()
+      if (trimmed.startsWith('#')) return ''
+      const comment = line.indexOf(' #')
+      return comment === -1 ? line : line.slice(0, comment)
+    })
+    .join('\n')
+}
+
+function parseTopLevelKeys(text) {
+  const keys = []
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue
+    const indent = line.match(/^\s*/)[0].length
+    if (indent !== 0) continue
+    const match = /^([A-Za-z0-9_.-]+):/.exec(line.trim())
+    if (match) keys.push(match[1])
+  }
+  return keys
+}
+
+function extractBlock(text, key) {
+  const lines = text.split(/\r?\n/)
+  const block = []
+  let collecting = false
+  for (const line of lines) {
+    const indent = line.match(/^\s*/)[0].length
+    const trimmed = line.trim()
+    if (!collecting) {
+      if (new RegExp(`^${key}:\\s*$`).test(trimmed)) collecting = true
+      continue
+    }
+    if (trimmed && indent === 0) break
+    block.push(line)
+  }
+  return block.join('\n')
+}
+
+function builderViolations(builderText) {
+  const text = stripYamlComments(builderText)
+  const violations = []
+  for (const key of FORBIDDEN_BUILDER_TOP_LEVEL) {
+    if (parseTopLevelKeys(text).includes(key)) {
+      violations.push(`forbidden top-level key: ${key}`)
+    }
+  }
+  for (const token of FORBIDDEN_BUILDER_TOKENS) {
+    if (text.includes(token)) violations.push(`forbidden token: ${token}`)
+  }
+
+  const winBlock = extractBlock(text, 'win')
+  if (!winBlock.trim()) {
+    violations.push('missing win block')
+    return violations
+  }
+  const winEntries = winBlock
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('- '))
+  const targets = winEntries.filter((line) => /^- target:/.test(line))
+  if (targets.length !== 1)
+    violations.push(`expected exactly one win target, found ${targets.length}`)
+  else if (!/^- target:\s*zip\s*$/.test(targets[0])) violations.push('win target is not zip')
+  const arches = winEntries.filter((line) => /^-( x64| ia32| arm64)\s*$/.test(line))
+  if (arches.length !== 1 || arches[0] !== '- x64') {
+    violations.push(`win arch is not exactly x64: ${arches.join(', ') || '<none>'}`)
+  }
+  const artifactName = /artifactName:\s*'?([^'\r\n]+)'?/.exec(text)
+  if (!artifactName || !artifactName[1].includes('${version}-windows-x64.zip')) {
+    violations.push('win artifactName is not HubFetch-${version}-windows-x64.zip')
+  }
+  return violations
+}
+
+test('packaging contract: builder targets exactly one unsigned Windows x64 zip', () => {
+  const builder = readFileSync(join(repositoryRoot, 'apps/desktop/electron-builder.yml'), 'utf8')
+  const violations = builderViolations(builder)
+  assert.deepEqual(violations, [], violations.join('\n'))
+
+  const winBlock = extractBlock(stripYamlComments(builder), 'win')
+  const entries = winBlock
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('- '))
+  assert.deepEqual(
+    entries.filter((line) => /^- target:/.test(line)),
+    ['- target: zip'],
+    'exactly one zip target'
+  )
+  assert.deepEqual(
+    entries.filter((line) => /^-( x64| ia32| arm64)\s*$/.test(line)),
+    ['- x64']
+  )
+})
+
+test('packaging contract negative fixture: portable target and mac block are rejected together', () => {
+  const builder = readFileSync(join(repositoryRoot, 'apps/desktop/electron-builder.yml'), 'utf8')
+  const broken = builder
+    .replace('target: zip', 'target: portable')
+    .replace('  artifactName:', 'mac:\n    target:\n      - dmg\n  artifactName:')
+  const violations = builderViolations(broken)
+  const joined = violations.join('\n')
+  assert.match(joined, /portable/, 'portable target must be rejected')
+  assert.match(joined, /forbidden top-level key: mac/, 'mac block must be rejected')
+  assert.match(joined, /win target is not zip/, 'non-zip target must be rejected')
+})
+
+test('packaging contract negative fixtures: each forbidden builder key is rejected', () => {
+  const builder = readFileSync(join(repositoryRoot, 'apps/desktop/electron-builder.yml'), 'utf8')
+  const injections = {
+    nsis: 'nsis:\n  oneClick: false\n',
+    linux: 'linux:\n  target:\n    - AppImage\n',
+    publish: 'publish:\n  provider: github\n  owner: OranImp\n  repo: HubFetch\n',
+    appImage: 'appImage:\n  artifactName: HubFetch-${version}.${ext}\n',
+    portable: 'portable:\n  artifactName: HubFetch-${version}-portable.${ext}\n'
+  }
+  for (const [label, block] of Object.entries(injections)) {
+    const broken = `${block}${builder}`
+    const violations = builderViolations(broken)
+    const joined = violations.join('\n')
+    assert.match(
+      joined,
+      new RegExp(label === 'publish' ? 'forbidden top-level key: publish' : label),
+      `${label} must be rejected`
+    )
+  }
+})
+
+const WORKFLOW_FILES = ['verify.yml', 'release.yml', 'packaged-smoke.yml']
+const WORKFLOW_FORBIDDEN = [
+  'macos-latest',
+  'ubuntu-latest',
+  'macos-',
+  'ubuntu-',
+  'xvfb',
+  'MAC_CSC',
+  'keychain',
+  'codesign',
+  'AppImage',
+  '.deb',
+  '.dmg',
+  'nsis',
+  'portable',
+  '--mac',
+  '--linux',
+  '-c.mac.identity',
+  'signed_macos'
+]
+
+function workflowViolations(root) {
+  const violations = []
+  for (const name of WORKFLOW_FILES) {
+    const rel = `.github/workflows/${name}`
+    const path = join(root, rel)
+    if (!existsSync(path)) {
+      violations.push(`${rel}: missing`)
+      continue
+    }
+    const body = stripYamlComments(readFileSync(path, 'utf8'))
+    if (!/^on:\s*$/m.test(body)) violations.push(`${rel}: missing on: trigger`)
+    if (!/^jobs:\s*$/m.test(body)) violations.push(`${rel}: missing jobs: section`)
+
+    const runsOn = [...body.matchAll(/^\s*runs-on:\s*([^\r\n]+)$/gm)]
+    if (runsOn.length === 0) violations.push(`${rel}: no runs-on declarations`)
+    for (const match of runsOn) {
+      const value = match[1].trim()
+      if (!value.startsWith('windows')) {
+        violations.push(`${rel}: non-Windows runner "${value}"`)
+      }
+    }
+    for (const token of WORKFLOW_FORBIDDEN) {
+      if (body.includes(token)) violations.push(`${rel}: forbidden token "${token}"`)
+    }
+    if (/builder_target|matrix:|platform: (linux|macos)/.test(body)) {
+      violations.push(`${rel}: multi-platform matrix present`)
+    }
+  }
+  return violations
+}
+
+test('packaging contract: every workflow runner and build target is Windows x64', () => {
+  const violations = workflowViolations(repositoryRoot)
+  assert.deepEqual(violations, [], violations.join('\n'))
+})
+
+test('packaging contract negative fixtures: non-Windows workflow content is rejected', () => {
+  for (const [label, mutation] of [
+    [
+      'ubuntu runner',
+      (text) => text.replace(/runs-on:\s*windows-latest/, 'runs-on: ubuntu-latest')
+    ],
+    ['macos runner', (text) => text.replace(/runs-on:\s*windows-latest/, 'runs-on: macos-latest')],
+    ['xvfb', (text) => `${text}\n        xvfb-run pnpm test\n`],
+    [
+      'mac signing secret',
+      (text) => `${text}\n        MAC_CSC_LINK: \${{ secrets.MAC_CSC_LINK }}\n`
+    ]
+  ]) {
+    const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-workflow-fixture-'))
+    const workflowDir = join(fixture, '.github/workflows')
+    mkdirSync(workflowDir, { recursive: true })
+    for (const name of WORKFLOW_FILES) {
+      const source = join(repositoryRoot, '.github/workflows', name)
+      writeFileSync(
+        join(workflowDir, name),
+        name === 'verify.yml'
+          ? mutation(readFileSync(source, 'utf8'))
+          : readFileSync(source, 'utf8')
+      )
+    }
+    const violations = workflowViolations(fixture)
+    assert.ok(violations.length > 0, `${label} must be rejected`)
+  }
+})
+
+test('packaging contract: package scripts are Windows-only with a package:win command', () => {
+  const rootScripts = readManifests().root.scripts ?? {}
+  const desktopScripts = readManifests().desktop.scripts ?? {}
+  for (const [label, scripts] of [
+    ['root', rootScripts],
+    ['desktop', desktopScripts]
+  ]) {
+    for (const key of ['build:linux', 'build:mac', 'build:mac:release']) {
+      assert.equal(key in scripts, false, `${label} package.json must not define ${key}`)
+    }
+  }
+  assert.equal(typeof rootScripts['package:win'], 'string')
+  assert.equal(typeof desktopScripts['package:win'], 'string')
+  assert.ok(rootScripts['package:win'].includes('hubfetch-desktop'))
+  assert.ok(desktopScripts['package:win'].includes('--win'))
+  assert.ok(desktopScripts['package:win'].includes('--x64'))
+  assert.ok(!desktopScripts['package:win'].includes('--mac'))
+  assert.ok(!desktopScripts['package:win'].includes('--linux'))
+})
+
+test('preflight accepts exactly one Windows x64 zip and writes SHA-256 plus inventory', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-ok-'))
+  const zipName = 'HubFetch-1.2.3-windows-x64.zip'
+  const zipContents = 'fake-zip-bytes'
+  writeFileSync(join(fixture, zipName), zipContents)
+
+  const result = spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'preflight.mjs'), fixture, '1.2.3'],
+    { encoding: 'utf8' }
+  )
+  assert.equal(result.status, 0, result.stderr)
+
+  const manifest = JSON.parse(readFileSync(join(fixture, 'release-assets.json'), 'utf8'))
+  assert.equal(manifest.version, '1.2.3')
+  assert.deepEqual(
+    manifest.assets.map((entry) => entry.name),
+    [zipName, `${zipName}.sha256`]
+  )
+  const hashFile = readFileSync(join(fixture, `${zipName}.sha256`), 'utf8')
+  const expectedHex = createHash('sha256').update(zipContents).digest('hex')
+  assert.ok(hashFile.startsWith(`${expectedHex}  ${zipName}`), hashFile)
+})
+
+test('preflight rejects installers, updater metadata, and other platforms', () => {
+  for (const [label, extra] of [
+    ['installer', 'HubFetch-1.2.3-setup.exe'],
+    ['updater metadata', 'latest.yml'],
+    ['mac dmg', 'HubFetch-1.2.3.dmg'],
+    ['linux appimage', 'HubFetch-1.2.3.AppImage']
+  ]) {
+    const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-bad-'))
+    writeFileSync(join(fixture, 'HubFetch-1.2.3-windows-x64.zip'), 'bytes')
+    writeFileSync(join(fixture, extra), 'bytes')
+    const result = spawnSync(
+      process.execPath,
+      [join(toolsDirectory, 'preflight.mjs'), fixture, '1.2.3'],
+      { encoding: 'utf8' }
+    )
+    assert.notEqual(result.status, 0, `${label} must be rejected`)
+    assert.match(result.stderr, /Forbidden|Unexpected/)
+  }
+})
+
+test('preflight rejects a mismatched version or a non-zip artifact set', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-ver-'))
+  writeFileSync(join(fixture, 'HubFetch-1.2.3-windows-x64.zip'), 'bytes')
+  const wrongVersion = spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'preflight.mjs'), fixture, '1.2.4'],
+    { encoding: 'utf8' }
+  )
+  assert.notEqual(wrongVersion.status, 0)
+  assert.match(wrongVersion.stderr, /is for v1\.2\.3/)
 })

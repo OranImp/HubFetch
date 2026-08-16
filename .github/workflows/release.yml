@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Build and verify every release artifact without creating a tag or release
+        description: Build and verify the release artifact without creating a tag or release
         required: true
         type: boolean
         default: true
@@ -15,13 +15,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: ohmyhf-release
+  group: hubfetch-release
   cancel-in-progress: false
+
+# Windows-only release pipeline (Todo 17): a single unsigned Windows x64 ZIP
+# is built, smoke-tested, hashed, inventoried, and then uploaded to a GitHub
+# Release. Every runner is windows-latest; no macOS/Linux job or signing
+# secret exists. All release tooling is Node (no bash/jq dependency).
+defaults:
+  run:
+    shell: bash
 
 jobs:
   detect:
     name: Detect release version
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       release: ${{ steps.detect.outputs.release }}
       version: ${{ steps.detect.outputs.version }}
@@ -45,10 +53,14 @@ jobs:
           fi
           result="$(node .github/scripts/release-tools/detect-version.mjs "${arguments[@]}")"
           echo "$result"
-          echo "release=$(jq -r .release <<<"$result")" >>"$GITHUB_OUTPUT"
-          echo "version=$(jq -r .version <<<"$result")" >>"$GITHUB_OUTPUT"
-          echo "dry_run=$REQUESTED_DRY_RUN" >>"$GITHUB_OUTPUT"
-          echo "commit_sha=$GITHUB_SHA" >>"$GITHUB_OUTPUT"
+          node -e '
+            const json = JSON.parse(process.argv[1])
+            for (const key of ["release", "version"]) {
+              process.stdout.write(key + "=" + json[key] + "\n")
+            }
+          ' "$result" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$REQUESTED_DRY_RUN" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
   verify:
     needs: detect
@@ -62,16 +74,12 @@ jobs:
     with:
       commit_sha: ${{ needs.detect.outputs.commit_sha }}
       publishable: true
-      signed_macos: ${{ needs.detect.outputs.dry_run != 'true' }}
-    secrets:
-      MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-      MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
 
   preflight:
-    name: Verify release assets and updater metadata
+    name: Verify the Windows x64 ZIP, SHA-256, and artifact inventory
     needs: [detect, build]
     if: needs.detect.outputs.release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - name: Check out verification scripts
@@ -79,21 +87,21 @@ jobs:
         with:
           ref: ${{ needs.detect.outputs.commit_sha }}
 
-      - name: Download all platform release assets
+      - name: Download the Windows release asset
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: release-*-${{ github.run_id }}
+          pattern: release-windows-${{ github.run_id }}
           path: dist/release
           merge-multiple: true
 
-      - name: Validate installers, manifests, references, and SHA-512
+      - name: Validate the ZIP, write SHA-256, and build the asset inventory
         run: node .github/scripts/release-tools/preflight.mjs dist/release "${{ needs.detect.outputs.version }}"
 
       - name: Record dry-run result
         if: needs.detect.outputs.dry_run == 'true'
         run: |
           echo "### Release dry-run passed" >>"$GITHUB_STEP_SUMMARY"
-          echo "All three platforms were built and smoke-tested; no tag or release was created." \
+          echo "The Windows x64 ZIP was built and smoke-tested; no tag or release was created." \
             >>"$GITHUB_STEP_SUMMARY"
 
       - name: Upload preflight-approved release assets
@@ -110,7 +118,7 @@ jobs:
     if: >-
       needs.detect.outputs.release == 'true' &&
       needs.detect.outputs.dry_run != 'true'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 15
     permissions:
       contents: write
@@ -131,7 +139,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
-          bash .github/scripts/release-tools/publish-release.sh
+          node .github/scripts/release-tools/publish-release.mjs
           "${{ needs.detect.outputs.version }}"
           "${{ needs.detect.outputs.commit_sha }}"
           dist/release

@@ -8,42 +8,27 @@ on:
         required: true
         type: string
       publishable:
-        description: Upload installers and updater manifests for release preflight
+        description: Upload the Windows x64 ZIP for release preflight
         required: false
         type: boolean
         default: false
-      signed_macos:
-        description: Require the stable macOS release identity
-        required: false
-        type: boolean
-        default: false
-    secrets:
-      MAC_CSC_LINK:
-        required: false
-      MAC_CSC_KEY_PASSWORD:
-        required: false
 
 permissions:
   contents: read
 
+# Decision (Todo 17): packaged-smoke stays as its own reusable workflow but is
+# reduced to a single Windows x64 job. The macOS/Linux matrix and the macOS
+# keychain-import step are removed; nothing here ever runs on a non-Windows
+# runner and no signing certificate is required.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   package:
-    name: Package and smoke test (${{ matrix.platform }})
-    runs-on: ${{ matrix.os }}
+    name: Package and smoke test (Windows x64)
+    runs-on: windows-latest
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux
-            os: ubuntu-latest
-            builder_target: --linux
-          - platform: macos
-            os: macos-latest
-            builder_target: --mac
-          - platform: windows
-            os: windows-latest
-            builder_target: --win
     steps:
       - name: Check out verified source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -61,90 +46,41 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Import macOS release signing certificate
-        if: matrix.platform == 'macos' && inputs.signed_macos
-        shell: bash
-        env:
-          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [[ -z "$MAC_CSC_LINK" || -z "$MAC_CSC_KEY_PASSWORD" ]]; then
-            echo "::error::MAC_CSC_LINK and MAC_CSC_KEY_PASSWORD are required for a real release."
-            exit 1
-          fi
-          keychain="$RUNNER_TEMP/ohmyhf-sign.keychain-db"
-          keychain_password="$(openssl rand -hex 16)"
-          printf '%s' "$MAC_CSC_LINK" | base64 -d >"$RUNNER_TEMP/sign.p12"
-          security create-keychain -p "$keychain_password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$keychain_password" "$keychain"
-          security import "$RUNNER_TEMP/sign.p12" \
-            -k "$keychain" -P "$MAC_CSC_KEY_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" >/dev/null
-          security find-certificate -c OhMyHF-Release -p "$keychain" >"$RUNNER_TEMP/sign.pem"
-          sudo security add-trusted-cert \
-            -d -r trustRoot -k /Library/Keychains/System.keychain "$RUNNER_TEMP/sign.pem"
-          existing="$(security list-keychains -d user | tr -d '\" ')"
-          security list-keychains -d user -s "$keychain" $existing
-          echo "CSC_KEYCHAIN=$keychain" >>"$GITHUB_ENV"
-          security find-identity -v -p codesigning "$keychain"
-
-      - name: Build distributables without publishing
-        shell: bash
+      - name: Build the unsigned Windows x64 ZIP without publishing
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           set -euo pipefail
           set -o pipefail
           mkdir -p .ci-logs
-          builder_arguments=("${{ matrix.builder_target }}" --publish never)
-          if [[ "${{ matrix.platform }}" == "macos" && "${{ inputs.signed_macos }}" == "true" ]]; then
-            builder_arguments+=("-c.mac.identity=OhMyHF-Release")
-          fi
           {
             pnpm --filter hubfetch-desktop exec electron-vite build
-            pnpm --filter hubfetch-desktop exec electron-builder \
-              "${builder_arguments[@]}"
-          } 2>&1 | tee ".ci-logs/build-${{ matrix.platform }}.log"
+            pnpm --filter hubfetch-desktop exec electron-builder --win --x64 --publish never
+          } 2>&1 | tee ".ci-logs/build-windows.log"
 
       - name: Run packaged smoke test
-        shell: bash
         run: |
           set -euo pipefail
           set -o pipefail
-          if [[ "${{ matrix.platform }}" == "linux" ]]; then
-            xvfb-run --auto-servernum pnpm --filter hubfetch-desktop exec \
-              playwright test --config=playwright.packaged.config.ts \
-              2>&1 | tee ".ci-logs/smoke-${{ matrix.platform }}.log"
-          else
-            pnpm --filter hubfetch-desktop exec \
-              playwright test --config=playwright.packaged.config.ts \
-              2>&1 | tee ".ci-logs/smoke-${{ matrix.platform }}.log"
-          fi
+          pnpm --filter hubfetch-desktop exec \
+            playwright test --config=playwright.packaged.config.ts \
+            2>&1 | tee ".ci-logs/smoke-windows.log"
 
-      - name: Upload platform release assets
+      - name: Upload the Windows x64 release ZIP
         if: inputs.publishable
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-${{ matrix.platform }}-${{ github.run_id }}
+          name: release-windows-${{ github.run_id }}
           if-no-files-found: error
           retention-days: 7
           path: |
-            apps/desktop/release/*.AppImage
-            apps/desktop/release/*.deb
-            apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.blockmap
-            apps/desktop/release/latest*.yml
 
       - name: Upload packaged smoke diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: packaged-smoke-${{ matrix.platform }}-${{ github.run_id }}
+          name: packaged-smoke-windows-${{ github.run_id }}
           if-no-files-found: ignore
           retention-days: 14
           include-hidden-files: true

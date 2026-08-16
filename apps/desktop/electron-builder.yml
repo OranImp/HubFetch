@@ -15,55 +15,15 @@ asarUnpack:
 npmRebuild: true
 electronVersion: 43.1.0
 
-# Strip extended attributes (com.apple.provenance, iCloud fileprovider tags)
-# before signing; codesign hard-fails on them ("detritus not allowed").
-afterPack: ./scripts/mac-strip-xattrs.cjs
-
-mac:
-  category: public.app-category.developer-tools
-  target:
-    - dmg
-    # Squirrel.Mac requires a zip alongside the dmg for macOS releases.
-    - zip
-  # Ad-hoc signature for local builds. Release CI overrides this with a
-  # stable self-signed certificate; still not notarized — see docs/signing.md.
-  identity: '-'
-  # Fail the build instead of silently shipping an unsigned (broken-seal) app
-  # when the release identity cannot be found, e.g. a missing CI secret.
-  # Ad-hoc ('-') always resolves, so local builds are unaffected.
-  forceCodeSigning: true
-  hardenedRuntime: true
-  gatekeeperAssess: false
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
-  # productName is space-free ("HubFetch"); keep artifactName space-free so the
-  # built file's name is stable and predictable across every CI job.
-  artifactName: 'HubFetch-${version}-${arch}.${ext}'
-
+# HubFetch ships a single unsigned Windows x64 ZIP: no installer, no
+# updater/feed metadata, no other platform targets, and no code-signing
+# requirement. Releases are manually installed from the GitHub Releases page.
+# See docs/signing.md for the unsigned disclosure.
 win:
   target:
-    - nsis
-
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  # See the mac.artifactName comment above — same fix, same reason.
-  artifactName: 'HubFetch-Setup-${version}.${ext}'
-
-linux:
-  target:
-    - AppImage
-    - deb
-  category: Development
-  synopsis: Unofficial desktop client for the Hugging Face Hub
-  maintainer: HubFetch contributors
-  executableName: hubfetch
-  desktop:
-    entry:
-      StartupWMClass: hubfetch
-
-# .deb already gets a fully sanitized name from dpkg tooling; only AppImage
-# needs the same space-free artifactName fix as mac/nsis above (scoped here,
-# not under linux:, so it doesn't touch the .deb naming convention).
-appImage:
-  artifactName: 'HubFetch-${version}.${ext}'
+    - target: zip
+      arch:
+        - x64
+  # artifactName is space-free so the built file's name is stable and
+  # predictable across every CI job.
+  artifactName: 'HubFetch-${version}-windows-x64.zip'

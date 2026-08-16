@@ -18,10 +18,8 @@
     "test:e2e:packaged": "playwright test --config playwright.packaged.config.ts",
     "test:screenshots": "CAPTURE_SCREENSHOTS=1 playwright test --config playwright.screenshots.config.ts",
     "i18n:extract": "i18next",
-    "build:linux": "electron-vite build && electron-builder --linux",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:mac:release": "electron-vite build && electron-builder --mac -c.mac.identity=OhMyHF-Release",
-    "build:win": "electron-vite build && electron-builder --win"
+    "build:win": "electron-vite build && electron-builder --win --x64",
+    "package:win": "electron-vite build && electron-builder --win --x64"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",

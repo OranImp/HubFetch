@@ -6,8 +6,9 @@
 > "Hugging Face" is a trademark of Hugging Face, Inc. and is used here only to refer to the
 > service this application connects to.
 
-An open-source, cross-platform (macOS / Windows / Linux) desktop client for browsing the Hugging
-Face Hub, managing large model downloads, and plugging models into your local AI toolchain.
+An open-source Windows desktop client for browsing the Hugging Face Hub,
+managing large model downloads, and plugging models into your local AI
+toolchain. Releases ship as a single unsigned Windows x64 ZIP.
 
 **Privacy-first: everything stays on your machine.** No telemetry, no analytics, no external
 services beyond the Hugging Face API itself. Your access token is encrypted with your OS keychain
@@ -45,24 +46,15 @@ permissions.
 Grab the latest release for your platform from
 [GitHub Releases](https://github.com/oh-my-hf/ohmyhf/releases):
 
-- **macOS** — `.dmg`
-- **Windows** — `.exe` (NSIS installer)
-- **Linux** — `.AppImage` or `.deb`
+- **Windows x64** — `HubFetch-<version>-windows-x64.zip` (unsigned)
 
-### macOS: Gatekeeper / quarantine
+### Windows: unsigned ZIP
 
-macOS release builds use the stable self-signed `OhMyHF-Release` certificate; local builds remain
-**ad-hoc signed**. Neither is Developer ID notarized (see [docs/signing.md](docs/signing.md)). After
-a browser download, first launch may still need:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Oh My HuggingFace.app"
-```
-
-or right-click the app → **Open** → **Open**.
-
-Updates are manual: install a newer build from the
-[GitHub Releases](https://github.com/oh-my-hf/ohmyhf/releases) page when one is published.
+Release ZIPs are **unsigned**: Windows SmartScreen may show a warning on first
+launch (see [docs/signing.md](docs/signing.md)). Extract the ZIP and run
+`HubFetch.exe`. Releases never include an installer and the app has **no
+auto-updater** — install a newer build manually from the GitHub Releases page
+when one is published.
 
 ## Development
 
@@ -81,9 +73,7 @@ pnpm build          # production build of every package
 Platform packaging (from `apps/desktop`):
 
 ```sh
-pnpm --filter hubfetch-desktop build:linux   # AppImage + deb
-pnpm --filter hubfetch-desktop build:mac     # dmg (ad-hoc signed)
-pnpm --filter hubfetch-desktop build:win     # nsis
+pnpm --filter hubfetch-desktop package:win   # unsigned Windows x64 ZIP
 ```
 
 ### Sign-in
@@ -108,11 +98,12 @@ at `%APPDATA%\HubFetch\credentials.json`.
 ### Releasing
 
 Releases are cut from `main` by a commit whose subject is `[RELEASE] Vx.y.z`. See
-[docs/releasing.md](docs/releasing.md) for the full flow; in short: bump all four workspace
-manifest versions, then land a commit titled e.g. `[RELEASE] V0.2.0`. CI verifies the source,
-builds and smoke-tests the packaged application before it creates the `v0.2.0` tag or draft
-release. Publishing happens only after the remote asset list is verified. There is no updater
-metadata to validate: the app has no self-update capability (see the manual-updates note above).
+[docs/releasing.md](docs/releasing.md) for the full flow; in short: bump all four workspace manifest
+versions, then land a commit titled e.g. `[RELEASE] V0.2.0`. CI verifies the source,
+builds and smoke-tests the packaged Windows x64 ZIP before it creates the `v0.2.0` tag or draft
+release, and a SHA-256 checksum plus asset inventory are produced for the ZIP. Publishing happens
+only after the remote asset list is verified. There is no updater metadata to validate: the app has
+no self-update capability (see the manual-updates note above).
 
 ## Architecture
 
