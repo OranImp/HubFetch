@@ -9,7 +9,7 @@
  * (`-...`), reflog (`@{`), refspec (`:`), traversal (`..`), and whitespace.
  */
 import { z } from 'zod'
-import { downloadProxyOverride } from './schemas'
+import { downloadProxyOverride } from './proxy-override'
 
 /** Closed repository kinds accepted by the clone contract. */
 export const cloneRepoKindSchema = z.enum(['model', 'dataset', 'space'])

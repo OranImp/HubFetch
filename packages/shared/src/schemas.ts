@@ -4,8 +4,13 @@
  */
 import { z } from 'zod'
 import type { IpcInvokeChannel } from './ipc'
+import { cloneRequestSchema } from './clone'
+import { downloadProxyOverride, manualProxyUrlSchema as manualProxyUrl } from './proxy-override'
 import { DIAGNOSTIC_REASON_CODES, SUPPORTED_LOCALES } from './types'
-import { normalizeManualProxyUrl } from './urls'
+
+// Re-exported from './proxy-override' so existing importers of this module
+// (e.g. the clone persistence schemas) keep resolving the same binding.
+export { downloadProxyOverride }
 
 /**
  * Closed status/category/reason-code enums shared by the DiagnosticsService.
@@ -116,15 +121,6 @@ const repoSummary = z.object({
 })
 
 /**
- * A manual proxy URL: `http(s)://host:port` with an explicit port and nothing
- * else — no userinfo, path, query, or fragment. Credentials are never accepted.
- */
-const manualProxyUrl = z
-  .string()
-  .max(2048)
-  .refine((value) => normalizeManualProxyUrl(value) !== null, 'invalid proxy url')
-
-/**
  * Closed proxy config for settings. `manualUrl` is retained across mode
  * switches but Manual mode always requires a concrete normalized URL.
  */
@@ -138,13 +134,6 @@ const proxyConfig = z
     (config) => config.mode !== 'manual' || config.manualUrl !== null,
     'manual proxy mode requires a URL'
   )
-
-/** Per-create proxy override for downloads:start. Closed union, no fallback. */
-export const downloadProxyOverride = z.discriminatedUnion('mode', [
-  z.object({ mode: z.literal('system') }).strict(),
-  z.object({ mode: z.literal('direct') }).strict(),
-  z.object({ mode: z.literal('manual'), url: manualProxyUrl }).strict()
-])
 
 const settingsPatch = z
   .object({
@@ -690,5 +679,15 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
     id: z.uuid(),
     request: z.object({ model: repoId, input: z.string().max(65536) })
   }),
-  'inference:cancel': z.object({ id: z.uuid() })
+  'inference:cancel': z.object({ id: z.uuid() }),
+  // Clone operations (plan Todo 33). `.strict()` on the OUTER object too: an
+  // unknown top-level field (a raw URL, a token, a forged status) is rejected
+  // outright instead of being silently stripped. `cloneRequestSchema` itself
+  // is strict, so a raw url/token/status nested inside `request` also fails.
+  // Attempt ids are branded UUIDs (CloneRecord.id), never free-form strings.
+  'clones:get': z.object({ id: z.uuid() }).strict(),
+  'clones:create': z.object({ request: cloneRequestSchema }).strict(),
+  'clones:cancel': z.object({ id: z.uuid() }).strict(),
+  'clones:retry': z.object({ parentId: z.uuid(), request: cloneRequestSchema }).strict(),
+  'clones:openDestination': z.object({ id: z.uuid() }).strict()
 }

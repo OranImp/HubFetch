@@ -521,7 +521,8 @@ if (!gotLock) {
         broadcast,
         applyNetworkSettings,
         applyDesktopSettings,
-        diagnostics
+        diagnostics,
+        clones: cloneManager
       },
       trustedOrigins
     )

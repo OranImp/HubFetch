@@ -4,10 +4,12 @@
  * payload reject anything non-null. No string channels appear outside the contract.
  */
 import { BrowserWindow, app, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
-import { lstat, readFile, realpath, writeFile } from 'node:fs/promises'
+import { lstat, readFile, realpath, stat, writeFile } from 'node:fs/promises'
 import type {
   AppInfo,
   AppSettings,
+  CloneCreateInput,
+  CloneRequest,
   IpcEventChannel,
   IpcEventPayload,
   IpcInvokeChannel,
@@ -54,6 +56,7 @@ import {
 import { redactor } from './security/log'
 import type { DiagnosticsCoordinator } from './diagnostics-coordinator'
 import { SupportBundleError } from './support-bundle'
+import type { CloneManager } from './clone/clone-manager'
 
 export interface AppContext {
   db: AppDatabase
@@ -79,6 +82,7 @@ export interface AppContext {
     prev: { launchAtLogin: boolean; closeToTray: boolean; theme: string }
   ) => void
   diagnostics: DiagnosticsCoordinator
+  clones: CloneManager
 }
 
 function handle<C extends IpcInvokeChannel>(
@@ -676,5 +680,37 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   })
   handle('diagnostics:exportCancel', () => {
     ctx.diagnostics.cancelExport()
+  })
+
+  // --- clones (plan Todo 33) ------------------------------------------------------
+  // Every operation is already gated by the central `handle` wrapper: Zod
+  // payload validation happens BEFORE any manager call and the sender must be
+  // the app's own trusted main frame. The create/retry handlers resolve an
+  // omitted proxy override to the FROZEN settings snapshot here in main — the
+  // renderer never supplies an arbitrary proxy config beyond the closed
+  // override, and never a raw URL or token (the clone URL is always derived).
+  const withResolvedCloneProxy = (request: CloneRequest): CloneCreateInput => ({
+    ...request,
+    proxy: request.proxy ?? snapshotFromConfig(ctx.settings.get().proxy)
+  })
+
+  handle('clones:list', () => ctx.clones.list())
+  handle('clones:get', ({ id }) => ctx.clones.list().find((record) => record.id === id) ?? null)
+  handle('clones:create', ({ request }) => ctx.clones.create(withResolvedCloneProxy(request)))
+  handle('clones:cancel', ({ id }) => ctx.clones.cancel(id))
+  handle('clones:retry', ({ parentId, request }) =>
+    ctx.clones.retry(parentId, withResolvedCloneProxy(request))
+  )
+  // Owner-bound open: the path is resolved ONLY from the validated stored
+  // record (never an arbitrary renderer-supplied path), canonicalized, and
+  // confirmed to be a real directory before the OS file manager opens it.
+  handle('clones:openDestination', async ({ id }) => {
+    const record = ctx.clones.list().find((entry) => entry.id === id)
+    if (record === undefined) throw new Error('clone attempt not found')
+    const canonical = await realpath(record.destination).catch(() => record.destination)
+    const info = await stat(canonical)
+    if (!info.isDirectory()) throw new Error('clone destination is not a directory')
+    const openError = await shell.openPath(canonical)
+    if (openError !== '') throw new Error(`could not open clone destination: ${openError}`)
   })
 }

@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
+  CloneBridge,
+  CloneRecord,
+  CloneRequest,
   DiagnosticReport,
   DiagnosticsBridge,
   DiagnosticsExportResult,
@@ -39,6 +42,39 @@ const diagnosticsBridge: DiagnosticsBridge = {
 }
 
 /**
+ * Typed clone bridge (plan Todo 33). Every method is named and narrow — no raw
+ * channel/URL/path acceptance, no token bytes, no status writes. All payloads
+ * are validated again in main (Zod + sender trust) before the manager runs.
+ */
+const cloneBridge: CloneBridge = {
+  list(): Promise<CloneRecord[]> {
+    return ipcRenderer.invoke('clones:list') as Promise<CloneRecord[]>
+  },
+  get(id: string): Promise<CloneRecord | null> {
+    return ipcRenderer.invoke('clones:get', { id }) as Promise<CloneRecord | null>
+  },
+  create(request: CloneRequest): Promise<CloneRecord> {
+    return ipcRenderer.invoke('clones:create', { request }) as Promise<CloneRecord>
+  },
+  cancel(id: string): Promise<CloneRecord[]> {
+    return ipcRenderer.invoke('clones:cancel', { id }) as Promise<CloneRecord[]>
+  },
+  retry(parentId: string, request: CloneRequest): Promise<CloneRecord> {
+    return ipcRenderer.invoke('clones:retry', { parentId, request }) as Promise<CloneRecord>
+  },
+  openDestination(id: string): Promise<void> {
+    return ipcRenderer.invoke('clones:openDestination', { id }) as Promise<void>
+  },
+  onClonesChanged(listener: (records: CloneRecord[]) => void): () => void {
+    const wrapped = (_event: unknown, payload: CloneRecord[]): void => listener(payload)
+    ipcRenderer.on('evt:clones', wrapped)
+    return () => {
+      ipcRenderer.removeListener('evt:clones', wrapped)
+    }
+  }
+}
+
+/**
  * The minimal, typed bridge. Only channels defined in the shared contract can be
  * invoked or subscribed to; everything else throws before touching IPC.
  */
@@ -62,7 +98,8 @@ const api: RendererApi = {
       ipcRenderer.removeListener(channel, wrapped)
     }
   },
-  diagnostics: diagnosticsBridge
+  diagnostics: diagnosticsBridge,
+  clones: cloneBridge
 }
 
 contextBridge.exposeInMainWorld('hubfetch', api)

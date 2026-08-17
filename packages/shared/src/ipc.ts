@@ -69,6 +69,7 @@ import type {
   CollectionSearchResult
 } from './types'
 import type { CloneRecord } from './clone-record'
+import type { CloneRequest } from './clone'
 
 /** Request/response map for `ipcRenderer.invoke`-style calls. */
 export interface IpcInvokeContract {
@@ -469,6 +470,23 @@ export interface IpcInvokeContract {
   'downloads:clearCompleted': { req: void; res: DownloadTask[] }
   'downloads:reveal': { req: { id: string }; res: void }
 
+  /**
+   * Clone attempt operations (plan Todo 33). Every input is schema-validated
+   * (strict bounds, UUID attempt ids) BEFORE the manager is called; `create`
+   * and `retry` accept only validated repo fields (kind/id/revision), the
+   * transport, a destination, an auth mode, and a closed proxy override —
+   * NEVER a raw URL or a token (URLs are derived, `app-token` rides the
+   * Todo 30 AskPass broker). Status transitions belong to CloneManager/
+   * CloneStore alone; the renderer can never set a status.
+   */
+  'clones:list': { req: void; res: CloneRecord[] }
+  'clones:get': { req: { id: string }; res: CloneRecord | null }
+  'clones:create': { req: { request: CloneRequest }; res: CloneRecord }
+  'clones:cancel': { req: { id: string }; res: CloneRecord[] }
+  'clones:retry': { req: { parentId: string; request: CloneRequest }; res: CloneRecord }
+  /** Open the recorded clone destination folder in the OS file manager. */
+  'clones:openDestination': { req: { id: string }; res: void }
+
   'cache:scan': { req: void; res: CacheReport }
   'cache:deleteRevisions': {
     req: { kind: RepoKind; repoId: string; commitHashes: string[] }
@@ -662,6 +680,12 @@ export const IPC_INVOKE_CHANNELS = [
   'downloads:resumeAll',
   'downloads:clearCompleted',
   'downloads:reveal',
+  'clones:list',
+  'clones:get',
+  'clones:create',
+  'clones:cancel',
+  'clones:retry',
+  'clones:openDestination',
   'cache:scan',
   'cache:deleteRevisions',
   'cache:cleanPartials',
@@ -725,6 +749,13 @@ export interface RendererApi {
    * convenience namespace, never a bypass of sender validation.
    */
   diagnostics: DiagnosticsBridge
+  /**
+   * Typed clone surface exposed as `window.hubfetch.clones.*`. Every method
+   * delegates to the central validated invoke path (Zod + sender trust) — a
+   * convenience namespace, never a bypass. Events stream through
+   * `evt:clones`; `onClonesChanged` returns an unsubscribe function.
+   */
+  clones: CloneBridge
 }
 
 /**
@@ -740,4 +771,28 @@ export interface DiagnosticsBridge {
   cancelExport(): Promise<void>
   /** Subscribe to run/export progress; returns an unsubscribe function. */
   onProgress(listener: (progress: DiagnosticsProgress) => void): () => void
+}
+
+/**
+ * Typed clone bridge on the preload. All methods are named and narrow; the
+ * raw `ipcRenderer`, CloneManager, database, and native handles never reach
+ * the renderer. `create`/`retry` accept ONLY validated repo fields plus a
+ * closed proxy override — no raw URL, no token, and no status. Clone state
+ * changes stream through `onClonesChanged` (subscribes to `evt:clones`).
+ */
+export interface CloneBridge {
+  /** Every clone attempt in deterministic FIFO order (schema-valid records). */
+  list(): Promise<CloneRecord[]>
+  /** One attempt by id; null when it does not exist. */
+  get(id: string): Promise<CloneRecord | null>
+  /** Enqueue one new attempt; returns the queued record. */
+  create(request: CloneRequest): Promise<CloneRecord>
+  /** Cancel one attempt; returns the resulting list. */
+  cancel(id: string): Promise<CloneRecord[]>
+  /** Retry a terminal attempt with a fresh destination; returns the queued record. */
+  retry(parentId: string, request: CloneRequest): Promise<CloneRecord>
+  /** Open the recorded destination folder of one attempt (owner-bound). */
+  openDestination(id: string): Promise<void>
+  /** Subscribe to `evt:clones`; returns an unsubscribe function. */
+  onClonesChanged(listener: (records: CloneRecord[]) => void): () => void
 }
