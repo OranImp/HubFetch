@@ -43,6 +43,8 @@ import { MainI18n, matchLocale } from './i18n'
 import { IntegrationTaskManager } from './integration-tasks'
 import { registerIpcHandlers } from './ipc'
 import { CloneHost } from './clone/clone-host'
+import { CloneManager } from './clone/clone-manager'
+import { CloneStore } from './clone/clone-store'
 import { AskPassBroker, resolveAskPassHelperPath } from './askpass/askpass-broker'
 import { Library } from './library'
 import { createLogCaptures, sanitizeRendererLine } from './log-capture'
@@ -56,6 +58,8 @@ import { logger } from './security/log'
 import { secretRegistry } from './security/secret-registry'
 import { closeDefaultTransportPool, ProxyTransportManager } from './transport'
 import { TrayManager } from './tray'
+import { GitDiagnostics } from './git-diagnostics'
+import { runCommandBounded } from './diagnostics-env'
 import {
   registerWindowsNotificationShortcut,
   removeWindowsNotificationShortcut
@@ -229,6 +233,23 @@ if (!gotLock) {
     const i18n = new MainI18n()
     const configuredLocale = settings.get().locale
     i18n.setLocale(configuredLocale === 'system' ? matchLocale(app.getLocale()) : configuredLocale)
+
+    // Todo 32: durable single-active clone FIFO alongside the parallel
+    // download manager. Recover running/cancelling rows from a previous crash
+    // (running/cancelling -> interrupted), then pump the oldest queued clone.
+    // Each start is gated on destination validation/reserve AND Git readiness
+    // before any worker spawns; progress persistence is throttled; exactly one
+    // terminal event per attempt pumps the next queued clone. Downloads are
+    // untouched — CloneManager shares no concurrency state with DownloadManager.
+    const cloneManager = new CloneManager({
+      store: new CloneStore(db),
+      host: cloneHost,
+      diagnostics: new GitDiagnostics({
+        runner: { runCommand: (argv, opts) => runCommandBounded(argv, opts) }
+      }),
+      publish: (records) => broadcast('evt:clones', records)
+    })
+    cloneManager.recover()
 
     const auth = new AuthManager(db, (state) => broadcast('evt:auth', state))
     const initial = settings.get()
@@ -688,11 +709,11 @@ if (!gotLock) {
       integrationTasks.shutdown()
       follows.stop()
       tray.destroy()
-      // Todo 27: cancel every active clone through the cooperative cancel ->
+      // Todo 27/32: cancel every active clone through the cooperative cancel ->
       // bounded grace -> Job terminate -> wait-for-empty path, so no Git
-      // descendant outlives the app. Bounded and never awaited: shutdown must
-      // not hang.
-      void cloneHost.shutdown()
+      // descendant outlives the app, then verify zero Job PIDs. Bounded and
+      // never awaited: shutdown must not hang.
+      void cloneManager.shutdown()
       // Todo 30: zeroize any live AskPass session (token + username buffers)
       // before the process exits.
       askPassBroker.closeAll()

@@ -68,6 +68,7 @@ import type {
   PaperSearchResult,
   CollectionSearchResult
 } from './types'
+import type { CloneRecord } from './clone-record'
 
 /** Request/response map for `ipcRenderer.invoke`-style calls. */
 export interface IpcInvokeContract {
@@ -527,6 +528,7 @@ export type IpcResponse<C extends IpcInvokeChannel> = IpcInvokeContract[C]['res'
 /** Push events, main → renderer. */
 export interface IpcEventContract {
   'evt:downloads': DownloadTask[]
+  'evt:clones': CloneRecord[]
   'evt:auth': AuthState
   'evt:inbox': InboxItem[]
   /** Ask the renderer to navigate to an in-app route (menu items, notification clicks). */
@@ -700,6 +702,7 @@ void _invokeChannelsExhaustive
 
 export const IPC_EVENT_CHANNELS: readonly IpcEventChannel[] = [
   'evt:downloads',
+  'evt:clones',
   'evt:auth',
   'evt:inbox',
   'evt:navigate',
