@@ -129,6 +129,16 @@ class EmptyWaiter : public Napi::AsyncWorker {
     result_.ok = true;
     if (QueryZeroActive()) return;
     const DWORD start = GetTickCount();
+    // Windows does not reliably post JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO for a
+    // Job whose members exit naturally and are immediately reaped (observed
+    // with the utility clone worker: the process list empties but no completion
+    // message arrives). So when a port-read slice yields no message we poll the
+    // process list directly as a bounded fallback. A single empty read can be a
+    // transient (a just-spawned member's Job membership has not propagated yet,
+    // e.g. a waiter that is assigned and then immediately polled), so we only
+    // trust a drain that stays empty across two consecutive 100 ms slices.
+    // Terminated Jobs still resolve instantly through the completion message.
+    int emptySlices = 0;
     for (;;) {
       if (closed_->load(std::memory_order_acquire)) {
         SetError(kCodeClosed, "closed", ERROR_INVALID_HANDLE, "JobHandle closed while waiting");
@@ -151,7 +161,18 @@ class EmptyWaiter : public Napi::AsyncWorker {
         continue;  // other job messages are irrelevant to emptiness
       }
       const DWORD err = GetLastError();
-      if (err == WAIT_TIMEOUT) continue;  // slice expired; loop re-checks the deadline
+      if (err == WAIT_TIMEOUT) {
+        // No message this slice. Poll the process list directly (bounded by the
+        // timeout), requiring two consecutive empty reads so a transient
+        // membership lag is never mistaken for a genuine drain.
+        if (QueryZeroActive()) {
+          emptySlices += 1;
+          if (emptySlices >= 2) return;
+        } else {
+          emptySlices = 0;
+        }
+        continue;  // slice expired; loop re-checks the deadline
+      }
       if (err == ERROR_OPERATION_ABORTED || err == ERROR_INVALID_HANDLE) {
         SetError(kCodeClosed, "closed", err, "completion port closed while waiting");
         return;

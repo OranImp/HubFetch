@@ -100,6 +100,18 @@ const suites = [
     file: 'electron-askpass-qa-failure.cjs',
     exposeGc: false,
     runAsNode: false
+  },
+  {
+    name: 'clone-matrix',
+    file: 'electron-clone-matrix.cjs',
+    exposeGc: false,
+    runAsNode: false
+  },
+  {
+    name: 'job-natural-exit',
+    file: 'electron-job-natural-exit.cjs',
+    exposeGc: false,
+    runAsNode: true
   }
 ]
 
