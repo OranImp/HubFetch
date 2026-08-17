@@ -18,6 +18,7 @@
 
 #include <napi.h>
 
+#include "askpass_session.h"
 #include "job_handle.h"
 
 namespace {
@@ -145,6 +146,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("createKillOnCloseJob",
               Napi::Function::New(env, hubfetch_job::JobHandle::CreateKillOnCloseJob));
   hubfetch_job::JobHandle::Init(env, exports);
+  // Todo 30: Job-bound one-shot AskPass session + DACL diagnostic export.
+  hubfetch_job::AskPassSession::Init(env, exports);
   return exports;
 }
 

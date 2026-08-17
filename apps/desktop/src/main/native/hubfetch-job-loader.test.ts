@@ -12,7 +12,8 @@ import {
   getCloneSupport,
   loadHubFetchJob,
   resolveHubFetchJobPath,
-  type HubFetchJobBridge
+  type HubFetchJobBridge,
+  type HubFetchJobHandle
 } from './hubfetch-job-loader'
 
 vi.mock('electron', () => ({
@@ -45,7 +46,8 @@ function validModule(nodeAbi = RUNTIME_MODULES, arch = 'x64'): Record<string, un
       arch,
       napiVersion: 8
     }),
-    createKillOnCloseJob: () => validHandle()
+    createKillOnCloseJob: () => validHandle(),
+    createAskPassSession: () => ({ pipeName: 'HubFetchAskPass-qa', session: {} })
   }
 }
 
@@ -255,6 +257,41 @@ describe('loadHubFetchJob — typed unavailable contract (no throws)', () => {
     })
     expect(bridge.status).toBe('unavailable')
     if (bridge.status === 'unavailable') expect(bridge.code).toBe('bad-exports')
+  })
+
+  it('classifies a module without createAskPassSession as bad-exports (Todo 30)', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => {
+        const mod = validModule()
+        delete mod.createAskPassSession
+        return mod
+      }
+    })
+    expect(bridge.status).toBe('unavailable')
+    if (bridge.status === 'unavailable') expect(bridge.code).toBe('bad-exports')
+  })
+
+  it('exposes createAskPassSession on the ready bridge (Todo 30)', () => {
+    const bridge = loadHubFetchJob({
+      checkExists: () => true,
+      appPath: 'C:\\dev\\apps\\desktop',
+      loadModule: () => validModule()
+    })
+    expect(bridge.status).toBe('ready')
+    if (bridge.status === 'ready') {
+      const created = bridge.createAskPassSession({
+        token: Buffer.from('token'),
+        username: 'hf_user',
+        job: validHandle() as unknown as HubFetchJobHandle,
+        ttlMs: 60000,
+        promptLimit: 4,
+        allowUsername: true,
+        allowPassword: true
+      })
+      expect(created.pipeName).toBe('HubFetchAskPass-qa')
+    }
   })
 
   it('never throws, whatever the module does', () => {

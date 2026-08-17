@@ -72,6 +72,13 @@ class JobHandle : public Napi::ObjectWrap<JobHandle> {
   ~JobHandle() override;
   void Finalize(Napi::Env env) override;
 
+  /**
+   * Raw Job object handle for the AskPass session bridge (Todo 30). Only the
+   * same addon's AskPassSession consumes it, and it does so by duplicating the
+   * handle before use — it is never exposed to JS.
+   */
+  HANDLE handle() const { return job_; }
+
   Napi::Value AssignProcess(const Napi::CallbackInfo& info);
   Napi::Value ContainsProcess(const Napi::CallbackInfo& info);
   Napi::Value ActiveProcessIds(const Napi::CallbackInfo& info);

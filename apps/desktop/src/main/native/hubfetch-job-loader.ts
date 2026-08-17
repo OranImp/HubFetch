@@ -84,6 +84,16 @@ export interface HubFetchJobAddon {
   addonName: string
   getRuntimeInfo(): HubFetchJobRuntimeInfo
   createKillOnCloseJob(): HubFetchJobHandle
+  /** Todo 30: create one Job-bound one-shot AskPass session. */
+  createAskPassSession(options: {
+    token: Buffer
+    username: string
+    job: HubFetchJobHandle
+    ttlMs: number
+    promptLimit: number
+    allowUsername: boolean
+    allowPassword: boolean
+  }): { pipeName: string; session: unknown }
 }
 
 /** Result of creating a REAL kill-on-close Job through the ready bridge. */
@@ -108,6 +118,11 @@ export type HubFetchJobBridge =
        * is contained from birth. Typed failure (never throws).
        */
       createJob(): CreateJobResult
+      /**
+       * Todo 30: create a REAL Job-bound one-shot AskPass session. Never
+       * throws — failures are typed AskPass errors thrown by the caller.
+       */
+      createAskPassSession: HubFetchJobAddon['createAskPassSession']
     }
   | {
       status: 'unavailable'
@@ -199,6 +214,13 @@ export function classifyRuntimeInfo(
       ok: false,
       code: 'bad-exports',
       detail: 'createKillOnCloseJob export is missing or not a function'
+    }
+  }
+  if (typeof mod.createAskPassSession !== 'function') {
+    return {
+      ok: false,
+      code: 'bad-exports',
+      detail: 'createAskPassSession export is missing or not a function'
     }
   }
 
@@ -352,7 +374,8 @@ export function loadHubFetchJob(opts: HubFetchJobLoaderOptions = {}): HubFetchJo
     addonPath: resolved.path,
     runtimeInfo: classified.runtimeInfo,
     probeJob: () => probeRealBridge(addon),
-    createJob: () => createRealJob(addon)
+    createJob: () => createRealJob(addon),
+    createAskPassSession: (options) => addon.createAskPassSession(options)
   }
 }
 

@@ -20,6 +20,7 @@ import type {
   HubFetchJobHandle,
   HubFetchJobOpResult
 } from '../native/hubfetch-job-loader'
+import type { CloneHostOptions } from './clone-host'
 
 vi.mock('electron', () => ({
   app: {
@@ -90,7 +91,8 @@ function makeBridge(job: ReturnType<typeof makeJob>): HubFetchJobBridge {
       napiVersion: 10
     },
     probeJob: () => ({ ok: true }),
-    createJob: () => ({ ok: true, handle: job })
+    createJob: () => ({ ok: true, handle: job }),
+    createAskPassSession: () => ({ pipeName: 'HubFetchAskPass-qa', session: {} })
   }
 }
 
@@ -114,7 +116,12 @@ interface Harness {
 }
 
 function makeHarness(
-  options: { supportEnabled?: boolean; graceMs?: number; waitMs?: number } = {}
+  options: {
+    supportEnabled?: boolean
+    graceMs?: number
+    waitMs?: number
+    askPass?: CloneHostOptions['askPass']
+  } = {}
 ): Harness {
   const job = makeJob()
   const bridge = makeBridge(job)
@@ -144,7 +151,8 @@ function makeHarness(
     graceIntervalMs: options.graceMs ?? 100,
     waitTimeoutMs: options.waitMs ?? 2000,
     emptyTimeoutMs: 2000,
-    now: () => Date.now()
+    now: () => Date.now(),
+    askPass: options.askPass ?? null
   })
   return { host, job, bridge, utilities, taskkillCalls }
 }
@@ -476,5 +484,204 @@ describe('CloneHost: resource cleanup + loop responsiveness', () => {
     // zero is still proven through the Job even after the degraded fallback
     expect(record.zeroProven).toBe(true)
     await p
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Todo 30: app-token AskPass integration
+// ---------------------------------------------------------------------------
+
+describe('CloneHost: app-token AskPass integration', () => {
+  /** Drive the full happy path and return the startClone promise + the fake. */
+  function armStartTerminal(h: Harness, assignmentId: string, p: Promise<CloneRunRecord>) {
+    const fake = h.utilities[0]
+    if (!fake) throw new Error('fork never called')
+    fake.workerReply({ type: 'ready', pid: 4242 })
+    return (async () => {
+      await new Promise((r) => setImmediate(r))
+      fake.workerReply({ type: 'armed', assignmentId })
+      await new Promise((r) => setImmediate(r))
+      fake.workerReply({ type: 'started', assignmentId, gitPid: 5151 })
+      await new Promise((r) => setImmediate(r))
+      fake.workerReply({
+        type: 'terminal',
+        assignmentId,
+        outcome: 'completed',
+        exitCode: 0,
+        signal: null
+      })
+      return p
+    })()
+  }
+
+  it('merges the AskPass env/argv into the armed envelope and closes the session on settle', async () => {
+    const close = vi.fn()
+    let jobSeen: unknown = null
+    const h = makeHarness({
+      askPass: {
+        createForJob: (job) => {
+          jobSeen = job
+          return {
+            pipeName: 'HubFetchAskPass-abc',
+            env: {
+              GIT_ASKPASS: 'C:\\helper\\HubFetchAskPass.exe',
+              HUBFETCH_ASKPASS_PIPE: 'HubFetchAskPass-abc',
+              GIT_CONFIG_COUNT: '1',
+              GIT_CONFIG_KEY_0: 'credential.helper',
+              GIT_CONFIG_VALUE_0: ''
+            },
+            argv: ['-c', 'credential.helper='],
+            close
+          }
+        }
+      }
+    })
+    const envelope = makeEnvelope()
+    const p = h.host.startClone({
+      assignmentId: envelope.assignmentId,
+      envelope,
+      auth: 'app-token'
+    })
+    const record = await armStartTerminal(h, envelope.assignmentId, p)
+
+    expect(record.outcome).toBe('completed')
+    expect(record.appToken).toBe(true)
+    expect(record.askPassMerged).toBe(true)
+    expect(record.askPassPipeName).toBe('HubFetchAskPass-abc')
+    // The session was created with the clone's Job (Job-bound).
+    expect(jobSeen).toBe(h.job)
+    // The session is closed exactly once, on settle.
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('arms the EXACT credential.helper contract (env + argv) on the Git child', async () => {
+    const h = makeHarness({
+      askPass: {
+        createForJob: () => ({
+          pipeName: 'HubFetchAskPass-abc',
+          env: {
+            GIT_ASKPASS: 'C:\\helper\\HubFetchAskPass.exe',
+            HUBFETCH_ASKPASS_PIPE: 'HubFetchAskPass-abc',
+            GIT_TERMINAL_PROMPT: '0',
+            GIT_CONFIG_COUNT: '1',
+            GIT_CONFIG_KEY_0: 'credential.helper',
+            GIT_CONFIG_VALUE_0: ''
+          },
+          argv: ['-c', 'credential.helper='],
+          close: () => undefined
+        })
+      }
+    })
+    const envelope = makeEnvelope()
+    const p = h.host.startClone({
+      assignmentId: envelope.assignmentId,
+      envelope,
+      auth: 'app-token'
+    })
+    const fake = h.utilities[0]
+    if (!fake) throw new Error('fork never called')
+    fake.workerReply({ type: 'ready', pid: 4242 })
+    await new Promise((r) => setImmediate(r))
+    // The armed envelope must carry the merged env/argv.
+    const arm = fake.posted.find(
+      (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'arm'
+    ) as { envelope: CloneEnvelope; envelopeHash: string }
+    const merged = arm.envelope
+    expect(merged.env.GIT_ASKPASS).toBe('C:\\helper\\HubFetchAskPass.exe')
+    expect(merged.env.HUBFETCH_ASKPASS_PIPE).toBe('HubFetchAskPass-abc')
+    expect(merged.env.GIT_CONFIG_COUNT).toBe('1')
+    expect(merged.env.GIT_CONFIG_KEY_0).toBe('credential.helper')
+    expect(merged.env.GIT_CONFIG_VALUE_0).toBe('')
+    expect(merged.argv.slice(0, 2)).toEqual(['-c', 'credential.helper='])
+    // The hash anchors the MERGED envelope (a tampered arm would be refused).
+    expect(arm.envelopeHash).toBe(hashEnvelope(merged))
+    // The original envelope is untouched.
+    expect(envelope.argv).toEqual([
+      'clone',
+      '--progress',
+      'https://huggingface.co/org/repo',
+      'dest'
+    ])
+    await armStartTerminal(h, envelope.assignmentId, p)
+  })
+
+  it('never calls the AskPass factory for system (GCM/SSH) clones', async () => {
+    const createForJob = vi.fn()
+    const h = makeHarness({ askPass: { createForJob } })
+    const envelope = makeEnvelope()
+    const p = h.host.startClone({ assignmentId: envelope.assignmentId, envelope })
+    const record = await armStartTerminal(h, envelope.assignmentId, p)
+    expect(record.outcome).toBe('completed')
+    expect(record.appToken).toBe(false)
+    expect(record.askPassMerged).toBe(false)
+    expect(createForJob).not.toHaveBeenCalled()
+  })
+
+  it('fails typed when auth app-token is requested but no AskPass broker exists', async () => {
+    const h = makeHarness()
+    const envelope = makeEnvelope()
+    const record = await h.host.startClone({
+      assignmentId: envelope.assignmentId,
+      envelope,
+      auth: 'app-token'
+    })
+    expect(record.outcome).toBe('failed')
+    expect(record.appToken).toBe(true)
+    expect(record.askPassMerged).toBe(false)
+    expect(record.error).toContain('AskPass broker')
+    expect(h.utilities).toHaveLength(0) // no worker was forked
+  })
+
+  it('fails typed when the AskPass session creation throws, and no envelope is armed', async () => {
+    const h = makeHarness({
+      askPass: {
+        createForJob: () => {
+          throw new Error('token missing')
+        }
+      }
+    })
+    const envelope = makeEnvelope()
+    const record = await h.host.startClone({
+      assignmentId: envelope.assignmentId,
+      envelope,
+      auth: 'app-token'
+    })
+    expect(record.outcome).toBe('failed')
+    expect(record.error).toContain('AskPass session failed: token missing')
+    expect(record.askPassMerged).toBe(false)
+    expect(h.utilities).toHaveLength(0)
+  })
+
+  it('closes the AskPass session on cancel too (terminal/cancel/shutdown paths)', async () => {
+    const close = vi.fn()
+    const h = makeHarness({
+      graceMs: 50,
+      askPass: {
+        createForJob: () => ({
+          pipeName: 'HubFetchAskPass-abc',
+          env: {},
+          argv: [],
+          close
+        })
+      }
+    })
+    const envelope = makeEnvelope()
+    const p = h.host.startClone({
+      assignmentId: envelope.assignmentId,
+      envelope,
+      auth: 'app-token'
+    })
+    const fake = h.utilities[0]
+    if (!fake) throw new Error('fork never called')
+    fake.workerReply({ type: 'ready', pid: 4242 })
+    await new Promise((r) => setImmediate(r))
+    fake.workerReply({ type: 'armed', assignmentId: envelope.assignmentId })
+    await new Promise((r) => setImmediate(r))
+    fake.workerReply({ type: 'started', assignmentId: envelope.assignmentId, gitPid: 5151 })
+    await new Promise((r) => setImmediate(r))
+    const record = await h.host.cancelClone(envelope.assignmentId)
+    expect(record.outcome).toBe('cancelled')
+    await p
+    expect(close).toHaveBeenCalledTimes(1)
   })
 })

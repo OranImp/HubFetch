@@ -76,6 +76,30 @@ const suites = [
     file: 'electron-clone-qa-failure.cjs',
     exposeGc: false,
     runAsNode: false
+  },
+  {
+    name: 'askpass-helper-tests',
+    file: 'electron-askpass-helper-tests.cjs',
+    exposeGc: false,
+    runAsNode: true
+  },
+  {
+    name: 'askpass-addon-tests',
+    file: 'electron-askpass-addon-tests.cjs',
+    exposeGc: false,
+    runAsNode: true
+  },
+  {
+    name: 'askpass-qa-happy',
+    file: 'electron-askpass-qa-happy.cjs',
+    exposeGc: false,
+    runAsNode: false
+  },
+  {
+    name: 'askpass-qa-failure',
+    file: 'electron-askpass-qa-failure.cjs',
+    exposeGc: false,
+    runAsNode: false
   }
 ]
 

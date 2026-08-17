@@ -43,6 +43,7 @@ import { MainI18n, matchLocale } from './i18n'
 import { IntegrationTaskManager } from './integration-tasks'
 import { registerIpcHandlers } from './ipc'
 import { CloneHost } from './clone/clone-host'
+import { AskPassBroker, resolveAskPassHelperPath } from './askpass/askpass-broker'
 import { Library } from './library'
 import { createLogCaptures, sanitizeRendererLine } from './log-capture'
 import { buildMenu } from './menu'
@@ -192,9 +193,35 @@ if (!gotLock) {
     // PID is assigned to the Job, membership confirmed, the immutable envelope
     // armed, and `start` sent. App shutdown cancels every active clone through
     // the same bounded path as a user cancel.
+    // Todo 30: app-token clones get a Job-bound AskPass session through the
+    // broker (packaged helper + GIT_ASKPASS/HUBFETCH_ASKPASS_PIPE/credential
+    // clearing), created after the Job exists and closed on clone settle.
+    const askPassBroker = new AskPassBroker({
+      createSession: (options) =>
+        hubFetchJobBridge.status === 'ready'
+          ? hubFetchJobBridge.createAskPassSession(options)
+          : (() => {
+              throw new Error('hubfetch_job bridge unavailable for AskPass')
+            })(),
+      resolveHelperPath: () =>
+        resolveAskPassHelperPath({
+          isPackaged: app.isPackaged,
+          appPath: app.getAppPath(),
+          resourcesPath: process.resourcesPath
+        })
+    })
     const cloneHost = new CloneHost({
       bridge: hubFetchJobBridge,
-      workerModulePath: join(__dirname, 'clone-worker.mjs')
+      workerModulePath: join(__dirname, 'clone-worker.mjs'),
+      askPass: {
+        createForJob: (job) =>
+          askPassBroker.openSession({
+            token: auth.accessToken() ?? '',
+            job,
+            ttlMs: 60_000,
+            promptLimit: 4
+          })
+      }
     })
 
     const db = openDatabase()
@@ -666,6 +693,9 @@ if (!gotLock) {
       // descendant outlives the app. Bounded and never awaited: shutdown must
       // not hang.
       void cloneHost.shutdown()
+      // Todo 30: zeroize any live AskPass session (token + username buffers)
+      // before the process exits.
+      askPassBroker.closeAll()
       // Release per-task sessions/dispatchers and the app-level fetch pool.
       void transportManager.closeAll()
       void closeDefaultTransportPool()

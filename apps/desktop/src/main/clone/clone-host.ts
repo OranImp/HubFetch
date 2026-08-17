@@ -70,11 +70,31 @@ export interface CloneHostOptions {
   waitTimeoutMs?: number
   /** Bounded wait for Job emptiness. */
   emptyTimeoutMs?: number
+  /**
+   * Todo 30: optional factory creating ONE Job-bound AskPass session per
+   * app-token clone. Called AFTER the clone's Job exists and BEFORE the
+   * envelope is armed; the returned env/argv are merged into the effective
+   * envelope and the session is closed on settle. A throw fails the clone
+   * typed. System clones never call it.
+   */
+  askPass?: { createForJob(job: HubFetchJobHandle): AskPassCloneBundle } | null
 }
 
 export type CloneStep = 'spawn' | 'ready' | 'assign' | 'contains' | 'arm' | 'start'
 
 export type CloneOutcome = 'completed' | 'failed' | 'cancelled' | 'interrupted'
+
+/** Todo 30: one Job-bound AskPass session merged into a clone's Git child. */
+export interface AskPassCloneBundle {
+  /** Non-secret pipe locator handed to the helper via HUBFETCH_ASKPASS_PIPE. */
+  pipeName: string
+  /** Env additions merged into the effective clone envelope (exact contract). */
+  env: Record<string, string>
+  /** argv additions (e.g. `-c credential.helper=`), prepended before `clone`. */
+  argv: string[]
+  /** Zeroize the session + release its SecretRegistry registration. */
+  close(): void
+}
 
 export interface CloneRunRecord {
   assignmentId: string
@@ -93,6 +113,12 @@ export interface CloneRunRecord {
   receivedProgress: number
   receivedLog: number
   refusedCode: CloneRefusalCode | null
+  /** Todo 30: true when this clone ran with the app-token AskPass session. */
+  appToken: boolean
+  /** Todo 30: true when the AskPass bundle was merged into the armed envelope. */
+  askPassMerged: boolean
+  /** Todo 30: non-secret pipe locator (never the token). */
+  askPassPipeName: string | null
 }
 
 export interface StartCloneOptions {
@@ -100,6 +126,12 @@ export interface StartCloneOptions {
   envelope: CloneEnvelope
   /** Called for every progress/log event before terminal. */
   onEvent?: (event: CloneEvent) => void
+  /**
+   * Todo 30: credential mode for this clone. `app-token` opens a Job-bound
+   * AskPass session (via the `askPass` factory) and merges its env/argv into
+   * the armed envelope; `system` (default) leaves GCM/SSH untouched.
+   */
+  auth?: 'system' | 'app-token'
 }
 
 interface ActiveClone {
@@ -108,6 +140,8 @@ interface ActiveClone {
   child: UtilityProcessLike
   job: HubFetchJobHandle
   onEvent?: (event: CloneEvent) => void
+  /** Todo 30: the Job-bound AskPass session, closed on settle. */
+  askPassBundle: AskPassCloneBundle | null
   settled: boolean
   exitHandled: boolean
   cancelRequested: boolean
@@ -123,6 +157,28 @@ function isMessage(event: unknown): event is CloneEvent {
   )
 }
 
+/** Base typed record shape (Todo 30 adds the AskPass bookkeeping fields). */
+function makeRecord(assignmentId: string, error: string | null = null): CloneRunRecord {
+  return {
+    assignmentId,
+    steps: [],
+    outcome: 'failed',
+    exitCode: null,
+    signal: null,
+    zeroProven: false,
+    degradedTaskkill: false,
+    error,
+    gitPid: null,
+    utilityPid: null,
+    receivedProgress: 0,
+    receivedLog: 0,
+    refusedCode: null,
+    appToken: false,
+    askPassMerged: false,
+    askPassPipeName: null
+  }
+}
+
 export class CloneHost {
   private readonly bridge: HubFetchJobBridge
   private readonly fork: ForkFn
@@ -136,6 +192,8 @@ export class CloneHost {
   private readonly graceIntervalMs: number
   private readonly waitTimeoutMs: number
   private readonly emptyTimeoutMs: number
+  private readonly askPass: { createForJob(job: HubFetchJobHandle): AskPassCloneBundle } | null =
+    null
   private readonly active = new Map<string, ActiveClone>()
 
   constructor(options: CloneHostOptions) {
@@ -156,6 +214,7 @@ export class CloneHost {
     this.graceIntervalMs = options.graceIntervalMs ?? 3000
     this.waitTimeoutMs = options.waitTimeoutMs ?? 30000
     this.emptyTimeoutMs = options.emptyTimeoutMs ?? 15000
+    this.askPass = options.askPass ?? null
   }
 
   /**
@@ -167,21 +226,7 @@ export class CloneHost {
     const { assignmentId, envelope, onEvent } = options
     const support = this.getSupport(this.bridge)
     if (!support.enabled) {
-      return {
-        assignmentId,
-        steps: [],
-        outcome: 'failed',
-        exitCode: null,
-        signal: null,
-        zeroProven: false,
-        degradedTaskkill: false,
-        error: `clone gated: ${support.reason ?? 'unknown reason'}`,
-        gitPid: null,
-        utilityPid: null,
-        receivedProgress: 0,
-        receivedLog: 0,
-        refusedCode: null
-      }
+      return makeRecord(assignmentId, `clone gated: ${support.reason ?? 'unknown reason'}`)
     }
 
     const created = this.bridge.status === 'ready' ? this.bridge.createJob() : null
@@ -189,37 +234,35 @@ export class CloneHost {
       const detail = created
         ? `${created.code}: ${created.message}`
         : 'hubfetch_job bridge unavailable'
-      return {
-        assignmentId,
-        steps: [],
-        outcome: 'failed',
-        exitCode: null,
-        signal: null,
-        zeroProven: false,
-        degradedTaskkill: false,
-        error: `createJob failed: ${detail}`,
-        gitPid: null,
-        utilityPid: null,
-        receivedProgress: 0,
-        receivedLog: 0,
-        refusedCode: null
-      }
+      return makeRecord(assignmentId, `createJob failed: ${detail}`)
     }
 
-    const record: CloneRunRecord = {
-      assignmentId,
-      steps: [],
-      outcome: 'failed',
-      exitCode: null,
-      signal: null,
-      zeroProven: false,
-      degradedTaskkill: false,
-      error: null,
-      gitPid: null,
-      utilityPid: null,
-      receivedProgress: 0,
-      receivedLog: 0,
-      refusedCode: null
+    const record = makeRecord(assignmentId)
+    record.appToken = options.auth === 'app-token'
+
+    // Todo 30: open the Job-bound AskPass session for app-token clones AFTER
+    // the Job exists and BEFORE the envelope is armed, so the helper is in the
+    // Job from birth and the session dies with the clone.
+    let askPassBundle: AskPassCloneBundle | null = null
+    let effectiveEnvelope = envelope
+    if (record.appToken) {
+      if (this.askPass === null) {
+        record.error = 'app-token auth requires an AskPass broker'
+        return record
+      }
+      try {
+        askPassBundle = this.askPass.createForJob(created.handle)
+      } catch (error) {
+        record.error = `AskPass session failed: ${error instanceof Error ? error.message : String(error)}`
+        return record
+      }
+      record.askPassMerged = true
+      record.askPassPipeName = askPassBundle.pipeName
+      effectiveEnvelope = {
+        ...envelope,
+        env: { ...envelope.env, ...askPassBundle.env },
+        argv: [...askPassBundle.argv, ...envelope.argv]
+      }
     }
 
     const child = this.fork(this.workerModulePath, [assignmentId])
@@ -232,12 +275,20 @@ export class CloneHost {
       child,
       job: created.handle,
       onEvent,
+      askPassBundle,
       settled: false,
       exitHandled: false,
       cancelRequested: false,
       abort: new AbortController()
     }
     this.active.set(assignmentId, active)
+
+    if (record.error !== null) {
+      // The app-token setup failed BEFORE the worker was armed; the Job must
+      // still be reaped and the session closed.
+      await this.settle(active, 'failed')
+      return record
+    }
 
     try {
       // 1. wait for the worker to be idle-ready with its PID.
@@ -277,12 +328,13 @@ export class CloneHost {
       }
       record.steps.push('contains')
 
-      // 4. arm with the immutable envelope.
-      const envelopeHash = hashEnvelope(envelope)
+      // 4. arm with the immutable envelope (the EFFECTIVE envelope for
+      // app-token clones carries the AskPass env/argv merged after Job creation).
+      const envelopeHash = hashEnvelope(effectiveEnvelope)
       child.postMessage({
         type: 'arm',
         assignmentId,
-        envelope,
+        envelope: effectiveEnvelope,
         envelopeHash
       })
       const armed = await this.waitForMessage(
@@ -381,23 +433,9 @@ export class CloneHost {
   async cancelClone(assignmentId: string): Promise<CloneRunRecord> {
     const active = this.active.get(assignmentId)
     if (!active || active.settled) {
-      return (
-        active?.record ?? {
-          assignmentId,
-          steps: [],
-          outcome: 'cancelled',
-          exitCode: null,
-          signal: null,
-          zeroProven: false,
-          degradedTaskkill: false,
-          error: 'no active clone with that id',
-          gitPid: null,
-          utilityPid: null,
-          receivedProgress: 0,
-          receivedLog: 0,
-          refusedCode: null
-        }
-      )
+      const fallback = makeRecord(assignmentId, 'no active clone with that id')
+      fallback.outcome = 'cancelled'
+      return active?.record ?? fallback
     }
     active.cancelRequested = true
     const record = active.record
@@ -469,6 +507,14 @@ export class CloneHost {
     // Release every pending wait so no promise waits out the full timeout after
     // a cancel/shutdown settles the clone.
     active.abort.abort()
+    // Todo 30: zeroize the Job-bound AskPass session (and release its
+    // SecretRegistry registration) when the clone settles — terminal, cancel,
+    // crash, or shutdown.
+    try {
+      active.askPassBundle?.close()
+    } catch {
+      /* session close is idempotent; never let cleanup throw */
+    }
     try {
       active.job.close()
     } catch {
