@@ -161,7 +161,7 @@ export function Sidebar(): React.JSX.Element {
     { to: '/my-repos', labelKey: 'myRepos', icon: FolderGit2 },
     { to: '/collections', labelKey: 'collections', icon: Bookmark },
     { to: '/downloads', labelKey: 'downloads', icon: ArrowDownToLine, badge: activeDownloads },
-    { to: '/clones/create', labelKey: 'clones', icon: GitBranch },
+    { to: '/clones', labelKey: 'clones', icon: GitBranch },
     { to: '/cache', labelKey: 'cache', icon: HardDrive },
     { to: '/diagnostics', labelKey: 'diagnostics', icon: HeartPulse },
     { to: '/inbox', labelKey: 'inbox', icon: Inbox, badge: unread },

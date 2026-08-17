@@ -94,6 +94,112 @@
     "tokenRequired": "App-Token-Authentifizierung erfordert vorherige Anmeldung",
     "destinationError": "Auf Zielordner kann nicht zugegriffen oder dieser validiert werden",
     "proxyInvalid": "Manuelle Proxy-URL ist ungültig",
-    "internal": "Interner Fehler: {{detail}}"
+    "internal": "Interner Fehler: {{detail}}",
+    "cancelFailed": "Klon konnte nicht abgebrochen werden",
+    "retryFailed": "Wiederholung konnte nicht gestartet werden",
+    "openFailed": "Zielordner konnte nicht geöffnet werden",
+    "copyFailed": "Details konnten nicht kopiert werden",
+    "loadFailed": "Klon-Warteschlange konnte nicht geladen werden"
+  },
+  "queue": {
+    "title": "Klon-Warteschlange",
+    "emptyTitle": "Noch keine Klone",
+    "emptyBody": "Klonen Sie ein Modell, einen Datensatz oder einen Space zur lokalen Nutzung. Aufgaben laufen nacheinander.",
+    "count": "{{count}} Aufgabe",
+    "count_other": "{{count}} Aufgaben",
+    "newClone": "Neuer Klon"
+  },
+  "filter": {
+    "label": "Nach Status filtern",
+    "all": "Alle",
+    "emptyTitle": "Keine Aufgaben in diesem Status",
+    "emptyBody": "Wählen Sie einen anderen Filter oder starten Sie einen neuen Klon."
+  },
+  "status": {
+    "queued": "Wartend",
+    "running": "Läuft",
+    "cancelling": "Wird abgebrochen",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen",
+    "interrupted": "Unterbrochen"
+  },
+  "statusHint": {
+    "queued": "Wartet auf den aktiven Klon",
+    "running": "Kloniert in den Zielordner",
+    "cancelling": "Bricht den laufenden Klon ab",
+    "completed": "Klon abgeschlossen und verifiziert",
+    "failed": "Der Klon ist fehlgeschlagen. Wiederholen Sie in einen neuen leeren Ordner.",
+    "cancelled": "Dieser Klon wurde abgebrochen. Wiederholen Sie in einen neuen leeren Ordner.",
+    "interrupted": "Durch Herunterfahren oder Absturz unterbrochen. Der Zielordner kann unvollständig sein. Wiederholen Sie in einen neuen leeren Ordner."
+  },
+  "phase": {
+    "enumerating": "Objekte werden aufgezählt",
+    "counting": "Objekte werden gezählt",
+    "compressing": "Objekte werden komprimiert",
+    "receiving": "Objekte werden empfangen",
+    "resolving": "Deltas werden aufgelöst",
+    "updating": "Dateien werden aktualisiert",
+    "checkout": "Dateien werden ausgecheckt",
+    "xet": "Git-Xet-Blobs"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} von {{total}}",
+    "starting": "Starte…"
+  },
+  "queuePosition": "Warteschlangenposition #{{n}}",
+  "queuePositionLabel": "Warteschlangenposition",
+  "attempt": "Versuch {{n}}",
+  "banner": {
+    "interrupted": "Unterbrochen — die App wurde beendet oder der Worker gestoppt. Der Zielordner kann unvollständig sein. Es wurde nichts gelöscht."
+  },
+  "detail": {
+    "repository": "Repository",
+    "revision": "Revision",
+    "revisionNone": "Standard-Branch",
+    "transport": "Transport",
+    "destination": "Ziel",
+    "proxy": "Proxy",
+    "proxyManual": "Manuell · {{url}}",
+    "auth": "Authentifizierung",
+    "authSystem": "System (GCM / SSH)",
+    "authAppToken": "App-Token",
+    "created": "Erstellt",
+    "started": "Gestartet",
+    "updated": "Aktualisiert {{time}}",
+    "completed": "Beendet",
+    "progress": "Fortschritt",
+    "error": "Fehler",
+    "firstAttempt": "Erster Versuch",
+    "retryOfAttempt": "Wiederholung von Versuch {{id}}",
+    "prerequisites": "Voraussetzungen",
+    "retryInfo": "So funktionieren Wiederholungen",
+    "retryInfoBody": "Wiederaufnahme an Ort und Stelle wird nicht unterstützt. Eine Wiederholung klont das Repository erneut in einen NEUEN leeren Ordner; vorhandene Dateien werden weder überschrieben noch gelöscht."
+  },
+  "action": {
+    "copyDetails": "Details kopieren",
+    "copied": "Kopiert",
+    "cancel": "Klon abbrechen",
+    "disabledCancel": "Abbruch läuft bereits",
+    "cancelConfirmTitle": "Diesen Klon abbrechen?",
+    "cancelConfirmBody": "Der Klon wird gestoppt. Der Zielordner kann unvollständig bleiben und wird nie gelöscht.",
+    "cancelConfirmConfirm": "Klon abbrechen",
+    "retry": "Klon wiederholen",
+    "retryTitle": "Klon wiederholen",
+    "retryBody": "Eine Wiederholung klont in einen NEUEN leeren Ordner. Wiederaufnahme an Ort und Stelle wird nicht unterstützt, und vorhandene Dateien werden nie überschrieben oder gelöscht.",
+    "retryDestinationLabel": "Neuer leerer Zielordner",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "Geben Sie einen neuen leeren Zielordner ein",
+      "same": "Wählen Sie einen anderen Ordner — der Ordner des vorherigen Versuchs kann unvollständige Dateien enthalten.",
+      "invalid": "Geben Sie einen gültigen Zielpfad ein"
+    },
+    "retryStart": "Wiederholung starten",
+    "retryStarted": "Wiederholung eingereiht",
+    "openFolder": "Ordner öffnen",
+    "refresh": "Aktualisieren",
+    "viewDetails": "Details für {{id}} anzeigen"
   }
 }

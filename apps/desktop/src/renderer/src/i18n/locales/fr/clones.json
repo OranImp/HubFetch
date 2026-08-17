@@ -94,6 +94,112 @@
     "tokenRequired": "L'authentification par jeton de l'app nécessite une connexion préalable",
     "destinationError": "Impossible d'accéder ou de valider le dossier de destination",
     "proxyInvalid": "L'URL du proxy manuel est invalide",
-    "internal": "Erreur interne : {{detail}}"
+    "internal": "Erreur interne : {{detail}}",
+    "cancelFailed": "Impossible d’annuler le clon",
+    "retryFailed": "Impossible de lancer la nouvelle tentative",
+    "openFailed": "Impossible d’ouvrir le dossier de destination",
+    "copyFailed": "Impossible de copier les détails",
+    "loadFailed": "Impossible de charger la file de clonage"
+  },
+  "queue": {
+    "title": "File de clonage",
+    "emptyTitle": "Aucun clon pour le moment",
+    "emptyBody": "Clonez un modèle, un dataset ou un Space pour l’utiliser localement. Les tâches s’exécutent une à la fois.",
+    "count": "{{count}} tâche",
+    "count_other": "{{count}} tâches",
+    "newClone": "Nouveau clon"
+  },
+  "filter": {
+    "label": "Filtrer par statut",
+    "all": "Tous",
+    "emptyTitle": "Aucune tâche dans ce statut",
+    "emptyBody": "Choisissez un autre filtre ou lancez un nouveau clon."
+  },
+  "status": {
+    "queued": "En attente",
+    "running": "En cours",
+    "cancelling": "Annulation",
+    "completed": "Terminé",
+    "failed": "Échec",
+    "cancelled": "Annulé",
+    "interrupted": "Interrompu"
+  },
+  "statusHint": {
+    "queued": "En attente de la fin du clon actif",
+    "running": "Clonage dans le dossier de destination",
+    "cancelling": "Annulation du clon en cours",
+    "completed": "Clon terminé et vérifié",
+    "failed": "Le clon a échoué. Réessayez dans un nouveau dossier vide.",
+    "cancelled": "Ce clon a été annulé. Réessayez dans un nouveau dossier vide.",
+    "interrupted": "Interrompu par un arrêt ou un plantage. Le dossier de destination peut être partiel. Réessayez dans un nouveau dossier vide."
+  },
+  "phase": {
+    "enumerating": "Énumération des objets",
+    "counting": "Comptage des objets",
+    "compressing": "Compression des objets",
+    "receiving": "Réception des objets",
+    "resolving": "Résolution des deltas",
+    "updating": "Mise à jour des fichiers",
+    "checkout": "Extraction des fichiers",
+    "xet": "Blobs Git-Xet"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} sur {{total}}",
+    "starting": "Démarrage…"
+  },
+  "queuePosition": "Position dans la file #{{n}}",
+  "queuePositionLabel": "Position dans la file",
+  "attempt": "Tentative {{n}}",
+  "banner": {
+    "interrupted": "Interrompu — l’application s’est fermée ou le worker s’est arrêté pendant le clonage. Le dossier de destination peut être partiel. Rien n’a été supprimé."
+  },
+  "detail": {
+    "repository": "Dépôt",
+    "revision": "Révision",
+    "revisionNone": "Branche par défaut",
+    "transport": "Transport",
+    "destination": "Destination",
+    "proxy": "Proxy",
+    "proxyManual": "Manuel · {{url}}",
+    "auth": "Authentification",
+    "authSystem": "Système (GCM / SSH)",
+    "authAppToken": "Jeton de l’application",
+    "created": "Créé",
+    "started": "Démarré",
+    "updated": "Mis à jour {{time}}",
+    "completed": "Terminé",
+    "progress": "Progression",
+    "error": "Erreur",
+    "firstAttempt": "Tentative initiale",
+    "retryOfAttempt": "Nouvelle tentative de la tentative {{id}}",
+    "prerequisites": "Prérequis",
+    "retryInfo": "Fonctionnement des nouvelles tentatives",
+    "retryInfoBody": "La reprise sur place n’est pas prise en charge. Une nouvelle tentative reclone le dépôt dans un dossier NOUVEAU et vide ; aucun fichier existant n’est écrasé ni supprimé."
+  },
+  "action": {
+    "copyDetails": "Copier les détails",
+    "copied": "Copié",
+    "cancel": "Annuler le clon",
+    "disabledCancel": "L’annulation est déjà en cours",
+    "cancelConfirmTitle": "Annuler ce clon ?",
+    "cancelConfirmBody": "Le clon est arrêté. Le dossier de destination peut rester partiel et n’est jamais supprimé.",
+    "cancelConfirmConfirm": "Annuler le clon",
+    "retry": "Réessayer le clon",
+    "retryTitle": "Réessayer le clon",
+    "retryBody": "Une nouvelle tentative clone dans un dossier NOUVEAU et vide. La reprise sur place n’est pas prise en charge et les fichiers existants ne sont jamais écrasés ni supprimés.",
+    "retryDestinationLabel": "Nouveau dossier de destination vide",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "Saisissez un nouveau dossier de destination vide",
+      "same": "Choisissez un autre dossier — celui de la tentative précédente peut contenir des fichiers partiels.",
+      "invalid": "Saisissez un chemin de destination valide"
+    },
+    "retryStart": "Lancer la nouvelle tentative",
+    "retryStarted": "Nouvelle tentative en file",
+    "openFolder": "Ouvrir le dossier",
+    "refresh": "Actualiser",
+    "viewDetails": "Voir les détails de {{id}}"
   }
 }

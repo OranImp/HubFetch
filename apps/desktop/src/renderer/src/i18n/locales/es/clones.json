@@ -94,6 +94,112 @@
     "tokenRequired": "La autenticación con token de la app requiere iniciar sesión primero",
     "destinationError": "No se puede acceder o validar la carpeta de destino",
     "proxyInvalid": "La URL del proxy manual no es válida",
-    "internal": "Error interno: {{detail}}"
+    "internal": "Error interno: {{detail}}",
+    "cancelFailed": "No se pudo cancelar el clon",
+    "retryFailed": "No se pudo iniciar el reintento",
+    "openFailed": "No se pudo abrir la carpeta de destino",
+    "copyFailed": "No se pudieron copiar los detalles",
+    "loadFailed": "No se pudo cargar la cola de clonación"
+  },
+  "queue": {
+    "title": "Cola de clonación",
+    "emptyTitle": "Aún no hay clones",
+    "emptyBody": "Clone un modelo, dataset o space para usarlo localmente. Las tareas se ejecutan una a la vez.",
+    "count": "{{count}} tarea",
+    "count_other": "{{count}} tareas",
+    "newClone": "Nuevo clon"
+  },
+  "filter": {
+    "label": "Filtrar por estado",
+    "all": "Todos",
+    "emptyTitle": "No hay tareas en este estado",
+    "emptyBody": "Elija otro filtro o inicie un nuevo clon."
+  },
+  "status": {
+    "queued": "En cola",
+    "running": "En curso",
+    "cancelling": "Cancelando",
+    "completed": "Completado",
+    "failed": "Fallido",
+    "cancelled": "Cancelado",
+    "interrupted": "Interrumpido"
+  },
+  "statusHint": {
+    "queued": "Esperando a que termine el clon activo",
+    "running": "Clonando en la carpeta de destino",
+    "cancelling": "Cancelando el clon en curso",
+    "completed": "Clon completado y verificado",
+    "failed": "El clon falló. Reintente en una carpeta nueva y vacía.",
+    "cancelled": "Este clon fue cancelado. Reintente en una carpeta nueva y vacía.",
+    "interrupted": "Interrumpido por un cierre o un bloqueo. La carpeta de destino puede estar incompleta. Reintente en una carpeta nueva y vacía."
+  },
+  "phase": {
+    "enumerating": "Enumerando objetos",
+    "counting": "Contando objetos",
+    "compressing": "Comprimiendo objetos",
+    "receiving": "Recibiendo objetos",
+    "resolving": "Resolviendo deltas",
+    "updating": "Actualizando archivos",
+    "checkout": "Extrayendo archivos",
+    "xet": "Blobs de Git-Xet"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} de {{total}}",
+    "starting": "Iniciando…"
+  },
+  "queuePosition": "Posición en la cola #{{n}}",
+  "queuePositionLabel": "Posición en la cola",
+  "attempt": "Intento {{n}}",
+  "banner": {
+    "interrupted": "Interrumpido: la aplicación se cerró o el worker se detuvo durante la clonación. La carpeta de destino puede estar incompleta. No se eliminó nada."
+  },
+  "detail": {
+    "repository": "Repositorio",
+    "revision": "Revisión",
+    "revisionNone": "Rama predeterminada",
+    "transport": "Transporte",
+    "destination": "Destino",
+    "proxy": "Proxy",
+    "proxyManual": "Manual · {{url}}",
+    "auth": "Autenticación",
+    "authSystem": "Sistema (GCM / SSH)",
+    "authAppToken": "Token de la app",
+    "created": "Creado",
+    "started": "Iniciado",
+    "updated": "Actualizado {{time}}",
+    "completed": "Finalizado",
+    "progress": "Progreso",
+    "error": "Error",
+    "firstAttempt": "Intento inicial",
+    "retryOfAttempt": "Reintento del intento {{id}}",
+    "prerequisites": "Requisitos previos",
+    "retryInfo": "Cómo funcionan los reintentos",
+    "retryInfoBody": "No se admite reanudar en el mismo lugar. Un reintento clona el repositorio de nuevo en una carpeta NUEVA y vacía; los archivos existentes nunca se sobrescriben ni eliminan."
+  },
+  "action": {
+    "copyDetails": "Copiar detalles",
+    "copied": "Copiado",
+    "cancel": "Cancelar clon",
+    "disabledCancel": "La cancelación ya está en curso",
+    "cancelConfirmTitle": "¿Cancelar este clon?",
+    "cancelConfirmBody": "El clon se detiene. La carpeta de destino puede quedar incompleta y nunca se elimina.",
+    "cancelConfirmConfirm": "Cancelar clon",
+    "retry": "Reintentar clon",
+    "retryTitle": "Reintentar clon",
+    "retryBody": "Un reintento clona en una carpeta NUEVA y vacía. No se admite reanudar en el mismo lugar y los archivos existentes nunca se sobrescriben ni eliminan.",
+    "retryDestinationLabel": "Nueva carpeta de destino vacía",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "Introduzca una nueva carpeta de destino vacía",
+      "same": "Elija otra carpeta: la carpeta del intento anterior puede contener archivos incompletos.",
+      "invalid": "Introduzca una ruta de destino válida"
+    },
+    "retryStart": "Iniciar reintento",
+    "retryStarted": "Reintento en cola",
+    "openFolder": "Abrir carpeta",
+    "refresh": "Actualizar",
+    "viewDetails": "Ver detalles de {{id}}"
   }
 }

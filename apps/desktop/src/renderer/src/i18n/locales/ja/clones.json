@@ -94,6 +94,112 @@
     "tokenRequired": "アプリトークン認証には先にログインする必要があります",
     "destinationError": "保存先フォルダにアクセスまたは検証できません",
     "proxyInvalid": "手動プロキシURLが無効です",
-    "internal": "内部エラー：{{detail}}"
+    "internal": "内部エラー：{{detail}}",
+    "cancelFailed": "クローンをキャンセルできませんでした",
+    "retryFailed": "再試行を開始できませんでした",
+    "openFailed": "保存先フォルダを開けませんでした",
+    "copyFailed": "詳細をコピーできませんでした",
+    "loadFailed": "クローンキューを読み込めませんでした"
+  },
+  "queue": {
+    "title": "クローンキュー",
+    "emptyTitle": "クローンはまだありません",
+    "emptyBody": "モデル、データセット、スペースをクローンしてローカルで利用できます。タスクは一度に1つ実行されます。",
+    "count": "{{count}}件のタスク",
+    "count_other": "{{count}}件のタスク",
+    "newClone": "新規クローン"
+  },
+  "filter": {
+    "label": "ステータスで絞り込む",
+    "all": "すべて",
+    "emptyTitle": "このステータスのタスクはありません",
+    "emptyBody": "別のフィルターを選ぶか、新しいクローンを開始してください。"
+  },
+  "status": {
+    "queued": "待機中",
+    "running": "実行中",
+    "cancelling": "キャンセル中",
+    "completed": "完了",
+    "failed": "失敗",
+    "cancelled": "キャンセル済み",
+    "interrupted": "中断"
+  },
+  "statusHint": {
+    "queued": "アクティブなクローンの完了を待っています",
+    "running": "保存先フォルダにクローンしています",
+    "cancelling": "実行中のクローンをキャンセルしています",
+    "completed": "クローンが完了し検証されました",
+    "failed": "クローンに失敗しました。新しい空のフォルダに再試行してください。",
+    "cancelled": "このクローンはキャンセルされました。新しい空のフォルダに再試行してください。",
+    "interrupted": "シャットダウンまたはクラッシュにより中断されました。保存先フォルダが不完全な場合があります。新しい空のフォルダに再試行してください。"
+  },
+  "phase": {
+    "enumerating": "オブジェクトを列挙中",
+    "counting": "オブジェクトをカウント中",
+    "compressing": "オブジェクトを圧縮中",
+    "receiving": "オブジェクトを受信中",
+    "resolving": "デルタを解決中",
+    "updating": "ファイルを更新中",
+    "checkout": "ファイルをチェックアウト中",
+    "xet": "Git-Xetブロブ"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} / {{total}}",
+    "starting": "開始中…"
+  },
+  "queuePosition": "キュー内 #{{n}}",
+  "queuePositionLabel": "キュー内位置",
+  "attempt": "試行 {{n}}",
+  "banner": {
+    "interrupted": "中断されました — クローン中にアプリが終了したか、ワーカーが停止しました。保存先フォルダが不完全な場合があります。何も削除されません。"
+  },
+  "detail": {
+    "repository": "リポジトリ",
+    "revision": "リビジョン",
+    "revisionNone": "デフォルトブランチ",
+    "transport": "トランスポート",
+    "destination": "保存先",
+    "proxy": "プロキシ",
+    "proxyManual": "手動 · {{url}}",
+    "auth": "認証",
+    "authSystem": "システム（GCM / SSH）",
+    "authAppToken": "アプリトークン",
+    "created": "作成",
+    "started": "開始",
+    "updated": "更新 {{time}}",
+    "completed": "完了",
+    "progress": "進捗",
+    "error": "エラー",
+    "firstAttempt": "最初の試行",
+    "retryOfAttempt": "試行 {{id}} の再試行",
+    "prerequisites": "前提条件",
+    "retryInfo": "再試行の仕組み",
+    "retryInfoBody": "インプレース再開には対応していません。再試行は新しい空のフォルダにリポジトリを再クローンします。ディスク上の既存ファイルは上書きも削除もされません。"
+  },
+  "action": {
+    "copyDetails": "詳細をコピー",
+    "copied": "コピーしました",
+    "cancel": "クローンをキャンセル",
+    "disabledCancel": "キャンセル処理が進行中です",
+    "cancelConfirmTitle": "このクローンをキャンセルしますか？",
+    "cancelConfirmBody": "クローンは停止します。保存先フォルダは不完全なまま残る場合があり、削除されることはありません。",
+    "cancelConfirmConfirm": "クローンをキャンセル",
+    "retry": "クローンを再試行",
+    "retryTitle": "クローンを再試行",
+    "retryBody": "再試行は新しい空のフォルダにクローンします。インプレース再開には対応しておらず、既存ファイルは上書きも削除もされません。",
+    "retryDestinationLabel": "新しい空の保存先フォルダ",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "新しい空の保存先フォルダを入力してください",
+      "same": "別のフォルダを選択してください — 前回の試行のフォルダには不完全なファイルが含まれている可能性があります。",
+      "invalid": "有効な保存先パスを入力してください"
+    },
+    "retryStart": "再試行を開始",
+    "retryStarted": "再試行をキューに追加しました",
+    "openFolder": "フォルダを開く",
+    "refresh": "更新",
+    "viewDetails": "{{id}} の詳細を表示"
   }
 }

@@ -84,6 +84,107 @@
   "creating": "Creating…",
   "cancel": "Cancel",
   "created": "Clone task created",
+  "queue": {
+    "title": "Clone queue",
+    "emptyTitle": "No clones yet",
+    "emptyBody": "Clone a model, dataset, or space to work with it locally. Tasks run one at a time.",
+    "count": "{{count}} task",
+    "count_other": "{{count}} tasks",
+    "newClone": "New clone"
+  },
+  "filter": {
+    "label": "Filter by status",
+    "all": "All",
+    "emptyTitle": "No tasks in this status",
+    "emptyBody": "Choose another filter, or start a new clone."
+  },
+  "status": {
+    "queued": "Queued",
+    "running": "Running",
+    "cancelling": "Cancelling",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "interrupted": "Interrupted"
+  },
+  "statusHint": {
+    "queued": "Waiting for the active clone to finish",
+    "running": "Cloning into the destination folder",
+    "cancelling": "Cancelling the running clone",
+    "completed": "Clone finished and verified",
+    "failed": "The clone failed. Retry into a new empty folder.",
+    "cancelled": "This clone was cancelled. Retry into a new empty folder.",
+    "interrupted": "Interrupted by a shutdown or crash. The destination folder may be partial. Retry into a new empty folder."
+  },
+  "phase": {
+    "enumerating": "Enumerating objects",
+    "counting": "Counting objects",
+    "compressing": "Compressing objects",
+    "receiving": "Receiving objects",
+    "resolving": "Resolving deltas",
+    "updating": "Updating files",
+    "checkout": "Checking out files",
+    "xet": "Git-Xet blobs"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} of {{total}}",
+    "starting": "Starting…"
+  },
+  "queuePosition": "Queue position #{{n}}",
+  "queuePositionLabel": "Queue position",
+  "attempt": "Attempt {{n}}",
+  "banner": {
+    "interrupted": "Interrupted — the app shut down or the worker stopped while cloning. The destination folder may be partial. Nothing was deleted."
+  },
+  "detail": {
+    "repository": "Repository",
+    "revision": "Revision",
+    "revisionNone": "Default branch",
+    "transport": "Transport",
+    "destination": "Destination",
+    "proxy": "Proxy",
+    "proxyManual": "Manual · {{url}}",
+    "auth": "Authentication",
+    "authSystem": "System (GCM / SSH)",
+    "authAppToken": "App token",
+    "created": "Created",
+    "started": "Started",
+    "updated": "Updated {{time}}",
+    "completed": "Finished",
+    "progress": "Progress",
+    "error": "Error",
+    "firstAttempt": "Initial attempt",
+    "retryOfAttempt": "Retry of attempt {{id}}",
+    "prerequisites": "Prerequisites",
+    "retryInfo": "How retries work",
+    "retryInfoBody": "In-place resume is not supported. A retry clones the repository again into a NEW EMPTY folder; nothing already on disk is overwritten or deleted."
+  },
+  "action": {
+    "copyDetails": "Copy details",
+    "copied": "Copied",
+    "cancel": "Cancel clone",
+    "disabledCancel": "Cancellation is already in progress",
+    "cancelConfirmTitle": "Cancel this clone?",
+    "cancelConfirmBody": "The clone is stopped. The destination folder may be left partial and is never deleted.",
+    "cancelConfirmConfirm": "Cancel clone",
+    "retry": "Retry clone",
+    "retryTitle": "Retry clone",
+    "retryBody": "A retry clones into a NEW EMPTY folder. Resume in place is not supported and existing files are never overwritten or deleted.",
+    "retryDestinationLabel": "New empty destination folder",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "Enter a new empty destination folder",
+      "same": "Choose a different folder — the previous attempt's folder may contain partial files.",
+      "invalid": "Enter a valid destination path"
+    },
+    "retryStart": "Start retry",
+    "retryStarted": "Retry queued",
+    "openFolder": "Open folder",
+    "refresh": "Refresh",
+    "viewDetails": "View details for {{id}}"
+  },
   "errors": {
     "malformedRepo": "Invalid repository ID format",
     "missingDestination": "Please select a destination folder",
@@ -94,6 +195,11 @@
     "tokenRequired": "App token authentication requires signing in first",
     "destinationError": "Cannot access or validate destination folder",
     "proxyInvalid": "Manual proxy URL is invalid",
-    "internal": "Internal error: {{detail}}"
+    "internal": "Internal error: {{detail}}",
+    "cancelFailed": "Could not cancel the clone",
+    "retryFailed": "Could not start the retry",
+    "openFailed": "Could not open the destination folder",
+    "copyFailed": "Could not copy the details",
+    "loadFailed": "Could not load the clone queue"
   }
 }

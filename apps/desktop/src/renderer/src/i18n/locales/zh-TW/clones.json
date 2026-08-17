@@ -94,6 +94,112 @@
     "tokenRequired": "應用程式權杖驗證需要先登入",
     "destinationError": "無法存取或驗證目標資料夾",
     "proxyInvalid": "手動代理 URL 無效",
-    "internal": "內部錯誤：{{detail}}"
+    "internal": "內部錯誤：{{detail}}",
+    "cancelFailed": "無法取消克隆",
+    "retryFailed": "無法開始重試",
+    "openFailed": "無法開啟目標資料夾",
+    "copyFailed": "無法複製詳細資料",
+    "loadFailed": "無法載入克隆佇列"
+  },
+  "queue": {
+    "title": "克隆佇列",
+    "emptyTitle": "還沒有克隆任務",
+    "emptyBody": "克隆模型、資料集或空間即可在本機使用。任務一次執行一個。",
+    "count": "{{count}} 個任務",
+    "count_other": "{{count}} 個任務",
+    "newClone": "新增克隆"
+  },
+  "filter": {
+    "label": "依狀態篩選",
+    "all": "全部",
+    "emptyTitle": "此狀態沒有任務",
+    "emptyBody": "選擇其他篩選條件，或新增一個克隆。"
+  },
+  "status": {
+    "queued": "排隊中",
+    "running": "進行中",
+    "cancelling": "正在取消",
+    "completed": "已完成",
+    "failed": "失敗",
+    "cancelled": "已取消",
+    "interrupted": "已中斷"
+  },
+  "statusHint": {
+    "queued": "等待作用中的克隆完成",
+    "running": "正在克隆到目標資料夾",
+    "cancelling": "正在取消執行中的克隆",
+    "completed": "克隆已完成並驗證",
+    "failed": "克隆失敗。請重試到新的空資料夾。",
+    "cancelled": "此克隆已取消。請重試到新的空資料夾。",
+    "interrupted": "因應用程式關閉或當機而中斷。目標資料夾可能不完整。請重試到新的空資料夾。"
+  },
+  "phase": {
+    "enumerating": "正在列舉物件",
+    "counting": "正在計算物件",
+    "compressing": "正在壓縮物件",
+    "receiving": "正在接收物件",
+    "resolving": "正在解析差異",
+    "updating": "正在更新檔案",
+    "checkout": "正在簽出檔案",
+    "xet": "Git-Xet 資料區塊"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} / {{total}}",
+    "starting": "正在啟動…"
+  },
+  "queuePosition": "佇列位置 #{{n}}",
+  "queuePositionLabel": "佇列位置",
+  "attempt": "第 {{n}} 次嘗試",
+  "banner": {
+    "interrupted": "已中斷 — 克隆期間應用程式關閉或背景處理程序停止。目標資料夾可能不完整。不會刪除任何內容。"
+  },
+  "detail": {
+    "repository": "儲存庫",
+    "revision": "版本",
+    "revisionNone": "預設分支",
+    "transport": "傳輸方式",
+    "destination": "目標位置",
+    "proxy": "代理",
+    "proxyManual": "手動 · {{url}}",
+    "auth": "身分驗證",
+    "authSystem": "系統（GCM / SSH）",
+    "authAppToken": "應用程式權杖",
+    "created": "建立時間",
+    "started": "開始時間",
+    "updated": "更新時間 {{time}}",
+    "completed": "完成時間",
+    "progress": "進度",
+    "error": "錯誤",
+    "firstAttempt": "初次嘗試",
+    "retryOfAttempt": "第 {{id}} 次嘗試的重試",
+    "prerequisites": "必要條件",
+    "retryInfo": "重試機制",
+    "retryInfoBody": "不支援原地續傳。重試會重新將儲存庫克隆到一個新的空資料夾；磁碟上已有的檔案不會被覆寫或刪除。"
+  },
+  "action": {
+    "copyDetails": "複製詳細資料",
+    "copied": "已複製",
+    "cancel": "取消克隆",
+    "disabledCancel": "取消作業已進行中",
+    "cancelConfirmTitle": "取消此克隆？",
+    "cancelConfirmBody": "克隆將被停止。目標資料夾可能不完整，且絕不會被刪除。",
+    "cancelConfirmConfirm": "取消克隆",
+    "retry": "重試克隆",
+    "retryTitle": "重試克隆",
+    "retryBody": "重試會克隆到一個新的空資料夾。不支援原地續傳，既有檔案絕不會被覆寫或刪除。",
+    "retryDestinationLabel": "新的空目標資料夾",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "請輸入新的空目標資料夾",
+      "same": "請選擇其他資料夾 — 上一次嘗試的資料夾可能包含不完整檔案。",
+      "invalid": "請輸入有效的目標路徑"
+    },
+    "retryStart": "開始重試",
+    "retryStarted": "重試已排入佇列",
+    "openFolder": "開啟資料夾",
+    "refresh": "重新整理",
+    "viewDetails": "檢視 {{id}} 的詳細資料"
   }
 }

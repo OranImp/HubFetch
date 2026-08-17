@@ -94,6 +94,112 @@
     "tokenRequired": "앱 토큰 인증은 먼저 로그인이 필요합니다",
     "destinationError": "대상 폴더에 액세스하거나 검증할 수 없습니다",
     "proxyInvalid": "수동 프록시 URL이 잘못되었습니다",
-    "internal": "내부 오류: {{detail}}"
+    "internal": "내부 오류: {{detail}}",
+    "cancelFailed": "클론을 취소할 수 없습니다",
+    "retryFailed": "재시도를 시작할 수 없습니다",
+    "openFailed": "대상 폴더를 열 수 없습니다",
+    "copyFailed": "세부 정보를 복사할 수 없습니다",
+    "loadFailed": "클론 대기열을 불러올 수 없습니다"
+  },
+  "queue": {
+    "title": "클론 대기열",
+    "emptyTitle": "아직 클론이 없습니다",
+    "emptyBody": "모델, 데이터셋, 스페이스를 클론하여 로컬에서 사용하세요. 작업은 한 번에 하나씩 실행됩니다.",
+    "count": "작업 {{count}}개",
+    "count_other": "작업 {{count}}개",
+    "newClone": "새 클론"
+  },
+  "filter": {
+    "label": "상태별 필터",
+    "all": "전체",
+    "emptyTitle": "이 상태의 작업이 없습니다",
+    "emptyBody": "다른 필터를 선택하거나 새 클론을 시작하세요."
+  },
+  "status": {
+    "queued": "대기 중",
+    "running": "실행 중",
+    "cancelling": "취소 중",
+    "completed": "완료",
+    "failed": "실패",
+    "cancelled": "취소됨",
+    "interrupted": "중단됨"
+  },
+  "statusHint": {
+    "queued": "활성 클론이 끝날 때까지 대기 중",
+    "running": "대상 폴더에 클론하는 중",
+    "cancelling": "실행 중인 클론을 취소하는 중",
+    "completed": "클론 완료 및 검증됨",
+    "failed": "클론이 실패했습니다. 새 빈 폴더로 다시 시도하세요.",
+    "cancelled": "이 클론은 취소되었습니다. 새 빈 폴더로 다시 시도하세요.",
+    "interrupted": "종료 또는 충돌로 중단되었습니다. 대상 폴더가 불완전할 수 있습니다. 새 빈 폴더로 다시 시도하세요."
+  },
+  "phase": {
+    "enumerating": "개체 열거 중",
+    "counting": "개체 계산 중",
+    "compressing": "개체 압축 중",
+    "receiving": "개체 수신 중",
+    "resolving": "델타 해석 중",
+    "updating": "파일 업데이트 중",
+    "checkout": "파일 체크아웃 중",
+    "xet": "Git-Xet 블롭"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} / {{total}}",
+    "starting": "시작 중…"
+  },
+  "queuePosition": "대기열 위치 #{{n}}",
+  "queuePositionLabel": "대기열 위치",
+  "attempt": "시도 {{n}}",
+  "banner": {
+    "interrupted": "중단됨 — 클론 중 앱이 종료되거나 작업자가 멈췄습니다. 대상 폴더가 불완전할 수 있습니다. 아무것도 삭제되지 않습니다."
+  },
+  "detail": {
+    "repository": "리포지토리",
+    "revision": "리비전",
+    "revisionNone": "기본 브랜치",
+    "transport": "전송 방식",
+    "destination": "대상",
+    "proxy": "프록시",
+    "proxyManual": "수동 · {{url}}",
+    "auth": "인증",
+    "authSystem": "시스템(GCM / SSH)",
+    "authAppToken": "앱 토큰",
+    "created": "만든 시각",
+    "started": "시작 시각",
+    "updated": "업데이트 {{time}}",
+    "completed": "완료 시각",
+    "progress": "진행률",
+    "error": "오류",
+    "firstAttempt": "첫 시도",
+    "retryOfAttempt": "시도 {{id}} 재시도",
+    "prerequisites": "전제 조건",
+    "retryInfo": "재시도 방식",
+    "retryInfoBody": "자리 이어서 재개는 지원되지 않습니다. 재시도는 새 빈 폴더에 리포지토리를 다시 클론하며, 디스크의 기존 파일은 덮어쓰거나 삭제되지 않습니다."
+  },
+  "action": {
+    "copyDetails": "세부 정보 복사",
+    "copied": "복사됨",
+    "cancel": "클론 취소",
+    "disabledCancel": "취소가 이미 진행 중입니다",
+    "cancelConfirmTitle": "이 클론을 취소할까요?",
+    "cancelConfirmBody": "클론이 중지됩니다. 대상 폴더는 불완전하게 남을 수 있으며 삭제되지 않습니다.",
+    "cancelConfirmConfirm": "클론 취소",
+    "retry": "클론 재시도",
+    "retryTitle": "클론 재시도",
+    "retryBody": "재시도는 새 빈 폴더에 클론합니다. 자리 이어서 재개는 지원되지 않으며 기존 파일은 덮어쓰거나 삭제되지 않습니다.",
+    "retryDestinationLabel": "새 빈 대상 폴더",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "새 빈 대상 폴더를 입력하세요",
+      "same": "다른 폴더를 선택하세요 — 이전 시도의 폴더에는 불완전한 파일이 있을 수 있습니다.",
+      "invalid": "유효한 대상 경로를 입력하세요"
+    },
+    "retryStart": "재시도 시작",
+    "retryStarted": "재시도가 대기열에 추가됨",
+    "openFolder": "폴더 열기",
+    "refresh": "새로고침",
+    "viewDetails": "{{id}} 세부 정보 보기"
   }
 }

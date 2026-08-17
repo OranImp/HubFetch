@@ -94,6 +94,112 @@
     "tokenRequired": "应用令牌身份验证需要先登录",
     "destinationError": "无法访问或验证目标文件夹",
     "proxyInvalid": "手动代理 URL 无效",
-    "internal": "内部错误：{{detail}}"
+    "internal": "内部错误：{{detail}}",
+    "cancelFailed": "无法取消克隆",
+    "retryFailed": "无法开始重试",
+    "openFailed": "无法打开目标文件夹",
+    "copyFailed": "无法复制详情",
+    "loadFailed": "无法加载克隆队列"
+  },
+  "queue": {
+    "title": "克隆队列",
+    "emptyTitle": "还没有克隆任务",
+    "emptyBody": "克隆模型、数据集或空间即可在本地使用。任务一次运行一个。",
+    "count": "{{count}} 个任务",
+    "count_other": "{{count}} 个任务",
+    "newClone": "新建克隆"
+  },
+  "filter": {
+    "label": "按状态筛选",
+    "all": "全部",
+    "emptyTitle": "该状态没有任务",
+    "emptyBody": "选择其他筛选条件，或新建一个克隆。"
+  },
+  "status": {
+    "queued": "排队中",
+    "running": "进行中",
+    "cancelling": "正在取消",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消",
+    "interrupted": "已中断"
+  },
+  "statusHint": {
+    "queued": "等待活动克隆完成",
+    "running": "正在克隆到目标文件夹",
+    "cancelling": "正在取消运行中的克隆",
+    "completed": "克隆已完成并验证",
+    "failed": "克隆失败。请重试到新的空文件夹。",
+    "cancelled": "此克隆已取消。请重试到新的空文件夹。",
+    "interrupted": "因应用关闭或崩溃而中断。目标文件夹可能不完整。请重试到新的空文件夹。"
+  },
+  "phase": {
+    "enumerating": "正在枚举对象",
+    "counting": "正在计数对象",
+    "compressing": "正在压缩对象",
+    "receiving": "正在接收对象",
+    "resolving": "正在解析增量",
+    "updating": "正在更新文件",
+    "checkout": "正在检出文件",
+    "xet": "Git-Xet 数据块"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} / {{total}}",
+    "starting": "正在启动…"
+  },
+  "queuePosition": "队列位置 #{{n}}",
+  "queuePositionLabel": "队列位置",
+  "attempt": "第 {{n}} 次尝试",
+  "banner": {
+    "interrupted": "已中断 — 克隆期间应用关闭或工作进程停止。目标文件夹可能不完整。不会删除任何内容。"
+  },
+  "detail": {
+    "repository": "仓库",
+    "revision": "版本",
+    "revisionNone": "默认分支",
+    "transport": "传输方式",
+    "destination": "目标位置",
+    "proxy": "代理",
+    "proxyManual": "手动 · {{url}}",
+    "auth": "身份验证",
+    "authSystem": "系统（GCM / SSH）",
+    "authAppToken": "应用令牌",
+    "created": "创建时间",
+    "started": "开始时间",
+    "updated": "更新时间 {{time}}",
+    "completed": "完成时间",
+    "progress": "进度",
+    "error": "错误",
+    "firstAttempt": "初次尝试",
+    "retryOfAttempt": "第 {{id}} 次尝试的重试",
+    "prerequisites": "前提条件",
+    "retryInfo": "重试机制",
+    "retryInfoBody": "不支持原地续传。重试会重新将仓库克隆到一个新的空文件夹；磁盘上已有的文件不会被覆盖或删除。"
+  },
+  "action": {
+    "copyDetails": "复制详情",
+    "copied": "已复制",
+    "cancel": "取消克隆",
+    "disabledCancel": "取消操作已在进行中",
+    "cancelConfirmTitle": "取消此克隆？",
+    "cancelConfirmBody": "克隆将被停止。目标文件夹可能不完整，且绝不会被删除。",
+    "cancelConfirmConfirm": "取消克隆",
+    "retry": "重试克隆",
+    "retryTitle": "重试克隆",
+    "retryBody": "重试会克隆到一个新的空文件夹。不支持原地续传，已有文件绝不会被覆盖或删除。",
+    "retryDestinationLabel": "新的空目标文件夹",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "请输入新的空目标文件夹",
+      "same": "请选择其他文件夹 — 上一次尝试的文件夹可能包含不完整文件。",
+      "invalid": "请输入有效的目标路径"
+    },
+    "retryStart": "开始重试",
+    "retryStarted": "重试已排队",
+    "openFolder": "打开文件夹",
+    "refresh": "刷新",
+    "viewDetails": "查看 {{id}} 的详情"
   }
 }

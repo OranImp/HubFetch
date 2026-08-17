@@ -94,6 +94,112 @@
     "tokenRequired": "A autenticação com token do app requer fazer login primeiro",
     "destinationError": "Não é possível acessar ou validar a pasta de destino",
     "proxyInvalid": "A URL do proxy manual é inválida",
-    "internal": "Erro interno: {{detail}}"
+    "internal": "Erro interno: {{detail}}",
+    "cancelFailed": "Não foi possível cancelar o clone",
+    "retryFailed": "Não foi possível iniciar a nova tentativa",
+    "openFailed": "Não foi possível abrir a pasta de destino",
+    "copyFailed": "Não foi possível copiar os detalhes",
+    "loadFailed": "Não foi possível carregar a fila de clones"
+  },
+  "queue": {
+    "title": "Fila de clones",
+    "emptyTitle": "Nenhum clone ainda",
+    "emptyBody": "Clone um modelo, dataset ou space para usá-lo localmente. As tarefas são executadas uma por vez.",
+    "count": "{{count}} tarefa",
+    "count_other": "{{count}} tarefas",
+    "newClone": "Novo clone"
+  },
+  "filter": {
+    "label": "Filtrar por status",
+    "all": "Todos",
+    "emptyTitle": "Nenhuma tarefa neste status",
+    "emptyBody": "Escolha outro filtro ou inicie um novo clone."
+  },
+  "status": {
+    "queued": "Na fila",
+    "running": "Em andamento",
+    "cancelling": "Cancelando",
+    "completed": "Concluído",
+    "failed": "Falhou",
+    "cancelled": "Cancelado",
+    "interrupted": "Interrompido"
+  },
+  "statusHint": {
+    "queued": "Aguardando o clone ativo terminar",
+    "running": "Clonando para a pasta de destino",
+    "cancelling": "Cancelando o clone em andamento",
+    "completed": "Clone concluído e verificado",
+    "failed": "O clone falhou. Tente novamente em uma nova pasta vazia.",
+    "cancelled": "Este clone foi cancelado. Tente novamente em uma nova pasta vazia.",
+    "interrupted": "Interrompido por um desligamento ou travamento. A pasta de destino pode estar parcial. Tente novamente em uma nova pasta vazia."
+  },
+  "phase": {
+    "enumerating": "Enumerando objetos",
+    "counting": "Contando objetos",
+    "compressing": "Comprimindo objetos",
+    "receiving": "Recebendo objetos",
+    "resolving": "Resolvendo deltas",
+    "updating": "Atualizando arquivos",
+    "checkout": "Extraindo arquivos",
+    "xet": "Blobs do Git-Xet"
+  },
+  "progress": {
+    "summary": "{{phase}} · {{percent}} · {{counters}}",
+    "percent": "{{percent}}%",
+    "counters": "{{done}} de {{total}}",
+    "starting": "Iniciando…"
+  },
+  "queuePosition": "Posição na fila #{{n}}",
+  "queuePositionLabel": "Posição na fila",
+  "attempt": "Tentativa {{n}}",
+  "banner": {
+    "interrupted": "Interrompido — o aplicativo foi encerrado ou o worker parou durante o clone. A pasta de destino pode estar parcial. Nada foi excluído."
+  },
+  "detail": {
+    "repository": "Repositório",
+    "revision": "Revisão",
+    "revisionNone": "Branch padrão",
+    "transport": "Transporte",
+    "destination": "Destino",
+    "proxy": "Proxy",
+    "proxyManual": "Manual · {{url}}",
+    "auth": "Autenticação",
+    "authSystem": "Sistema (GCM / SSH)",
+    "authAppToken": "Token do app",
+    "created": "Criado",
+    "started": "Iniciado",
+    "updated": "Atualizado {{time}}",
+    "completed": "Concluído",
+    "progress": "Progresso",
+    "error": "Erro",
+    "firstAttempt": "Tentativa inicial",
+    "retryOfAttempt": "Nova tentativa da tentativa {{id}}",
+    "prerequisites": "Pré-requisitos",
+    "retryInfo": "Como funcionam as novas tentativas",
+    "retryInfoBody": "Retomar no mesmo local não é suportado. Uma nova tentativa clona o repositório novamente em uma pasta NOVA e vazia; nenhum arquivo existente é sobrescrito ou excluído."
+  },
+  "action": {
+    "copyDetails": "Copiar detalhes",
+    "copied": "Copiado",
+    "cancel": "Cancelar clone",
+    "disabledCancel": "O cancelamento já está em andamento",
+    "cancelConfirmTitle": "Cancelar este clone?",
+    "cancelConfirmBody": "O clone é interrompido. A pasta de destino pode ficar parcial e nunca é excluída.",
+    "cancelConfirmConfirm": "Cancelar clone",
+    "retry": "Tentar novamente",
+    "retryTitle": "Tentar novamente o clone",
+    "retryBody": "Uma nova tentativa clona em uma pasta NOVA e vazia. Retomar no mesmo local não é suportado e arquivos existentes nunca são sobrescritos ou excluídos.",
+    "retryDestinationLabel": "Nova pasta de destino vazia",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryError": {
+      "required": "Informe uma nova pasta de destino vazia",
+      "same": "Escolha outra pasta — a pasta da tentativa anterior pode conter arquivos parciais.",
+      "invalid": "Informe um caminho de destino válido"
+    },
+    "retryStart": "Iniciar nova tentativa",
+    "retryStarted": "Nova tentativa na fila",
+    "openFolder": "Abrir pasta",
+    "refresh": "Atualizar",
+    "viewDetails": "Ver detalhes de {{id}}"
   }
 }
