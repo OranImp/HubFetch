@@ -1,0 +1,99 @@
+{
+  "title": "複製儲存庫",
+  "nav": "複製",
+  "kind": {
+    "label": "儲存庫類型",
+    "model": "模型",
+    "dataset": "資料集",
+    "space": "空間"
+  },
+  "id": {
+    "label": "儲存庫 ID",
+    "placeholder": "命名空間/名稱",
+    "invalid": "請輸入有效的儲存庫 ID（命名空間/名稱）"
+  },
+  "revision": {
+    "label": "版本（選填）",
+    "placeholder": "分支、標籤或提交 SHA",
+    "kindLabel": "版本類型",
+    "branch": "分支",
+    "tag": "標籤",
+    "commit": "提交 SHA",
+    "nameLabel": "分支或標籤名稱",
+    "shaLabel": "完整提交 SHA（40 個十六進位字元）",
+    "invalidBranch": "無效的分支名稱",
+    "invalidTag": "無效的標籤名稱",
+    "invalidSha": "請輸入完整的 40 字元提交 SHA"
+  },
+  "transport": {
+    "label": "傳輸方式",
+    "https": "HTTPS",
+    "ssh": "SSH"
+  },
+  "auth": {
+    "label": "驗證",
+    "none": "匿名（僅限公開儲存庫）",
+    "system": "系統（Git 憑證管理器 / SSH 代理）",
+    "appToken": "應用程式權杖",
+    "appTokenUnavailable": "應用程式權杖（需要登入）",
+    "appTokenHint": "使用您登入的 Hugging Face 權杖",
+    "systemHint": "使用作業系統憑證助手和 SSH 金鑰",
+    "noneHint": "無驗證（僅限公開儲存庫）"
+  },
+  "destination": {
+    "label": "目標資料夾",
+    "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
+    "select": "選擇資料夾…",
+    "selected": "已選擇：{{path}}",
+    "invalid": "目標為必填",
+    "nonEmpty": "目標必須是空目錄",
+    "inaccessible": "無法存取目標資料夾"
+  },
+  "proxy": {
+    "label": "代理模式",
+    "system": "系統",
+    "direct": "直連",
+    "manual": "手動",
+    "hintSystem": "遵循作業系統的代理設定。",
+    "hintDirect": "繞過所有代理並直接連線。",
+    "hintManual": "使用固定的 HTTP(S) 代理伺服器。",
+    "manualLabel": "HTTP(S) 代理 URL",
+    "invalid": "請輸入有效的 http:// 或 https:// URL，包含主機和連接埠，不含路徑、查詢或憑證。"
+  },
+  "diagnostics": {
+    "title": "前提條件",
+    "recheck": "重新檢查",
+    "checking": "檢查中…",
+    "allPass": "所有檢查通過",
+    "git": "Git",
+    "gitXet": "Git-Xet 擴充功能",
+    "credentialHelper": "憑證助手",
+    "sshAgent": "SSH 代理",
+    "pass": "可用",
+    "missing": "未找到",
+    "gitMissing": "需要 Git 但未找到。請安裝 Git 後重試。",
+    "gitXetMissing": "建議使用 Git-Xet 擴充功能處理 LFS 檔案。",
+    "credentialHelperMissing": "建議使用 Git 憑證管理器進行 HTTPS 驗證。",
+    "sshMissing": "SSH 傳輸需要 SSH 代理。"
+  },
+  "derivedUrl": {
+    "label": "遠端 URL",
+    "hint": "將複製此無憑證 URL"
+  },
+  "create": "建立複製",
+  "creating": "建立中…",
+  "cancel": "取消",
+  "created": "複製任務已建立",
+  "errors": {
+    "malformedRepo": "無效的儲存庫 ID 格式",
+    "missingDestination": "請選擇目標資料夾",
+    "nonEmptyDestination": "目標資料夾必須為空",
+    "gitNotFound": "未安裝 Git 或不在 PATH 中",
+    "gitXetNotFound": "需要 Git-Xet 擴充功能但未找到",
+    "sshNotAvailable": "SSH 傳輸需要 SSH 但不可用",
+    "tokenRequired": "應用程式權杖驗證需要先登入",
+    "destinationError": "無法存取或驗證目標資料夾",
+    "proxyInvalid": "手動代理 URL 無效",
+    "internal": "內部錯誤：{{detail}}"
+  }
+}

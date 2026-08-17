@@ -1,0 +1,99 @@
+{
+  "title": "Clonar repositório",
+  "nav": "Clones",
+  "kind": {
+    "label": "Tipo de repositório",
+    "model": "Modelo",
+    "dataset": "Dataset",
+    "space": "Space"
+  },
+  "id": {
+    "label": "ID do repositório",
+    "placeholder": "namespace/nome",
+    "invalid": "Digite um ID de repositório válido (namespace/nome)"
+  },
+  "revision": {
+    "label": "Revisão (opcional)",
+    "placeholder": "Branch, tag ou SHA de commit",
+    "kindLabel": "Tipo de revisão",
+    "branch": "Branch",
+    "tag": "Tag",
+    "commit": "SHA de commit",
+    "nameLabel": "Nome do branch ou tag",
+    "shaLabel": "SHA de commit completo (40 caracteres hexadecimais)",
+    "invalidBranch": "Nome de branch inválido",
+    "invalidTag": "Nome de tag inválido",
+    "invalidSha": "Digite um SHA de commit completo de 40 caracteres"
+  },
+  "transport": {
+    "label": "Transporte",
+    "https": "HTTPS",
+    "ssh": "SSH"
+  },
+  "auth": {
+    "label": "Autenticação",
+    "none": "Anônimo (apenas repositórios públicos)",
+    "system": "Sistema (Git Credential Manager / agente SSH)",
+    "appToken": "Token do app",
+    "appTokenUnavailable": "Token do app (login necessário)",
+    "appTokenHint": "Usa seu token Hugging Face conectado",
+    "systemHint": "Usa auxiliares de credenciais do SO e chaves SSH",
+    "noneHint": "Sem autenticação (apenas repositórios públicos)"
+  },
+  "destination": {
+    "label": "Pasta de destino",
+    "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
+    "select": "Escolher pasta…",
+    "selected": "Selecionado: {{path}}",
+    "invalid": "O destino é obrigatório",
+    "nonEmpty": "O destino deve ser um diretório vazio",
+    "inaccessible": "Não é possível acessar a pasta de destino"
+  },
+  "proxy": {
+    "label": "Modo de proxy",
+    "system": "Sistema",
+    "direct": "Direto",
+    "manual": "Manual",
+    "hintSystem": "Seguir as configurações de proxy do sistema operacional.",
+    "hintDirect": "Ignorar todos os proxies e conectar diretamente.",
+    "hintManual": "Usar um servidor proxy HTTP(S) fixo.",
+    "manualLabel": "URL do proxy HTTP(S)",
+    "invalid": "Digite uma URL http:// ou https:// válida com host e porta sem caminho, consulta ou credenciais."
+  },
+  "diagnostics": {
+    "title": "Pré-requisitos",
+    "recheck": "Verificar novamente",
+    "checking": "Verificando…",
+    "allPass": "Todas as verificações passaram",
+    "git": "Git",
+    "gitXet": "Extensão Git-Xet",
+    "credentialHelper": "Auxiliar de credenciais",
+    "sshAgent": "Agente SSH",
+    "pass": "Disponível",
+    "missing": "Não encontrado",
+    "gitMissing": "Git é necessário mas não foi encontrado. Instale o Git e tente novamente.",
+    "gitXetMissing": "A extensão Git-Xet é recomendada para arquivos LFS.",
+    "credentialHelperMissing": "O Git Credential Manager é recomendado para autenticação HTTPS.",
+    "sshMissing": "O agente SSH é necessário para transporte SSH."
+  },
+  "derivedUrl": {
+    "label": "URL remota",
+    "hint": "Esta URL sem credenciais será clonada"
+  },
+  "create": "Criar clone",
+  "creating": "Criando…",
+  "cancel": "Cancelar",
+  "created": "Tarefa de clonagem criada",
+  "errors": {
+    "malformedRepo": "Formato de ID de repositório inválido",
+    "missingDestination": "Por favor selecione uma pasta de destino",
+    "nonEmptyDestination": "A pasta de destino deve estar vazia",
+    "gitNotFound": "Git não está instalado ou não está no PATH",
+    "gitXetNotFound": "A extensão Git-Xet é necessária mas não foi encontrada",
+    "sshNotAvailable": "SSH é necessário para transporte SSH mas não está disponível",
+    "tokenRequired": "A autenticação com token do app requer fazer login primeiro",
+    "destinationError": "Não é possível acessar ou validar a pasta de destino",
+    "proxyInvalid": "A URL do proxy manual é inválida",
+    "internal": "Erro interno: {{detail}}"
+  }
+}

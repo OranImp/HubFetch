@@ -1,0 +1,99 @@
+{
+  "title": "Clone Repository",
+  "nav": "Clones",
+  "kind": {
+    "label": "Repository type",
+    "model": "Model",
+    "dataset": "Dataset",
+    "space": "Space"
+  },
+  "id": {
+    "label": "Repository ID",
+    "placeholder": "namespace/name",
+    "invalid": "Enter a valid repository ID (namespace/name)"
+  },
+  "revision": {
+    "label": "Revision (optional)",
+    "placeholder": "Branch, tag, or commit SHA",
+    "kindLabel": "Revision type",
+    "branch": "Branch",
+    "tag": "Tag",
+    "commit": "Commit SHA",
+    "nameLabel": "Branch or tag name",
+    "shaLabel": "Full commit SHA (40 hex characters)",
+    "invalidBranch": "Invalid branch name",
+    "invalidTag": "Invalid tag name",
+    "invalidSha": "Enter a full 40-character commit SHA"
+  },
+  "transport": {
+    "label": "Transport",
+    "https": "HTTPS",
+    "ssh": "SSH"
+  },
+  "auth": {
+    "label": "Authentication",
+    "none": "Anonymous (public repos only)",
+    "system": "System (Git Credential Manager / SSH agent)",
+    "appToken": "App token",
+    "appTokenUnavailable": "App token (sign in required)",
+    "appTokenHint": "Uses your signed-in Hugging Face token",
+    "systemHint": "Uses OS credential helpers and SSH keys",
+    "noneHint": "No authentication (public repositories only)"
+  },
+  "destination": {
+    "label": "Destination folder",
+    "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
+    "select": "Choose folder…",
+    "selected": "Selected: {{path}}",
+    "invalid": "Destination is required",
+    "nonEmpty": "Destination must be an empty directory",
+    "inaccessible": "Cannot access destination folder"
+  },
+  "proxy": {
+    "label": "Proxy mode",
+    "system": "System",
+    "direct": "Direct",
+    "manual": "Manual",
+    "hintSystem": "Follow the operating system's proxy settings.",
+    "hintDirect": "Bypass all proxies and connect directly.",
+    "hintManual": "Use a fixed HTTP(S) proxy server.",
+    "manualLabel": "HTTP(S) proxy URL",
+    "invalid": "Enter a valid http:// or https:// URL with a host and port and no path, query, or credentials."
+  },
+  "diagnostics": {
+    "title": "Prerequisites",
+    "recheck": "Check again",
+    "checking": "Checking…",
+    "allPass": "All checks passed",
+    "git": "Git",
+    "gitXet": "Git-Xet extension",
+    "credentialHelper": "Credential helper",
+    "sshAgent": "SSH agent",
+    "pass": "Available",
+    "missing": "Not found",
+    "gitMissing": "Git is required but not found. Install Git and try again.",
+    "gitXetMissing": "Git-Xet extension is recommended for LFS files.",
+    "credentialHelperMissing": "Git Credential Manager is recommended for HTTPS authentication.",
+    "sshMissing": "SSH agent is required for SSH transport."
+  },
+  "derivedUrl": {
+    "label": "Remote URL",
+    "hint": "This credential-free URL will be cloned"
+  },
+  "create": "Create clone",
+  "creating": "Creating…",
+  "cancel": "Cancel",
+  "created": "Clone task created",
+  "errors": {
+    "malformedRepo": "Invalid repository ID format",
+    "missingDestination": "Please select a destination folder",
+    "nonEmptyDestination": "Destination folder must be empty",
+    "gitNotFound": "Git is not installed or not in PATH",
+    "gitXetNotFound": "Git-Xet extension is required but not found",
+    "sshNotAvailable": "SSH is required for SSH transport but not available",
+    "tokenRequired": "App token authentication requires signing in first",
+    "destinationError": "Cannot access or validate destination folder",
+    "proxyInvalid": "Manual proxy URL is invalid",
+    "internal": "Internal error: {{detail}}"
+  }
+}

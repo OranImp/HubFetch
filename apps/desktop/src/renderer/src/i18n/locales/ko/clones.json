@@ -1,0 +1,99 @@
+{
+  "title": "저장소 복제",
+  "nav": "복제",
+  "kind": {
+    "label": "저장소 유형",
+    "model": "모델",
+    "dataset": "데이터셋",
+    "space": "스페이스"
+  },
+  "id": {
+    "label": "저장소 ID",
+    "placeholder": "네임스페이스/이름",
+    "invalid": "유효한 저장소 ID를 입력하세요 (네임스페이스/이름)"
+  },
+  "revision": {
+    "label": "리비전 (선택사항)",
+    "placeholder": "브랜치, 태그 또는 커밋 SHA",
+    "kindLabel": "리비전 유형",
+    "branch": "브랜치",
+    "tag": "태그",
+    "commit": "커밋 SHA",
+    "nameLabel": "브랜치 또는 태그 이름",
+    "shaLabel": "전체 커밋 SHA (40자 16진수)",
+    "invalidBranch": "잘못된 브랜치 이름",
+    "invalidTag": "잘못된 태그 이름",
+    "invalidSha": "40자 전체 커밋 SHA를 입력하세요"
+  },
+  "transport": {
+    "label": "전송",
+    "https": "HTTPS",
+    "ssh": "SSH"
+  },
+  "auth": {
+    "label": "인증",
+    "none": "익명 (공개 저장소만)",
+    "system": "시스템 (Git Credential Manager / SSH 에이전트)",
+    "appToken": "앱 토큰",
+    "appTokenUnavailable": "앱 토큰 (로그인 필요)",
+    "appTokenHint": "로그인한 Hugging Face 토큰을 사용합니다",
+    "systemHint": "OS 자격 증명 도우미 및 SSH 키를 사용합니다",
+    "noneHint": "인증 없음 (공개 저장소만)"
+  },
+  "destination": {
+    "label": "대상 폴더",
+    "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
+    "select": "폴더 선택…",
+    "selected": "선택됨: {{path}}",
+    "invalid": "대상이 필요합니다",
+    "nonEmpty": "대상은 빈 디렉토리여야 합니다",
+    "inaccessible": "대상 폴더에 액세스할 수 없습니다"
+  },
+  "proxy": {
+    "label": "프록시 모드",
+    "system": "시스템",
+    "direct": "직접",
+    "manual": "수동",
+    "hintSystem": "운영 체제의 프록시 설정을 따릅니다.",
+    "hintDirect": "모든 프록시를 우회하고 직접 연결합니다.",
+    "hintManual": "고정 HTTP(S) 프록시 서버를 사용합니다.",
+    "manualLabel": "HTTP(S) 프록시 URL",
+    "invalid": "경로, 쿼리 또는 자격 증명 없이 호스트와 포트가 포함된 유효한 http:// 또는 https:// URL을 입력하세요."
+  },
+  "diagnostics": {
+    "title": "전제 조건",
+    "recheck": "다시 확인",
+    "checking": "확인 중…",
+    "allPass": "모든 검사 통과",
+    "git": "Git",
+    "gitXet": "Git-Xet 확장",
+    "credentialHelper": "자격 증명 도우미",
+    "sshAgent": "SSH 에이전트",
+    "pass": "사용 가능",
+    "missing": "찾을 수 없음",
+    "gitMissing": "Git이 필요하지만 찾을 수 없습니다. Git을 설치하고 다시 시도하세요.",
+    "gitXetMissing": "LFS 파일에는 Git-Xet 확장이 권장됩니다.",
+    "credentialHelperMissing": "HTTPS 인증에는 Git Credential Manager가 권장됩니다.",
+    "sshMissing": "SSH 전송에는 SSH 에이전트가 필요합니다."
+  },
+  "derivedUrl": {
+    "label": "원격 URL",
+    "hint": "이 자격 증명 없는 URL이 복제됩니다"
+  },
+  "create": "복제 생성",
+  "creating": "생성 중…",
+  "cancel": "취소",
+  "created": "복제 작업이 생성되었습니다",
+  "errors": {
+    "malformedRepo": "잘못된 저장소 ID 형식",
+    "missingDestination": "대상 폴더를 선택하세요",
+    "nonEmptyDestination": "대상 폴더는 비어 있어야 합니다",
+    "gitNotFound": "Git이 설치되지 않았거나 PATH에 없습니다",
+    "gitXetNotFound": "Git-Xet 확장이 필요하지만 찾을 수 없습니다",
+    "sshNotAvailable": "SSH 전송에 SSH가 필요하지만 사용할 수 없습니다",
+    "tokenRequired": "앱 토큰 인증은 먼저 로그인이 필요합니다",
+    "destinationError": "대상 폴더에 액세스하거나 검증할 수 없습니다",
+    "proxyInvalid": "수동 프록시 URL이 잘못되었습니다",
+    "internal": "내부 오류: {{detail}}"
+  }
+}

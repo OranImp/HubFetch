@@ -22,6 +22,7 @@ import enPapers from './locales/en/papers.json'
 import enProfile from './locales/en/profile.json'
 import enSettings from './locales/en/settings.json'
 import enShortcuts from './locales/en/shortcuts.json'
+import enClones from './locales/en/clones.json'
 import enUpload from './locales/en/upload.json'
 import zhCNAdmin from './locales/zh-CN/admin.json'
 import zhCNAuth from './locales/zh-CN/auth.json'
@@ -43,6 +44,7 @@ import zhCNPapers from './locales/zh-CN/papers.json'
 import zhCNProfile from './locales/zh-CN/profile.json'
 import zhCNSettings from './locales/zh-CN/settings.json'
 import zhCNShortcuts from './locales/zh-CN/shortcuts.json'
+import zhCNClones from './locales/zh-CN/clones.json'
 import zhCNUpload from './locales/zh-CN/upload.json'
 import zhTWAdmin from './locales/zh-TW/admin.json'
 import zhTWAuth from './locales/zh-TW/auth.json'
@@ -64,6 +66,7 @@ import zhTWPapers from './locales/zh-TW/papers.json'
 import zhTWProfile from './locales/zh-TW/profile.json'
 import zhTWSettings from './locales/zh-TW/settings.json'
 import zhTWShortcuts from './locales/zh-TW/shortcuts.json'
+import zhTWClones from './locales/zh-TW/clones.json'
 import zhTWUpload from './locales/zh-TW/upload.json'
 import jaAdmin from './locales/ja/admin.json'
 import jaAuth from './locales/ja/auth.json'
@@ -85,6 +88,7 @@ import jaPapers from './locales/ja/papers.json'
 import jaProfile from './locales/ja/profile.json'
 import jaSettings from './locales/ja/settings.json'
 import jaShortcuts from './locales/ja/shortcuts.json'
+import jaClones from './locales/ja/clones.json'
 import jaUpload from './locales/ja/upload.json'
 import koAdmin from './locales/ko/admin.json'
 import koAuth from './locales/ko/auth.json'
@@ -106,6 +110,7 @@ import koPapers from './locales/ko/papers.json'
 import koProfile from './locales/ko/profile.json'
 import koSettings from './locales/ko/settings.json'
 import koShortcuts from './locales/ko/shortcuts.json'
+import koClones from './locales/ko/clones.json'
 import koUpload from './locales/ko/upload.json'
 import deAdmin from './locales/de/admin.json'
 import deAuth from './locales/de/auth.json'
@@ -127,6 +132,7 @@ import dePapers from './locales/de/papers.json'
 import deProfile from './locales/de/profile.json'
 import deSettings from './locales/de/settings.json'
 import deShortcuts from './locales/de/shortcuts.json'
+import deClones from './locales/de/clones.json'
 import deUpload from './locales/de/upload.json'
 import esAdmin from './locales/es/admin.json'
 import esAuth from './locales/es/auth.json'
@@ -148,6 +154,7 @@ import esPapers from './locales/es/papers.json'
 import esProfile from './locales/es/profile.json'
 import esSettings from './locales/es/settings.json'
 import esShortcuts from './locales/es/shortcuts.json'
+import esClones from './locales/es/clones.json'
 import esUpload from './locales/es/upload.json'
 import frAdmin from './locales/fr/admin.json'
 import frAuth from './locales/fr/auth.json'
@@ -169,6 +176,7 @@ import frPapers from './locales/fr/papers.json'
 import frProfile from './locales/fr/profile.json'
 import frSettings from './locales/fr/settings.json'
 import frShortcuts from './locales/fr/shortcuts.json'
+import frClones from './locales/fr/clones.json'
 import frUpload from './locales/fr/upload.json'
 import ptBRAdmin from './locales/pt-BR/admin.json'
 import ptBRAuth from './locales/pt-BR/auth.json'
@@ -190,6 +198,7 @@ import ptBRPapers from './locales/pt-BR/papers.json'
 import ptBRProfile from './locales/pt-BR/profile.json'
 import ptBRSettings from './locales/pt-BR/settings.json'
 import ptBRShortcuts from './locales/pt-BR/shortcuts.json'
+import ptBRClones from './locales/pt-BR/clones.json'
 import ptBRUpload from './locales/pt-BR/upload.json'
 
 export const NAMESPACES = [
@@ -197,6 +206,7 @@ export const NAMESPACES = [
   'auth',
   'browse',
   'cache',
+  'clones',
   'collections',
   'common',
   'compare',
@@ -222,6 +232,7 @@ const resources = {
     auth: enAuth,
     browse: enBrowse,
     cache: enCache,
+    clones: enClones,
     collections: enCollections,
     common: enCommon,
     compare: enCompare,
@@ -245,6 +256,7 @@ const resources = {
     auth: zhCNAuth,
     browse: zhCNBrowse,
     cache: zhCNCache,
+    clones: zhCNClones,
     collections: zhCNCollections,
     common: zhCNCommon,
     compare: zhCNCompare,
@@ -268,6 +280,7 @@ const resources = {
     auth: zhTWAuth,
     browse: zhTWBrowse,
     cache: zhTWCache,
+    clones: zhTWClones,
     collections: zhTWCollections,
     common: zhTWCommon,
     compare: zhTWCompare,
@@ -291,6 +304,7 @@ const resources = {
     auth: jaAuth,
     browse: jaBrowse,
     cache: jaCache,
+    clones: jaClones,
     collections: jaCollections,
     common: jaCommon,
     compare: jaCompare,
@@ -314,6 +328,7 @@ const resources = {
     auth: koAuth,
     browse: koBrowse,
     cache: koCache,
+    clones: koClones,
     collections: koCollections,
     common: koCommon,
     compare: koCompare,
@@ -337,6 +352,7 @@ const resources = {
     auth: deAuth,
     browse: deBrowse,
     cache: deCache,
+    clones: deClones,
     collections: deCollections,
     common: deCommon,
     compare: deCompare,
@@ -360,6 +376,7 @@ const resources = {
     auth: esAuth,
     browse: esBrowse,
     cache: esCache,
+    clones: esClones,
     collections: esCollections,
     common: esCommon,
     compare: esCompare,
@@ -383,6 +400,7 @@ const resources = {
     auth: frAuth,
     browse: frBrowse,
     cache: frCache,
+    clones: frClones,
     collections: frCollections,
     common: frCommon,
     compare: frCompare,
@@ -406,6 +424,7 @@ const resources = {
     auth: ptBRAuth,
     browse: ptBRBrowse,
     cache: ptBRCache,
+    clones: ptBRClones,
     collections: ptBRCollections,
     common: ptBRCommon,
     compare: ptBRCompare,

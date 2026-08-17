@@ -1,0 +1,99 @@
+{
+  "title": "リポジトリのクローン",
+  "nav": "クローン",
+  "kind": {
+    "label": "リポジトリタイプ",
+    "model": "モデル",
+    "dataset": "データセット",
+    "space": "スペース"
+  },
+  "id": {
+    "label": "リポジトリID",
+    "placeholder": "名前空間/名前",
+    "invalid": "有効なリポジトリIDを入力してください（名前空間/名前）"
+  },
+  "revision": {
+    "label": "リビジョン（オプション）",
+    "placeholder": "ブランチ、タグ、またはコミットSHA",
+    "kindLabel": "リビジョンタイプ",
+    "branch": "ブランチ",
+    "tag": "タグ",
+    "commit": "コミットSHA",
+    "nameLabel": "ブランチまたはタグ名",
+    "shaLabel": "完全なコミットSHA（40文字の16進数）",
+    "invalidBranch": "無効なブランチ名",
+    "invalidTag": "無効なタグ名",
+    "invalidSha": "40文字の完全なコミットSHAを入力してください"
+  },
+  "transport": {
+    "label": "トランスポート",
+    "https": "HTTPS",
+    "ssh": "SSH"
+  },
+  "auth": {
+    "label": "認証",
+    "none": "匿名（公開リポジトリのみ）",
+    "system": "システム（Git Credential Manager / SSHエージェント）",
+    "appToken": "アプリトークン",
+    "appTokenUnavailable": "アプリトークン（ログインが必要）",
+    "appTokenHint": "サインインしたHugging Faceトークンを使用します",
+    "systemHint": "OSの認証情報ヘルパーとSSHキーを使用します",
+    "noneHint": "認証なし（公開リポジトリのみ）"
+  },
+  "destination": {
+    "label": "保存先フォルダ",
+    "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
+    "select": "フォルダを選択…",
+    "selected": "選択済み：{{path}}",
+    "invalid": "保存先は必須です",
+    "nonEmpty": "保存先は空のディレクトリである必要があります",
+    "inaccessible": "保存先フォルダにアクセスできません"
+  },
+  "proxy": {
+    "label": "プロキシモード",
+    "system": "システム",
+    "direct": "直接",
+    "manual": "手動",
+    "hintSystem": "オペレーティングシステムのプロキシ設定に従います。",
+    "hintDirect": "すべてのプロキシをバイパスして直接接続します。",
+    "hintManual": "固定のHTTP(S)プロキシサーバーを使用します。",
+    "manualLabel": "HTTP(S)プロキシURL",
+    "invalid": "ホストとポートを含む有効なhttp://またはhttps://のURLを入力してください。パス、クエリ、認証情報は含めないでください。"
+  },
+  "diagnostics": {
+    "title": "前提条件",
+    "recheck": "再確認",
+    "checking": "確認中…",
+    "allPass": "すべてのチェックに合格",
+    "git": "Git",
+    "gitXet": "Git-Xet拡張機能",
+    "credentialHelper": "認証情報ヘルパー",
+    "sshAgent": "SSHエージェント",
+    "pass": "利用可能",
+    "missing": "見つかりません",
+    "gitMissing": "Gitが必要ですが見つかりません。Gitをインストールして再試行してください。",
+    "gitXetMissing": "LFSファイルにはGit-Xet拡張機能をお勧めします。",
+    "credentialHelperMissing": "HTTPS認証にはGit Credential Managerをお勧めします。",
+    "sshMissing": "SSHトランスポートにはSSHエージェントが必要です。"
+  },
+  "derivedUrl": {
+    "label": "リモートURL",
+    "hint": "この認証情報なしのURLがクローンされます"
+  },
+  "create": "クローンを作成",
+  "creating": "作成中…",
+  "cancel": "キャンセル",
+  "created": "クローンタスクが作成されました",
+  "errors": {
+    "malformedRepo": "無効なリポジトリID形式",
+    "missingDestination": "保存先フォルダを選択してください",
+    "nonEmptyDestination": "保存先フォルダは空である必要があります",
+    "gitNotFound": "Gitがインストールされていないか、PATHに含まれていません",
+    "gitXetNotFound": "Git-Xet拡張機能が必要ですが見つかりません",
+    "sshNotAvailable": "SSHトランスポートにはSSHが必要ですが利用できません",
+    "tokenRequired": "アプリトークン認証には先にログインする必要があります",
+    "destinationError": "保存先フォルダにアクセスまたは検証できません",
+    "proxyInvalid": "手動プロキシURLが無効です",
+    "internal": "内部エラー：{{detail}}"
+  }
+}

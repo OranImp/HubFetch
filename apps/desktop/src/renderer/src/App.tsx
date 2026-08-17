@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary'
 import { BrowsePage } from '@/pages/BrowsePage'
 import { CachePage } from '@/pages/CachePage'
+import { CloneCreatePage } from '@/pages/CloneCreatePage'
 import { CollectionPage } from '@/pages/CollectionPage'
 import { CollectionsPage } from '@/pages/CollectionsPage'
 import { ComparePage } from '@/pages/ComparePage'
@@ -58,6 +59,11 @@ export function App(): React.JSX.Element {
               {/* Collection slugs contain a slash (owner/name-id), hence the splat. */}
               <Route path="collections/*" element={<CollectionPage />} />
               <Route path="downloads" element={<DownloadsPage />} />
+              <Route path="clones/create" element={<CloneCreatePage />} />
+              {/* Todo 35 owns the queue/detail surface; until then the create
+                  page also answers /clones so post-create ?selected= navigation
+                  does not bounce to home. */}
+              <Route path="clones" element={<CloneCreatePage />} />
               <Route path="diagnostics" element={<DiagnosticsPage />} />
               <Route path="cache" element={<CachePage />} />
               <Route path="inbox" element={<InboxPage />} />

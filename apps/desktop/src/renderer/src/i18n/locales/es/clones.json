@@ -1,0 +1,99 @@
+{
+  "title": "Clonar repositorio",
+  "nav": "Clones",
+  "kind": {
+    "label": "Tipo de repositorio",
+    "model": "Modelo",
+    "dataset": "Dataset",
+    "space": "Space"
+  },
+  "id": {
+    "label": "ID del repositorio",
+    "placeholder": "espacio-de-nombres/nombre",
+    "invalid": "Ingrese un ID de repositorio válido (espacio-de-nombres/nombre)"
+  },
+  "revision": {
+    "label": "Revisión (opcional)",
+    "placeholder": "Rama, etiqueta o SHA de commit",
+    "kindLabel": "Tipo de revisión",
+    "branch": "Rama",
+    "tag": "Etiqueta",
+    "commit": "SHA de commit",
+    "nameLabel": "Nombre de rama o etiqueta",
+    "shaLabel": "SHA de commit completo (40 caracteres hexadecimales)",
+    "invalidBranch": "Nombre de rama no válido",
+    "invalidTag": "Nombre de etiqueta no válido",
+    "invalidSha": "Ingrese un SHA de commit completo de 40 caracteres"
+  },
+  "transport": {
+    "label": "Transporte",
+    "https": "HTTPS",
+    "ssh": "SSH"
+  },
+  "auth": {
+    "label": "Autenticación",
+    "none": "Anónimo (solo repositorios públicos)",
+    "system": "Sistema (Git Credential Manager / agente SSH)",
+    "appToken": "Token de la app",
+    "appTokenUnavailable": "Token de la app (inicio de sesión requerido)",
+    "appTokenHint": "Usa tu token de Hugging Face con sesión iniciada",
+    "systemHint": "Usa ayudantes de credenciales del SO y claves SSH",
+    "noneHint": "Sin autenticación (solo repositorios públicos)"
+  },
+  "destination": {
+    "label": "Carpeta de destino",
+    "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
+    "select": "Elegir carpeta…",
+    "selected": "Seleccionado: {{path}}",
+    "invalid": "El destino es obligatorio",
+    "nonEmpty": "El destino debe ser un directorio vacío",
+    "inaccessible": "No se puede acceder a la carpeta de destino"
+  },
+  "proxy": {
+    "label": "Modo de proxy",
+    "system": "Sistema",
+    "direct": "Directo",
+    "manual": "Manual",
+    "hintSystem": "Seguir la configuración de proxy del sistema operativo.",
+    "hintDirect": "Omitir todos los proxies y conectar directamente.",
+    "hintManual": "Usar un servidor proxy HTTP(S) fijo.",
+    "manualLabel": "URL del proxy HTTP(S)",
+    "invalid": "Ingrese una URL http:// o https:// válida con host y puerto sin ruta, consulta o credenciales."
+  },
+  "diagnostics": {
+    "title": "Requisitos previos",
+    "recheck": "Verificar de nuevo",
+    "checking": "Verificando…",
+    "allPass": "Todas las verificaciones pasaron",
+    "git": "Git",
+    "gitXet": "Extensión Git-Xet",
+    "credentialHelper": "Ayudante de credenciales",
+    "sshAgent": "Agente SSH",
+    "pass": "Disponible",
+    "missing": "No encontrado",
+    "gitMissing": "Se requiere Git pero no se encontró. Instale Git e intente de nuevo.",
+    "gitXetMissing": "Se recomienda la extensión Git-Xet para archivos LFS.",
+    "credentialHelperMissing": "Se recomienda Git Credential Manager para autenticación HTTPS.",
+    "sshMissing": "Se requiere agente SSH para transporte SSH."
+  },
+  "derivedUrl": {
+    "label": "URL remota",
+    "hint": "Se clonará esta URL sin credenciales"
+  },
+  "create": "Crear clon",
+  "creating": "Creando…",
+  "cancel": "Cancelar",
+  "created": "Tarea de clonación creada",
+  "errors": {
+    "malformedRepo": "Formato de ID de repositorio no válido",
+    "missingDestination": "Por favor seleccione una carpeta de destino",
+    "nonEmptyDestination": "La carpeta de destino debe estar vacía",
+    "gitNotFound": "Git no está instalado o no está en PATH",
+    "gitXetNotFound": "Se requiere la extensión Git-Xet pero no se encontró",
+    "sshNotAvailable": "Se requiere SSH para transporte SSH pero no está disponible",
+    "tokenRequired": "La autenticación con token de la app requiere iniciar sesión primero",
+    "destinationError": "No se puede acceder o validar la carpeta de destino",
+    "proxyInvalid": "La URL del proxy manual no es válida",
+    "internal": "Error interno: {{detail}}"
+  }
+}
