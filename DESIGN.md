@@ -1,6 +1,6 @@
 # Design
 
-Visual system for Oh My HuggingFace. Register: **product** — design serves the task.
+Visual system for HubFetch. Register: **product** — design serves the task.
 Mood: "the Hub, distilled into a desktop instrument — cool paper grays, mono repo names,
 one yellow wink."
 

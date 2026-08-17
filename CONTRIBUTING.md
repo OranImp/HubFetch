@@ -1,6 +1,6 @@
-# Contributing to Oh My HuggingFace
+# Contributing to HubFetch
 
-Thanks for helping! This project is an unofficial, community-built desktop client for the
+Thanks for helping! This project is an unofficial, community-built Windows desktop client for the
 Hugging Face Hub, licensed under Apache-2.0.
 
 ## Ground rules

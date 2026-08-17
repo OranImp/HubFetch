@@ -48,7 +48,7 @@ Release.
 The Windows x64 ZIP is **unsigned**. Windows SmartScreen may warn on first launch; users choose
 "More info → Run anyway" and verify the downloaded ZIP against its published SHA-256. There is no
 code-signing requirement in the build, no signing secret in CI, and the release notes disclose this
-explicitly. See [docs/signing.md](docs/signing.md).
+explicitly. See [signing.md](signing.md).
 
 ## Dry-run
 

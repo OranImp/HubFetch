@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Security fixes are provided for the latest published version of Oh My HuggingFace. Please update to
-the newest release before reporting an issue that may already be resolved.
+Security fixes are provided for the latest published version of HubFetch. Please update to the
+newest release before reporting an issue that may already be resolved.
 
 ## Reporting a vulnerability
 
@@ -18,6 +18,7 @@ services, or publishing details before a fix is available.
 ## Release security controls
 
 CI audits production dependencies for high and critical advisories and runs CodeQL. Release jobs
-build all platforms with publishing disabled, smoke-test packaged applications, and verify
-SHA-512 hashes before the only write-enabled job can create a tag or GitHub Release. The application
-has no self-update capability, so there are no updater manifests to validate.
+build the **Windows x64 ZIP** with publishing disabled, smoke-test the packaged application, and
+verify SHA-256 checksums plus the remote asset inventory before the only write-enabled job can
+create a tag or GitHub Release. The application has no self-update capability, so there are no
+updater manifests to validate.

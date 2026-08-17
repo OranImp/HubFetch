@@ -60,6 +60,9 @@ jobs:
       - name: Test no-updater policy
         run: pnpm test:no-updater
 
+      - name: Test docs policy (link, contract, notices, command-reference)
+        run: pnpm test:docs
+
       - name: Unit tests with coverage
         run: |
           set -o pipefail

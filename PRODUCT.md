@@ -14,12 +14,13 @@ downloads matter. They value privacy: everything stays on their machine.
 
 ## Product Purpose
 
-Oh My HuggingFace is an unofficial, open-source, cross-platform desktop client for the Hugging Face
-Hub. It does what the website cannot: a resumable, parallel, checksummed download manager that
-writes into the standard HF cache (interoperable with transformers/CLI), local cache visualization
-and cleanup, system notifications for follows and daily papers, and export into the local AI
-toolchain (Ollama, LM Studio, ComfyUI). Success: a user manages their entire Hub workflow — browse,
-auth, download, clean, follow — without opening a browser, and trusts the app with their token.
+HubFetch is an unofficial, open-source, Windows desktop client for the Hugging Face Hub. It does
+what the website cannot: a resumable, parallel, checksummed download manager that writes into the
+standard HF cache (interoperable with transformers/CLI), real Git clones through system Git, local
+cache visualization and cleanup, system notifications for follows and daily papers, and export
+into the local AI toolchain (Ollama, LM Studio, ComfyUI). Success: a user manages their entire Hub
+workflow — browse, auth, download, clone, clean, follow — without opening a browser, and trusts the
+app with their token.
 
 It is NOT affiliated with or endorsed by Hugging Face, Inc. "Hugging Face" appears only as a
 referential nod to the service it connects to. No 🤗 emoji, no HF logos, nothing that implies
