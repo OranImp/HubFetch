@@ -45,7 +45,9 @@
     "history": "Historial de navegación",
     "github": "Repositorio de GitHub",
     "reportIssue": "Informar de un problema…",
-    "disclaimer": "Acerca de y aviso legal"
+    "disclaimer": "Acerca de y aviso legal",
+    "userGuideEn": "Guía de usuario (English)",
+    "userGuideZhCN": "Guía de usuario (简体中文)"
   },
   "notifications": {
     "downloadComplete": "Descarga completa",

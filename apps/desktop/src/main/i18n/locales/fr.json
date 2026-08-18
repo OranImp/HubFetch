@@ -45,7 +45,9 @@
     "history": "Historique de navigation",
     "github": "Dépôt GitHub",
     "reportIssue": "Signaler un problème…",
-    "disclaimer": "À propos et avertissement"
+    "disclaimer": "À propos et avertissement",
+    "userGuideEn": "Guide utilisateur (English)",
+    "userGuideZhCN": "Guide utilisateur (简体中文)"
   },
   "notifications": {
     "downloadComplete": "Téléchargement terminé",

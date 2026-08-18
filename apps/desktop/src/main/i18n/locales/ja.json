@@ -45,7 +45,9 @@
     "history": "閲覧履歴",
     "github": "GitHubリポジトリ",
     "reportIssue": "問題を報告…",
-    "disclaimer": "情報と免責事項"
+    "disclaimer": "情報と免責事項",
+    "userGuideEn": "ユーザーガイド（English）",
+    "userGuideZhCN": "ユーザーガイド（简体中文）"
   },
   "notifications": {
     "downloadComplete": "ダウンロード完了",

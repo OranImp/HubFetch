@@ -45,7 +45,9 @@
     "history": "Browserverlauf",
     "github": "GitHub-Repository",
     "reportIssue": "Problem melden…",
-    "disclaimer": "Über & Haftungsausschluss"
+    "disclaimer": "Über & Haftungsausschluss",
+    "userGuideEn": "Benutzerhandbuch (English)",
+    "userGuideZhCN": "Benutzerhandbuch (简体中文)"
   },
   "notifications": {
     "downloadComplete": "Download abgeschlossen",

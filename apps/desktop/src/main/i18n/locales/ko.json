@@ -45,7 +45,9 @@
     "history": "탐색 기록",
     "github": "GitHub 저장소",
     "reportIssue": "문제 신고…",
-    "disclaimer": "정보 및 면책 조항"
+    "disclaimer": "정보 및 면책 조항",
+    "userGuideEn": "사용자 가이드（English）",
+    "userGuideZhCN": "사용자 가이드（简体中文）"
   },
   "notifications": {
     "downloadComplete": "다운로드 완료",

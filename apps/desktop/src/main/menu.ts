@@ -4,6 +4,13 @@ import type { MainI18n } from './i18n'
 
 const REPO_URL = 'https://github.com/OranImp/HubFetch'
 
+/** User guides live in the repository (not the filesystem), so they are opened
+ *  as remote GitHub URLs — never an embedded local path. */
+const USER_GUIDE_URLS = {
+  en: 'https://github.com/OranImp/HubFetch/blob/main/docs/user-guide.en.md',
+  'zh-CN': 'https://github.com/OranImp/HubFetch/blob/main/docs/user-guide.zh-CN.md'
+} as const
+
 /** Fully localized native application menu. Rebuilt whenever the locale changes. */
 export function buildMenu(i18n: MainI18n, navigate: (route: string) => void): void {
   const t = (key: string): string => i18n.t(key)
@@ -109,6 +116,15 @@ export function buildMenu(i18n: MainI18n, navigate: (route: string) => void): vo
         {
           label: t('menu.reportIssue'),
           click: () => void shell.openExternal(`${REPO_URL}/issues/new`)
+        },
+        { type: 'separator' },
+        {
+          label: t('menu.userGuideEn'),
+          click: () => void shell.openExternal(USER_GUIDE_URLS.en)
+        },
+        {
+          label: t('menu.userGuideZhCN'),
+          click: () => void shell.openExternal(USER_GUIDE_URLS['zh-CN'])
         },
         { type: 'separator' },
         { label: t('menu.disclaimer'), click: showAbout }
