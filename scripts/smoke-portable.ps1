@@ -58,12 +58,26 @@ try {
   }
 
   # ---- 1. Resolve dev binaries before stripping PATH ----
+  # The pnpm shim calls `corepack` by its ABSOLUTE path (resolved here, before
+  # PATH is stripped) so the packaged E2E can still run Playwright after the
+  # dev Node/corepack directories are removed from PATH below.
   $pnpmShim = Join-Path $env:TEMP 'hubfetch-pnpm-shim\pnpm.cmd'
+  $corepackCmd = (Get-Command corepack -ErrorAction SilentlyContinue).Source
+  if (-not $corepackCmd) { $corepackCmd = 'corepack' }
   if (-not (Test-Path $pnpmShim)) {
     New-Item -ItemType Directory -Force -Path (Split-Path $pnpmShim) | Out-Null
-    Set-Content -Path $pnpmShim -Value "@echo off`r`nset `"TMP=E:\Programs\Temp`"`r`nset `"TEMP=E:\Programs\Temp`"`r`ncorepack pnpm %*`r`nexit /b %ERRORLEVEL%`r`n" -Encoding Ascii
+    Set-Content -Path $pnpmShim -Value "@echo off`r`nset `"TMP=E:\Programs\Temp`"`r`nset `"TEMP=E:\Programs\Temp`"`r`n`"$corepackCmd`" pnpm %*`r`nexit /b %ERRORLEVEL%`r`n" -Encoding Ascii
   }
   $env:PATH = "$(Split-Path $pnpmShim);$env:PATH"
+
+  # Absolute node + Playwright CLI paths, resolved before PATH is stripped, so
+  # the packaged E2E harness can still run after dev Node is removed from PATH.
+  $nodeAbs = (Get-Command node -ErrorAction SilentlyContinue).Source
+  if (-not $nodeAbs) { Write-Error '[smoke] node not resolvable before PATH strip'; exit 1 }
+  $playwrightCli = Join-Path $Root 'node_modules\@playwright\test\cli.js'
+  if (-not (Test-Path $playwrightCli)) {
+    Write-Error "[smoke] Playwright CLI not found: $playwrightCli"; exit 1
+  }
 
   # ---- 2. Extract to a Unicode + spaced temp path ----
   $extractRoot = Join-Path $SmokeTmp "T41 提取包 HubFetch-$Version-$PID"
@@ -113,8 +127,20 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
       foreach ($p in $devPrefixes) {
         if ($p -and $entry -like "$p*") { return $false }
       }
-      # Remove Python interpreters.
-      if ($entry -match 'python|pyenv|Scripts' -and (Test-Path (Join-Path $entry 'python.exe'))) { return $false }
+      # Remove any PATH entry that actually contains a Python interpreter
+      # (python.exe / python3.exe / py.exe). This also drops the Microsoft Store
+      # `WindowsApps` python alias, whose directory name does not itself contain
+      # the word "python" yet still resolves via `where python`. Guarded so a
+      # malformed PATH segment (e.g. a bare drive letter) cannot throw.
+      $isPythonDir = $false
+      foreach ($pf in @('python.exe', 'python3.exe', 'py.exe')) {
+        $candidate = Join-Path $entry $pf -ErrorAction SilentlyContinue
+        if ($candidate -and (Test-Path $candidate -ErrorAction SilentlyContinue)) {
+          $isPythonDir = $true
+          break
+        }
+      }
+      if ($isPythonDir) { return $false }
       return $true
     })
   $env:PATH = ($filtered -join ';')
@@ -140,7 +166,12 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
   $packagedSpec = Join-Path $Root 'apps\desktop\e2e\packaged-smoke.spec.ts'
   $configPath = Join-Path $Root 'apps\desktop\playwright.packaged.config.ts'
 
-  $playwrightRun = & $pnpmShim --filter hubfetch-desktop exec playwright test --config=$configPath 2>&1
+  # Run the packaged E2E through the ABSOLUTE node + Playwright CLI resolved
+  # before PATH was stripped. Do NOT go through the pnpm shim here: that would
+  # re-invoke node/corepack, which no longer resolve once dev Node is removed
+  # from PATH. The packaged app itself is launched by Playwright and inherits the
+  # stripped PATH, proving it runs without the dev tree.
+  $playwrightRun = & $nodeAbs $playwrightCli test --config=$configPath 2>&1
   $pwCode = $LASTEXITCODE
   if ($pwCode -ne 0) {
     Write-Error "[smoke] packaged E2E failed (exit $pwCode):`n$playwrightRun"

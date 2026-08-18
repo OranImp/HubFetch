@@ -105,12 +105,16 @@ try {
   $env:npm_config_proxy = 'http://127.0.0.1:7897'
   $env:npm_config_https_proxy = 'http://127.0.0.1:7897'
 
-  # Resolve a pnpm shim on PATH (pnpm is not on PATH in this environment).
+  # Resolve a pnpm shim on PATH (pnpm is not on PATH in this environment). The
+  # shim calls `corepack` by its ABSOLUTE path so it keeps working even after
+  # smoke-portable.ps1 strips the dev Node/corepack directories from PATH.
   $shimDir = Join-Path $env:TEMP 'hubfetch-pnpm-shim'
   New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
   $shim = Join-Path $shimDir 'pnpm.cmd'
+  $corepackCmd = (Get-Command corepack -ErrorAction SilentlyContinue).Source
+  if (-not $corepackCmd) { $corepackCmd = 'corepack' }
   if (-not (Test-Path $shim)) {
-    Set-Content -Path $shim -Value "@echo off`r`nset `"TMP=E:\Programs\Temp`"`r`nset `"TEMP=E:\Programs\Temp`"`r`ncorepack pnpm %*`r`nexit /b %ERRORLEVEL%`r`n" -Encoding Ascii
+    Set-Content -Path $shim -Value "@echo off`r`nset `"TMP=E:\Programs\Temp`"`r`nset `"TEMP=E:\Programs\Temp`"`r`n`"$corepackCmd`" pnpm %*`r`nexit /b %ERRORLEVEL%`r`n" -Encoding Ascii
   }
   $env:PATH = "$shimDir;$env:PATH"
 
