@@ -244,6 +244,15 @@ const manifest = {
     desktopPackageJsonSha256: desktopManifestHash
   },
   native: nativeHashes,
+  // The only permitted nondeterministic field in the packaged ZIP — the per-file
+  // modification timestamp electron-builder stamps into each archive entry — is
+  // normalized to a fixed epoch (1980-01-01T00:00:00Z) by build-windows.ps1's
+  // deterministic re-zip, so two clean builds of the same source are byte-identical.
+  nondeterminism: {
+    field: 'zip-entry-modification-timestamp',
+    treatment: 'normalized',
+    normalizedTo: '1980-01-01T00:00:00Z'
+  },
   zip: {
     name: zipName,
     path: zipPath,

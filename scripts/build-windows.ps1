@@ -134,6 +134,33 @@ try {
   # Electron child can stall the build forever. `&` + `*>` instead waits for the
   # child to EXIT and records $LASTEXITCODE, then we reap any stray
   # Electron/HubFetch processes so they cannot hold locks in later steps.
+  # Re-write a ZIP with every entry timestamp pinned to a fixed DOS epoch so
+  # that two clean builds of the same source produce BYTE-IDENTICAL ZIPs.
+  # electron-builder stamps per-build file mtimes into the archive, which would
+  # otherwise make the ZIP SHA-256 differ between otherwise-equal builds. This
+  # normalization is the plan's "normalize/assert the permitted nondeterministic
+  # field" step: the ZIP entry modification timestamp is listed in the manifest
+  # as normalized to 1980-01-01T00:00:00Z.
+  function Normalize-ZipTimestamps {
+    param([string]$Src, [string]$Dst)
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $fixed = [datetime]'1980-01-01T00:00:00'
+    $srcZip = [System.IO.Compression.ZipFile]::OpenRead($Src)
+    $outFs = [System.IO.File]::Create($Dst)
+    $dstZip = New-Object System.IO.Compression.ZipArchive($outFs, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+      foreach ($e in $srcZip.Entries) {
+        $d = $dstZip.CreateEntry($e.FullName)
+        $d.LastWriteTime = $fixed
+        $in = $e.Open()
+        $out = $d.Open()
+        try { $in.CopyTo($out) } finally { $out.Dispose(); $in.Dispose() }
+      }
+    } finally {
+      $dstZip.Dispose(); $outFs.Dispose(); $srcZip.Dispose()
+    }
+  }
+
   function Invoke-OrphanSafe {
     param([string]$Name, [string[]]$Command, [string]$Log)
     Write-Host "[build-windows] $Name ..."
@@ -201,6 +228,13 @@ try {
   # ---- 5. Copy to artifacts + policy check + stage manifest + smoke ----
   $targetZip = Join-Path $ArtifactsDir $ZipName
   Copy-Item -Force $builtZip $targetZip
+
+  # Deterministic re-zip: normalize ZIP entry timestamps so the artifact in
+  # artifacts/ (and thus the manifest SHA) is reproducible across clean builds.
+  $normalizedZip = Join-Path $ArtifactsDir "$ZipName.deterministic"
+  Normalize-ZipTimestamps -Src $targetZip -Dst $normalizedZip
+  Move-Item -Force $normalizedZip $targetZip
+  Write-Host "[build-windows] OK: normalized ZIP entry timestamps (deterministic re-zip)"
 
   $policy = Start-Process -FilePath 'node' `
     -ArgumentList @('scripts\check-package-policy.mjs', $targetZip, $Version) `
