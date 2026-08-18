@@ -97,6 +97,18 @@ jobs:
       - name: Validate the ZIP, write SHA-256, and build the asset inventory
         run: node .github/scripts/release-tools/preflight.mjs dist/release "${{ needs.detect.outputs.version }}"
 
+      - name: Enforce package policy (same script as the local release build)
+        run: |
+          $zip = Get-ChildItem "dist/release/HubFetch-${{ needs.detect.outputs.version }}-windows-x64.zip" | Select-Object -First 1
+          node scripts/check-package-policy.mjs $zip.FullName "${{ needs.detect.outputs.version }}"
+        shell: pwsh
+
+      - name: Bind release manifest to source evidence (same script as local build)
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem "dist/release/HubFetch-${{ needs.detect.outputs.version }}-windows-x64.zip" | Select-Object -First 1
+          node scripts/release-manifest.mjs dist/release $zip.Name "${{ needs.detect.outputs.commit_sha }}" "${{ needs.detect.outputs.version }}" --finalize
+
       - name: Record dry-run result
         if: needs.detect.outputs.dry_run == 'true'
         run: |

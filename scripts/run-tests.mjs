@@ -17,7 +17,14 @@ timer.unref()
 
 function run(cwd) {
   return new Promise((resolveRun, rejectRun) => {
-    activeChild = spawn(vitest, ['run'], { cwd, stdio: 'inherit', env: process.env })
+    // shell:true is required on Windows: spawning a `.cmd` shim directly (e.g.
+    // node_modules/.bin/vitest.cmd) without a shell throws `spawn EINVAL`.
+    activeChild = spawn(vitest, ['run'], {
+      cwd,
+      stdio: 'inherit',
+      env: process.env,
+      shell: true
+    })
     activeChild.once('error', rejectRun)
     activeChild.once('exit', (code, signal) => {
       activeChild = undefined
