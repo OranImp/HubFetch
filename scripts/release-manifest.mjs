@@ -42,8 +42,14 @@ function parseArgs(argv) {
   for (let i = 0; i < args.length; i += 1) {
     if (args[i].startsWith('--')) {
       const key = args[i].slice(2)
-      options[key] = args[i + 1]
-      i += 1
+      const next = args[i + 1]
+      // Treat a bare flag (no following value) as boolean true, e.g. --finalize.
+      if (next === undefined || next.startsWith('--')) {
+        options[key] = true
+      } else {
+        options[key] = next
+        i += 1
+      }
     } else {
       positional.push(args[i])
     }
