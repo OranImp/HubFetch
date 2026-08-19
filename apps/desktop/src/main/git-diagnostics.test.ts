@@ -99,7 +99,25 @@ describe('fixture executables cover supported/missing/old/timeout states', () =>
   it('reports an old git xet version as outdated', async () => {
     const report = await makeGitDiagnostics('git-old-xet.cjs').check()
     expect(report.xet.status).toBe('old')
-    expect(report.xet.version).toBe('0.9.2')
+    expect(report.xet.version).toBe('0.0.5')
+  })
+
+  it('reports HF-fork git-xet 0.2.1 with filters as configured', async () => {
+    const report = await new GitDiagnostics({
+      runner: {
+        runCommand: async (argv, opts) => {
+          if (argv.includes('xet') && (argv.at(-1) === 'version' || argv.at(-1) === '--version')) {
+            return okCommand('git-xet version 0.2.1')
+          }
+          return runCommandBounded(argv, opts)
+        }
+      },
+      gitCommand: [process.execPath, join(FIXTURES, 'git-ok.cjs')],
+      sshCommand: [process.execPath, join(FIXTURES, 'ssh-ok.cjs')],
+      timeoutMs: 1000
+    }).check()
+    expect(report.xet.status).toBe('configured')
+    expect(report.xet.version).toBe('0.2.1')
   })
 
   it('uses the `git xet --version` fallback when `git xet version` is rejected', async () => {
@@ -150,6 +168,44 @@ describe('credential helper combinations', () => {
     expect(report.credentials.status).toBe('configured')
     expect(report.credentials.hasGcm).toBe(true)
     expect(report.gcm.status).toBe('missing')
+  })
+
+  it('uses the `git credential-manager --version` fallback when `version` is rejected', async () => {
+    const report = await new GitDiagnostics({
+      runner: {
+        runCommand: async (argv, opts) => {
+          if (argv.includes('credential-manager') && argv.at(-1) === 'version') {
+            return okCommand("'version' was not matched. Did you mean --version?", 1)
+          }
+          if (argv.includes('credential-manager') && argv.at(-1) === '--version') {
+            return okCommand('Git Credential Manager version 2.7.3+b77d0db269')
+          }
+          return runCommandBounded(argv, opts)
+        }
+      },
+      gitCommand: [process.execPath, join(FIXTURES, 'git-ok.cjs')],
+      sshCommand: [process.execPath, join(FIXTURES, 'ssh-ok.cjs')],
+      timeoutMs: 1000
+    }).check()
+    expect(report.gcm.status).toBe('available')
+    expect(report.gcm.version).toBe('2.7.3')
+  })
+
+  it('reports GCM as nonzero when both version forms fail without the missing marker', async () => {
+    const report = await new GitDiagnostics({
+      runner: {
+        runCommand: async (argv, opts) => {
+          if (argv.includes('credential-manager')) {
+            return okCommand("'version' was not matched. Did you mean --version?", 1)
+          }
+          return runCommandBounded(argv, opts)
+        }
+      },
+      gitCommand: [process.execPath, join(FIXTURES, 'git-ok.cjs')],
+      sshCommand: [process.execPath, join(FIXTURES, 'ssh-ok.cjs')],
+      timeoutMs: 1000
+    }).check()
+    expect(report.gcm.status).toBe('nonzero')
   })
 
   it('classifies a hanging credential config probe as a typed timeout', async () => {

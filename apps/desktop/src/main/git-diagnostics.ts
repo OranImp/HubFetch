@@ -100,13 +100,13 @@ export interface GitDiagnosticsOptions {
   timeoutMs?: number
   /** Brief result cache lifetime in milliseconds (default 2000). */
   cacheTtlMs?: number
-  /** Oldest Git-Xet version still considered supported (default 0.10.0). */
+  /** Oldest Git-Xet version still considered supported (default 0.1.0). */
   minXetVersion?: string
 }
 
 export const DEFAULT_TIMEOUT_MS = 5_000
 export const DEFAULT_CACHE_TTL_MS = 2_000
-const DEFAULT_MIN_XET_VERSION = '0.10.0'
+const DEFAULT_MIN_XET_VERSION = '0.1.0'
 
 /** Bump when the probe set or its parsing changes; participates in the fingerprint. */
 const PROBE_VERSION = 1
@@ -459,19 +459,28 @@ export class GitDiagnostics {
   }
 
   private async probeGcm(): Promise<ToolProbeResult> {
-    const outcome = await this.probeCommand([...this.gitCommand, 'credential-manager', 'version'])
-    if ('timeout' in outcome) return { status: 'timeout', version: null }
-    if (outcome.status === 'launch-error') {
-      return { status: classifyLaunchError(outcome), version: null }
+    const primary = await this.probeCommand([...this.gitCommand, 'credential-manager', 'version'])
+    let outcome: CommandOutcome | { timeout: true }
+    if ('timeout' in primary) return { status: 'timeout', version: null }
+    if (primary.status === 'launch-error' || primary.exitCode !== 0) {
+      const fallback = await this.probeCommand([
+        ...this.gitCommand,
+        'credential-manager',
+        '--version'
+      ])
+      if ('timeout' in fallback) return { status: 'timeout', version: null }
+      if (fallback.status === 'launch-error' || fallback.exitCode !== 0) {
+        const marker = `${combined(primary)}\n${combined(fallback)}`.toLowerCase()
+        return {
+          status: marker.includes(MISSING_SUBCOMMAND_MARKER) ? 'missing' : 'nonzero',
+          version: null
+        }
+      }
+      outcome = fallback
+    } else {
+      outcome = primary
     }
-    if (outcome.exitCode === 0) {
-      return { status: 'available', version: extractSemver(combined(outcome)) }
-    }
-    const marker = combined(outcome).toLowerCase()
-    return {
-      status: marker.includes(MISSING_SUBCOMMAND_MARKER) ? 'missing' : 'nonzero',
-      version: null
-    }
+    return { status: 'available', version: extractSemver(combined(outcome)) }
   }
 
   private async probeSsh(): Promise<ToolProbeResult> {

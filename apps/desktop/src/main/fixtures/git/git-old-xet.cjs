@@ -1,6 +1,6 @@
 'use strict'
-// Todo 28 fixture: Git-Xet installed but at an OLD version (0.9.2) below the
-// supported minimum; filters configured; helper + GCM healthy.
+// Todo 28 fixture: Git-Xet installed but at an OLD version (0.0.5) below the
+// supported minimum (0.1.0); filters configured; helper + GCM healthy.
 const args = process.argv.slice(2)
 if (args.some((a) => a === 'install')) {
   process.stderr.write('MUTATION GUARD: install was requested\n')
@@ -13,7 +13,7 @@ if (sub === '--version') {
 }
 if (sub === 'xet') {
   if (args[1] === 'version' || args[1] === '--version') {
-    process.stdout.write('git-xet version 0.9.2\n')
+    process.stdout.write('git-xet version 0.0.5\n')
     process.exit(0)
   }
   process.exit(1)
