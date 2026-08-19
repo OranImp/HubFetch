@@ -17,7 +17,8 @@ import {
   Shield,
   UserCircle2,
   UserPen,
-  Wifi
+  Wifi,
+  Wrench
 } from 'lucide-react'
 import type {
   AccentPreset,
@@ -56,6 +57,7 @@ import { isAuthError } from '@/lib/errors'
 import { PrivacySection } from '@/components/settings/PrivacySection'
 import { ProfileSection } from '@/components/settings/ProfileSection'
 import { NetworkSection } from '@/components/settings/NetworkSection'
+import { CloneToolsSection } from '@/components/settings/CloneToolsSection'
 import { DesktopSection } from '@/components/settings/DesktopSection'
 
 const REPO_URL = 'https://github.com/OranImp/HubFetch'
@@ -128,7 +130,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     labelKey: 'settings:groups.connection',
-    items: [{ id: 'network', labelKey: 'settings:network.title', icon: Wifi }]
+    items: [
+      { id: 'network', labelKey: 'settings:network.title', icon: Wifi },
+      { id: 'cloneTools', labelKey: 'settings:cloneTools.title', icon: Wrench }
+    ]
   },
   {
     labelKey: 'settings:groups.system',
@@ -975,6 +980,7 @@ const SECTION_CONTENT: Record<SettingsSection, () => React.JSX.Element> = {
   downloads: DownloadsSection,
   notifications: NotificationsSection,
   network: NetworkSection,
+  cloneTools: CloneToolsSection,
   desktop: DesktopSection,
   privacy: PrivacySection,
   about: AboutSection

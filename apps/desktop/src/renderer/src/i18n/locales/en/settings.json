@@ -122,6 +122,22 @@
     "interface": "Interface",
     "system": "System"
   },
+  "cloneTools": {
+    "title": "Clone tools",
+    "description": "Git, Git-Xet, and Git Credential Manager are required or recommended for cloning. HubFetch opens the official download page; finish setup there, then recheck. Restart the app if Recheck still reports missing.",
+    "recheck": "Recheck",
+    "install": "Open download page",
+    "copyWinget": "Copy winget command",
+    "copyConfigure": "Copy git xet install",
+    "copied": "Copied",
+    "copyFailed": "Could not copy",
+    "restartHint": "If Recheck still reports missing, restart HubFetch so it can see PATH changes.",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "gcm": "Git Credential Manager",
+    "required": "Required for clone",
+    "recommended": "Recommended"
+  },
   "network": {
     "apply": "Apply",
     "description": "Override the Hub API base URL and optionally route traffic through an HTTP(S) proxy. Leave blank to use defaults.",

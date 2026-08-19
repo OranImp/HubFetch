@@ -74,7 +74,13 @@
     "gitMissing": "需要 Git 但未找到。请安装 Git 后重试。",
     "gitXetMissing": "建议使用 Git-Xet 扩展处理 LFS 文件。",
     "credentialHelperMissing": "建议使用 Git 凭据管理器进行 HTTPS 身份验证。",
-    "sshMissing": "SSH 传输需要 SSH 代理。"
+    "sshMissing": "SSH 传输需要 SSH 代理。",
+    "install": "打开下载页",
+    "copyWinget": "复制 winget 命令",
+    "copyConfigure": "复制 git xet install",
+    "copied": "已复制",
+    "copyFailed": "无法复制",
+    "restartHint": "如果重新检查仍显示缺失，请重启 HubFetch 以使其识别 PATH 变更。"
   },
   "derivedUrl": {
     "label": "远程 URL",

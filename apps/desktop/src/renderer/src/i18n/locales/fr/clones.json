@@ -74,7 +74,13 @@
     "gitMissing": "Git est requis mais introuvable. Installez Git et réessayez.",
     "gitXetMissing": "L'extension Git-Xet est recommandée pour les fichiers LFS.",
     "credentialHelperMissing": "Git Credential Manager est recommandé pour l'authentification HTTPS.",
-    "sshMissing": "L'agent SSH est requis pour le transport SSH."
+    "sshMissing": "L'agent SSH est requis pour le transport SSH.",
+    "install": "Ouvrir la page de téléchargement",
+    "copyWinget": "Copier la commande winget",
+    "copyConfigure": "Copier git xet install",
+    "copied": "Copié",
+    "copyFailed": "Impossible de copier",
+    "restartHint": "Si la revérification signale toujours des éléments manquants, redémarrez HubFetch pour qu'il puisse détecter les modifications de PATH."
   },
   "derivedUrl": {
     "label": "URL distante",

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloneRecord, DiagnosticReport } from '@hubfetch/shared'
@@ -23,10 +23,12 @@ vi.hoisted(() => {
 
 const clones = vi.hoisted(() => ({ createClone: vi.fn() }))
 const diagnostics = vi.hoisted(() => ({ runDiagnostics: vi.fn() }))
+const cloneTools = vi.hoisted(() => ({ performCloneToolInstall: vi.fn() }))
 const router = vi.hoisted(() => ({ navigate: vi.fn() }))
 
 vi.mock('@/lib/clones', () => clones)
 vi.mock('@/lib/diagnostics', () => diagnostics)
+vi.mock('@/lib/clone-tools', () => cloneTools)
 vi.mock('react-router', () => ({
   useNavigate: () => router.navigate
 }))
@@ -40,7 +42,16 @@ import { CloneCreatePage } from './CloneCreatePage'
 
 const CREATED_ID = '11111111-1111-4111-8111-111111111111'
 
-function diagnosticReport(gitPass: boolean): DiagnosticReport {
+interface ReportOverrides {
+  sshPass?: boolean
+  xetUninitialized?: boolean
+}
+
+function diagnosticReport(
+  gitPass: boolean,
+  overrides: ReportOverrides = {}
+): DiagnosticReport {
+  const { sshPass = true, xetUninitialized = false } = overrides
   const checkedAt = '2026-08-17T00:00:00.000Z'
   return {
     completedAt: checkedAt,
@@ -58,8 +69,10 @@ function diagnosticReport(gitPass: boolean): DiagnosticReport {
         id: 'git.xet',
         category: 'git',
         status: 'warning',
-        reasonCode: 'missing',
-        message: 'Git-Xet is not installed',
+        reasonCode: xetUninitialized ? 'unconfigured' : 'missing',
+        message: xetUninitialized
+          ? 'Git-Xet is installed but its filters are not configured'
+          : 'Git-Xet is not installed',
         durationMs: 1,
         checkedAt
       },
@@ -75,9 +88,9 @@ function diagnosticReport(gitPass: boolean): DiagnosticReport {
       {
         id: 'git.ssh',
         category: 'credentials',
-        status: 'pass',
-        reasonCode: 'ok',
-        message: 'SSH is available',
+        status: sshPass ? 'pass' : 'failure',
+        reasonCode: sshPass ? 'ok' : 'missing',
+        message: sshPass ? 'SSH is available' : 'SSH is not available',
         durationMs: 1,
         checkedAt
       }
@@ -85,7 +98,7 @@ function diagnosticReport(gitPass: boolean): DiagnosticReport {
   }
 }
 
-function renderPage(): void {
+function renderPage(): QueryClient {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
   })
@@ -94,6 +107,7 @@ function renderPage(): void {
       <CloneCreatePage />
     </QueryClientProvider>
   )
+  return client
 }
 
 async function waitForReady(gitMessage = 'Git is installed'): Promise<void> {
@@ -112,10 +126,16 @@ afterEach(() => {
   cleanup()
   clones.createClone.mockReset()
   diagnostics.runDiagnostics.mockReset()
+  cloneTools.performCloneToolInstall.mockReset()
   router.navigate.mockReset()
 })
 
 beforeEach(() => {
+  Object.defineProperty(window.navigator, 'clipboard', {
+    value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    writable: true,
+    configurable: true
+  })
   diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport(true))
   clones.createClone.mockResolvedValue({ id: CREATED_ID } satisfies Pick<CloneRecord, 'id'>)
 })
@@ -146,6 +166,14 @@ describe('CloneCreatePage', () => {
     diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport(false))
     renderPage()
     await waitForReady('Git is not installed')
+    // The Git row offers the guided actions: open the official page + copy winget.
+    const gitRow = screen.getByTestId('clone-prereq-row-git')
+    expect(
+      within(gitRow).getByRole('button', { name: 'clones:diagnostics.install' })
+    ).toBeTruthy()
+    expect(
+      within(gitRow).getByRole('button', { name: 'clones:diagnostics.copyWinget' })
+    ).toBeTruthy()
     fireEvent.change(screen.getByLabelText('clones:id.label'), {
       target: { value: 'acme/demo-model' }
     })
@@ -155,6 +183,68 @@ describe('CloneCreatePage', () => {
     expect(createButton().disabled).toBe(true)
     fireEvent.click(createButton())
     expect(clones.createClone).not.toHaveBeenCalled()
+  })
+
+  it('shows no actions on the SSH row and still blocks create for SSH transport', async () => {
+    diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport(true, { sshPass: false }))
+    renderPage()
+    await waitForReady()
+    fireEvent.click(screen.getByRole('radio', { name: 'clones:transport.ssh' }))
+    const sshRow = await screen.findByTestId('clone-prereq-row-ssh')
+    expect(
+      within(sshRow).queryByRole('button', { name: 'clones:diagnostics.install' })
+    ).toBeNull()
+    expect(
+      within(sshRow).queryByRole('button', { name: 'clones:diagnostics.copyWinget' })
+    ).toBeNull()
+    expect(
+      within(sshRow).queryByRole('button', { name: 'clones:diagnostics.copyConfigure' })
+    ).toBeNull()
+    fireEvent.change(screen.getByLabelText('clones:id.label'), {
+      target: { value: 'acme/demo-model' }
+    })
+    fireEvent.change(screen.getByLabelText('clones:destination.label'), {
+      target: { value: 'E:\\empty-clone-dest' }
+    })
+    expect(createButton().disabled).toBe(true)
+    fireEvent.click(createButton())
+    expect(clones.createClone).not.toHaveBeenCalled()
+  })
+
+  it('offers copy-configure only when Git-Xet is installed but uninitialized', async () => {
+    diagnostics.runDiagnostics.mockResolvedValue(
+      diagnosticReport(true, { xetUninitialized: true })
+    )
+    renderPage()
+    await waitForReady()
+    const xetRow = screen.getByTestId('clone-prereq-row-git-xet')
+    expect(
+      within(xetRow).queryByRole('button', { name: 'clones:diagnostics.install' })
+    ).toBeNull()
+    expect(
+      within(xetRow).queryByRole('button', { name: 'clones:diagnostics.copyWinget' })
+    ).toBeNull()
+    const copyConfigure = within(xetRow).getByRole('button', {
+      name: 'clones:diagnostics.copyConfigure'
+    })
+    fireEvent.click(copyConfigure)
+    await waitFor(() =>
+      expect(window.navigator.clipboard.writeText).toHaveBeenCalledWith('git xet install')
+    )
+    // Copying the configure command never opens a download page.
+    expect(cloneTools.performCloneToolInstall).not.toHaveBeenCalled()
+  })
+
+  it('recheck writes the report to the shared query and shows the restart hint when Git is still missing', async () => {
+    const initial = diagnosticReport(false)
+    const rechecked = diagnosticReport(false)
+    diagnostics.runDiagnostics.mockResolvedValueOnce(initial).mockResolvedValueOnce(rechecked)
+    const client = renderPage()
+    await waitForReady('Git is not installed')
+    fireEvent.click(screen.getByRole('button', { name: 'clones:diagnostics.recheck' }))
+    await waitFor(() => expect(client.getQueryData(['diagnostics'])).toEqual(rechecked))
+    expect(diagnostics.runDiagnostics).toHaveBeenCalledTimes(2)
+    expect(screen.getByText('clones:diagnostics.restartHint')).toBeTruthy()
   })
 
   it('creates once and navigates with the new task selected', async () => {

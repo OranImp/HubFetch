@@ -122,6 +122,22 @@
     "interface": "インターフェース",
     "system": "システム"
   },
+  "cloneTools": {
+    "title": "クローンツール",
+    "description": "クローンにはGit、Git-Xet、およびGit Credential Managerが必要または推奨されます。HubFetchは公式ダウンロードページを開きます。そこでセットアップを完了してから再確認してください。再確認してもまだ見つからない場合は、アプリを再起動してPATHの変更を認識させてください。",
+    "recheck": "再確認",
+    "install": "ダウンロードページを開く",
+    "copyWinget": "wingetコマンドをコピー",
+    "copyConfigure": "git xet installをコピー",
+    "copied": "コピーしました",
+    "copyFailed": "コピーできませんでした",
+    "restartHint": "再確認してもまだ見つからない場合は、HubFetchを再起動してPATHの変更を認識させてください。",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "gcm": "Git Credential Manager",
+    "required": "クローンに必須",
+    "recommended": "推奨"
+  },
   "network": {
     "apply": "適用",
     "description": "Hub APIのベースURLを上書きし、必要に応じてHTTP(S)プロキシ経由でトラフィックをルーティングします。デフォルトを使用する場合は空欄のままにしてください。",

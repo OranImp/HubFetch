@@ -17,6 +17,7 @@ import type {
 import type { BundleSources, SupportBundleResult } from './support-bundle'
 import { createBundleRedactor, SupportBundleBuilder } from './support-bundle'
 import { DiagnosticsService, type DiagnosticsEnv } from './diagnostics'
+import type { GitDiagnostics } from './git-diagnostics'
 import { secretRegistry } from './security/secret-registry'
 import { redactor } from './security/log'
 
@@ -30,6 +31,12 @@ export interface DiagnosticsCoordinatorOptions {
   /** Trim the on-disk log files to their budget before an export reads them. */
   flushLogs?: () => Promise<void>
   broadcast: (progress: DiagnosticsProgress) => void
+  /**
+   * Shared Git/Git-Xet/credential readiness probe (plan Todo 4). The same
+   * instance backs CloneManager, so `run()` invalidates it first: a Recheck
+   * must never report a pre-run cache hit.
+   */
+  gitDiagnostics: GitDiagnostics
 }
 
 export class DiagnosticsCoordinator {
@@ -42,6 +49,7 @@ export class DiagnosticsCoordinator {
   private readonly logReader: () => { main: string; renderer: string }
   private readonly flushLogs: (() => Promise<void>) | undefined
   private readonly broadcast: (progress: DiagnosticsProgress) => void
+  private readonly gitDiagnostics: GitDiagnostics
 
   constructor(options: DiagnosticsCoordinatorOptions) {
     this.envFactory = options.envFactory
@@ -50,6 +58,7 @@ export class DiagnosticsCoordinator {
     this.logReader = options.logReader
     this.flushLogs = options.flushLogs
     this.broadcast = options.broadcast
+    this.gitDiagnostics = options.gitDiagnostics
   }
 
   get report(): DiagnosticReport | null {
@@ -61,7 +70,13 @@ export class DiagnosticsCoordinator {
     this.runController?.abort()
     const controller = new AbortController()
     this.runController = controller
-    const service = new DiagnosticsService(this.envFactory())
+    // Drop the shared probe cache first so this run re-probes the machine
+    // (Recheck semantics) instead of serving a pre-run snapshot; the same
+    // instance is shared with CloneManager, so its next gate sees fresh state.
+    this.gitDiagnostics.invalidate()
+    const service = new DiagnosticsService(this.envFactory(), {
+      gitDiagnostics: this.gitDiagnostics
+    })
     try {
       const report = await service.run(controller.signal, ({ completed, total, currentId }) => {
         this.broadcast({

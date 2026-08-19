@@ -74,7 +74,13 @@
     "gitMissing": "Gitが必要ですが見つかりません。Gitをインストールして再試行してください。",
     "gitXetMissing": "LFSファイルにはGit-Xet拡張機能をお勧めします。",
     "credentialHelperMissing": "HTTPS認証にはGit Credential Managerをお勧めします。",
-    "sshMissing": "SSHトランスポートにはSSHエージェントが必要です。"
+    "sshMissing": "SSHトランスポートにはSSHエージェントが必要です。",
+    "install": "ダウンロードページを開く",
+    "copyWinget": "wingetコマンドをコピー",
+    "copyConfigure": "git xet installをコピー",
+    "copied": "コピーしました",
+    "copyFailed": "コピーできませんでした",
+    "restartHint": "再確認してもまだ見つからない場合は、HubFetchを再起動してPATHの変更を認識させてください。"
   },
   "derivedUrl": {
     "label": "リモートURL",

@@ -122,6 +122,22 @@
     "interface": "Interfaz",
     "system": "Sistema"
   },
+  "cloneTools": {
+    "title": "Herramientas de clonación",
+    "description": "Se requieren o recomiendan Git, Git-Xet y Git Credential Manager para la clonación. HubFetch abre la página de descarga oficial; complete la configuración allí y luego verifique de nuevo. Reinicie la aplicación si la verificación aún informa que falta.",
+    "recheck": "Verificar de nuevo",
+    "install": "Abrir página de descarga",
+    "copyWinget": "Copiar comando winget",
+    "copyConfigure": "Copiar git xet install",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar",
+    "restartHint": "Si la verificación aún informa que falta, reinicie HubFetch para que pueda detectar los cambios en PATH.",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "gcm": "Git Credential Manager",
+    "required": "Requerido para clonar",
+    "recommended": "Recomendado"
+  },
   "network": {
     "apply": "Aplicar",
     "description": "Anule la URL base de la API del Hub y, opcionalmente, enrute el tráfico a través de un proxy HTTP(S). Déjelo en blanco para usar los valores predeterminados.",

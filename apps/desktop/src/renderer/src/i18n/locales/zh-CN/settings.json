@@ -122,6 +122,22 @@
     "interface": "界面",
     "system": "系统"
   },
+  "cloneTools": {
+    "title": "克隆工具",
+    "description": "Git、Git-Xet 和 Git 凭据管理器是克隆所需或推荐的工具。HubFetch 会打开官方下载页，在那里完成安装，然后重新检查。如果重新检查仍显示缺失，请重启应用以使其识别 PATH 变更。",
+    "recheck": "重新检查",
+    "install": "打开下载页",
+    "copyWinget": "复制 winget 命令",
+    "copyConfigure": "复制 git xet install",
+    "copied": "已复制",
+    "copyFailed": "无法复制",
+    "restartHint": "如果重新检查仍显示缺失，请重启 HubFetch 以使其识别 PATH 变更。",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "gcm": "Git 凭据管理器",
+    "required": "克隆必需",
+    "recommended": "推荐"
+  },
   "network": {
     "apply": "应用",
     "description": "可覆盖 Hub API 地址，并可选通过 HTTP(S) 代理访问。留空则使用默认值。",

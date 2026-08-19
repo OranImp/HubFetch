@@ -122,6 +122,22 @@
     "interface": "인터페이스",
     "system": "시스템"
   },
+  "cloneTools": {
+    "title": "복제 도구",
+    "description": "복제하려면 Git, Git-Xet 및 Git Credential Manager가 필요하거나 권장됩니다. HubFetch는 공식 다운로드 페이지를 열어줍니다. 거기서 설치를 완료한 다음 다시 확인하세요. 다시 확인해도 여전히 누락으로 표시되면 앱을 재시작하여 PATH 변경 사항을 인식하도록 하세요.",
+    "recheck": "다시 확인",
+    "install": "다운로드 페이지 열기",
+    "copyWinget": "winget 명령 복사",
+    "copyConfigure": "git xet install 복사",
+    "copied": "복사됨",
+    "copyFailed": "복사할 수 없음",
+    "restartHint": "다시 확인해도 여전히 누락으로 표시되면 HubFetch를 재시작하여 PATH 변경 사항을 인식하도록 하세요.",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "gcm": "Git Credential Manager",
+    "required": "복제에 필수",
+    "recommended": "권장됨"
+  },
   "network": {
     "apply": "적용",
     "description": "Hub API 기본 URL을 재정의하고 필요한 경우 HTTP(S) 프록시를 통해 트래픽을 전달합니다. 기본값을 사용하려면 비워 두세요.",

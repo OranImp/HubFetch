@@ -74,7 +74,13 @@
     "gitMissing": "Git is required but not found. Install Git and try again.",
     "gitXetMissing": "Git-Xet extension is recommended for LFS files.",
     "credentialHelperMissing": "Git Credential Manager is recommended for HTTPS authentication.",
-    "sshMissing": "SSH agent is required for SSH transport."
+    "sshMissing": "SSH agent is required for SSH transport.",
+    "install": "Open download page",
+    "copyWinget": "Copy winget command",
+    "copyConfigure": "Copy git xet install",
+    "copied": "Copied",
+    "copyFailed": "Could not copy",
+    "restartHint": "If Recheck still reports missing, restart HubFetch so it can see PATH changes."
   },
   "derivedUrl": {
     "label": "Remote URL",

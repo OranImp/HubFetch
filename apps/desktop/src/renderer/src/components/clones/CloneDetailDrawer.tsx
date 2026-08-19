@@ -1,8 +1,8 @@
-import { useId, useMemo } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CloneRecord, DiagnosticCheck } from '@hubfetch/shared'
-import { CheckCircle2, Copy, FolderOpen, RefreshCw, TriangleAlert, XCircle } from 'lucide-react'
+import { Copy, FolderOpen, RefreshCw, TriangleAlert, XCircle } from 'lucide-react'
 import { cloneDetailLines, cloneQueuePosition, describeClonePhase } from '@/lib/clone-detail'
 import { runDiagnostics } from '@/lib/diagnostics'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { CloneStatusBadge } from '@/components/clones/CloneStatusBadge'
+import { ClonePrerequisiteRow } from '@/components/clones/ClonePrerequisiteRow'
 
 const GIT_CHECK_ID = 'git.version'
 const GIT_XET_CHECK_ID = 'git.xet'
@@ -79,10 +80,13 @@ export function CloneDetailDrawer({
     queryFn: () => runDiagnostics(),
     staleTime: 60_000
   })
+  const [rechecked, setRechecked] = useState(false)
+
   const rerunDiagnostics = useMutation({
     mutationFn: () => runDiagnostics(),
     onSuccess: (report) => {
       queryClient.setQueryData(['diagnostics'], report)
+      setRechecked(true)
     }
   })
 
@@ -90,6 +94,11 @@ export function CloneDetailDrawer({
   const gitXetCheck = checkById(diagnostics.data?.checks, GIT_XET_CHECK_ID)
   const gcmCheck = checkById(diagnostics.data?.checks, GIT_GCM_CHECK_ID)
   const sshCheck = checkById(diagnostics.data?.checks, GIT_SSH_CHECK_ID)
+
+  // Restart hint: after a Recheck, if a shown prerequisite row is still not
+  // passing, Windows may not have picked up the new PATH yet.
+  const shownChecks = [gitCheck, gitXetCheck, record.transport === 'https' ? gcmCheck : sshCheck]
+  const showRestartHint = rechecked && shownChecks.some((check) => check?.status !== 'pass')
 
   const bodyId = useId()
   const detailRows = lines.map((line) => (
@@ -250,9 +259,12 @@ export function CloneDetailDrawer({
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
-                <DiagnosticRow
+                <ClonePrerequisiteRow
+                  compact
+                  tool="git"
                   label={t('clones:diagnostics.git')}
-                  pass={gitCheck?.status === 'pass'}
+                  check={gitCheck}
+                  gitPass={gitCheck?.status === 'pass'}
                   message={
                     gitCheck?.message ??
                     (gitCheck?.status === 'pass'
@@ -260,9 +272,12 @@ export function CloneDetailDrawer({
                       : t('clones:diagnostics.gitMissing'))
                   }
                 />
-                <DiagnosticRow
+                <ClonePrerequisiteRow
+                  compact
+                  tool="git-xet"
                   label={t('clones:diagnostics.gitXet')}
-                  pass={gitXetCheck?.status === 'pass'}
+                  check={gitXetCheck}
+                  gitPass={gitCheck?.status === 'pass'}
                   warning
                   message={
                     gitXetCheck?.message ??
@@ -272,9 +287,12 @@ export function CloneDetailDrawer({
                   }
                 />
                 {record.transport === 'https' ? (
-                  <DiagnosticRow
+                  <ClonePrerequisiteRow
+                    compact
+                    tool="gcm"
                     label={t('clones:diagnostics.credentialHelper')}
-                    pass={gcmCheck?.status === 'pass'}
+                    check={gcmCheck}
+                    gitPass={gitCheck?.status === 'pass'}
                     warning
                     message={
                       gcmCheck?.message ??
@@ -284,9 +302,12 @@ export function CloneDetailDrawer({
                     }
                   />
                 ) : (
-                  <DiagnosticRow
+                  <ClonePrerequisiteRow
+                    compact
+                    tool="ssh"
                     label={t('clones:diagnostics.sshAgent')}
-                    pass={sshCheck?.status === 'pass'}
+                    check={sshCheck}
+                    gitPass={gitCheck?.status === 'pass'}
                     message={
                       sshCheck?.message ??
                       (sshCheck?.status === 'pass'
@@ -297,44 +318,13 @@ export function CloneDetailDrawer({
                 )}
               </div>
             )}
+
+            {showRestartHint ? (
+              <p className="text-[11.5px] text-ink-faint">{t('clones:diagnostics.restartHint')}</p>
+            ) : null}
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function DiagnosticRow({
-  label,
-  pass,
-  message,
-  warning
-}: {
-  label: string
-  pass: boolean
-  message: string
-  warning?: boolean
-}): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-2 text-[12px]">
-      {pass ? (
-        <CheckCircle2 className="size-3.5 shrink-0 text-success" aria-hidden />
-      ) : (
-        <XCircle
-          className={cn('size-3.5 shrink-0', warning ? 'text-warning' : 'text-error')}
-          aria-hidden
-        />
-      )}
-      <span className="min-w-0 flex-1 truncate text-ink-muted">{label}</span>
-      <span
-        className={cn(
-          'min-w-0 max-w-40 truncate text-right',
-          pass ? 'text-success' : warning ? 'text-warning' : 'text-error'
-        )}
-        title={message}
-      >
-        {message}
-      </span>
-    </div>
   )
 }

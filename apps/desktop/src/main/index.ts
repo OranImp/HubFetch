@@ -241,12 +241,16 @@ if (!gotLock) {
     // before any worker spawns; progress persistence is throttled; exactly one
     // terminal event per attempt pumps the next queued clone. Downloads are
     // untouched — CloneManager shares no concurrency state with DownloadManager.
+    // One shared Git readiness probe (plan Todo 4): CloneManager gates every
+    // start on it, and DiagnosticsCoordinator invalidates it before each run
+    // so a Recheck never reports a pre-run cache hit.
+    const gitDiagnostics = new GitDiagnostics({
+      runner: { runCommand: (argv, opts) => runCommandBounded(argv, opts) }
+    })
     const cloneManager = new CloneManager({
       store: new CloneStore(db),
       host: cloneHost,
-      diagnostics: new GitDiagnostics({
-        runner: { runCommand: (argv, opts) => runCommandBounded(argv, opts) }
-      }),
+      diagnostics: gitDiagnostics,
       publish: (records) => broadcast('evt:clones', records)
     })
     cloneManager.recover()
@@ -492,7 +496,8 @@ if (!gotLock) {
         await logCaptures.main.flush()
         await logCaptures.renderer.flush()
       },
-      broadcast: (progress) => broadcast('evt:diagnosticsProgress', progress)
+      broadcast: (progress) => broadcast('evt:diagnosticsProgress', progress),
+      gitDiagnostics
     })
 
     registerIpcHandlers(

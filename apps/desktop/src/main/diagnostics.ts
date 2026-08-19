@@ -24,6 +24,7 @@ import {
   diagnosticReportSchema
 } from '@hubfetch/shared'
 import { normalizeHubEndpoint } from '@hubfetch/shared'
+import { CLONE_TOOLS } from '@hubfetch/shared'
 import type { Redactor } from './security/redaction'
 import { redactor as processRedactor } from './security/log'
 import type {
@@ -723,7 +724,7 @@ export class DiagnosticsService {
               status: 'warning',
               reasonCode: 'outdated',
               message: `Git-Xet ${diag.xet.version ?? 'version unknown'} is older than the supported version`,
-              action: 'Upgrade Git-Xet (winget install --id git-xet.git-xet -e) and recheck.'
+              action: `Upgrade Git-Xet (${CLONE_TOOLS['git-xet'].wingetCommand}) and recheck.`
             }
           case 'uninitialized':
             return {
@@ -737,7 +738,7 @@ export class DiagnosticsService {
               status: 'warning',
               reasonCode: 'missing',
               message: 'Git-Xet is not installed',
-              action: 'Install Git-Xet (winget install --id git-xet.git-xet -e) to clone Xet repos.'
+              action: `Install Git-Xet (${CLONE_TOOLS['git-xet'].wingetCommand}) to clone Xet repos.`
             }
           case 'timeout':
             return {

@@ -17,12 +17,13 @@ import {
   type DiagnosticCheck,
   type ProxyMode
 } from '@hubfetch/shared'
-import { CheckCircle2, GitBranch, RefreshCw, XCircle } from 'lucide-react'
+import { GitBranch, RefreshCw } from 'lucide-react'
 import { createClone } from '@/lib/clones'
 import { runDiagnostics } from '@/lib/diagnostics'
 import { describeError } from '@/lib/errors'
 import { parseManualProxyDraft } from '@/lib/proxy'
 import { useAppStore } from '@/stores/app'
+import { ClonePrerequisiteRow } from '@/components/clones/ClonePrerequisiteRow'
 import { ProxySelector, type ProxySelectorLabels } from '@/components/settings/ProxySelector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -89,10 +90,13 @@ export function CloneCreatePage(): React.JSX.Element {
     staleTime: 60_000
   })
 
+  const [rechecked, setRechecked] = useState(false)
+
   const rerunDiagnostics = useMutation({
     mutationFn: () => runDiagnostics(),
     onSuccess: (report) => {
       queryClient.setQueryData(['diagnostics'], report)
+      setRechecked(true)
     }
   })
 
@@ -194,6 +198,11 @@ export function CloneCreatePage(): React.JSX.Element {
   const gitXetAvailable = gitXetCheck?.status === 'pass'
   const credHelperAvailable = gcmCheck?.status === 'pass'
   const sshAvailable = sshCheck?.status === 'pass'
+
+  // Restart hint: after a Recheck, if a shown prerequisite row is still not
+  // passing, Windows may not have picked up the new PATH yet.
+  const shownChecks = [gitCheck, gitXetCheck, transport === 'https' ? gcmCheck : sshCheck]
+  const showRestartHint = rechecked && shownChecks.some((check) => check?.status !== 'pass')
 
   const canSubmit = useMemo(() => {
     if (submitting) return false
@@ -555,42 +564,50 @@ export function CloneCreatePage(): React.JSX.Element {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <DiagnosticItem
+              <ClonePrerequisiteRow
+                tool="git"
                 label={t('clones:diagnostics.git')}
-                status={gitAvailable ? 'pass' : 'missing'}
+                check={gitCheck}
+                gitPass={gitAvailable}
                 message={
                   gitCheck?.message ??
                   (gitAvailable ? t('clones:diagnostics.pass') : t('clones:diagnostics.gitMissing'))
                 }
               />
-              <DiagnosticItem
+              <ClonePrerequisiteRow
+                tool="git-xet"
                 label={t('clones:diagnostics.gitXet')}
-                status={gitXetAvailable ? 'pass' : 'missing'}
+                check={gitXetCheck}
+                gitPass={gitAvailable}
+                warning
                 message={
                   gitXetCheck?.message ??
                   (gitXetAvailable
                     ? t('clones:diagnostics.pass')
                     : t('clones:diagnostics.gitXetMissing'))
                 }
-                warning={!gitXetAvailable}
               />
               {transport === 'https' && (
-                <DiagnosticItem
+                <ClonePrerequisiteRow
+                  tool="gcm"
                   label={t('clones:diagnostics.credentialHelper')}
-                  status={credHelperAvailable ? 'pass' : 'missing'}
+                  check={gcmCheck}
+                  gitPass={gitAvailable}
+                  warning
                   message={
                     gcmCheck?.message ??
                     (credHelperAvailable
                       ? t('clones:diagnostics.pass')
                       : t('clones:diagnostics.credentialHelperMissing'))
                   }
-                  warning={!credHelperAvailable}
                 />
               )}
               {transport === 'ssh' && (
-                <DiagnosticItem
+                <ClonePrerequisiteRow
+                  tool="ssh"
                   label={t('clones:diagnostics.sshAgent')}
-                  status={sshAvailable ? 'pass' : 'missing'}
+                  check={sshCheck}
+                  gitPass={gitAvailable}
                   message={
                     sshCheck?.message ??
                     (sshAvailable
@@ -601,6 +618,10 @@ export function CloneCreatePage(): React.JSX.Element {
               )}
             </div>
           )}
+
+          {showRestartHint ? (
+            <p className="text-[12px] text-ink-faint">{t('clones:diagnostics.restartHint')}</p>
+          ) : null}
         </div>
 
         {errors.form && (
@@ -626,37 +647,6 @@ export function CloneCreatePage(): React.JSX.Element {
           </Button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function DiagnosticItem({
-  label,
-  status,
-  message,
-  warning
-}: {
-  label: string
-  status: 'pass' | 'missing'
-  message: string
-  warning?: boolean
-}): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-2 text-[12.5px]">
-      {status === 'pass' ? (
-        <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
-      ) : (
-        <XCircle
-          className={`size-4 shrink-0 ${warning ? 'text-warning' : 'text-error'}`}
-          aria-hidden
-        />
-      )}
-      <span className="min-w-[120px] font-medium text-ink-strong">{label}</span>
-      <span
-        className={`flex-1 ${warning ? 'text-warning' : status === 'pass' ? 'text-success' : 'text-error'}`}
-      >
-        {message}
-      </span>
     </div>
   )
 }

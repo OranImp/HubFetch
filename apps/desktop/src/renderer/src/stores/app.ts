@@ -56,6 +56,7 @@ export type SettingsSection =
   | 'notifications'
   | 'privacy'
   | 'network'
+  | 'cloneTools'
   | 'desktop'
   | 'about'
 

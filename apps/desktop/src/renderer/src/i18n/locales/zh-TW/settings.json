@@ -122,6 +122,22 @@
     "interface": "介面",
     "system": "系統"
   },
+  "cloneTools": {
+    "title": "複製工具",
+    "description": "Git、Git-Xet 和 Git 憑證管理器是複製所需或建議的工具。HubFetch 會開啟官方下載頁面，在那裡完成安裝後再重新檢查。如果重新檢查仍顯示缺少，請重新啟動應用程式以使其識別 PATH 變更。",
+    "recheck": "重新檢查",
+    "install": "開啟下載頁面",
+    "copyWinget": "複製 winget 命令",
+    "copyConfigure": "複製 git xet install",
+    "copied": "已複製",
+    "copyFailed": "無法複製",
+    "restartHint": "如果重新檢查仍顯示缺少，請重新啟動 HubFetch 以使其識別 PATH 變更。",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "gcm": "Git 憑證管理器",
+    "required": "複製必需",
+    "recommended": "建議"
+  },
   "network": {
     "apply": "套用",
     "description": "覆寫 Hub API 基礎網址，並可選擇透過 HTTP(S) 代理伺服器轉送流量。留空則使用預設值。",
