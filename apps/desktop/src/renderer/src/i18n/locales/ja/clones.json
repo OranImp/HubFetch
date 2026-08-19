@@ -88,6 +88,16 @@
   },
   "create": "クローンを作成",
   "creating": "作成中…",
+  "createDisabled": {
+    "gitNotReady": "Git の準備ができていません。Git をインストールして再確認してください。",
+    "invalidRepoId": "有効なリポジトリIDを入力してください。",
+    "invalidDestination": "保存先フォルダを入力してください。",
+    "sshNotAvailable": "SSHトランスポートにはSSHが必要ですが、利用できません。",
+    "tokenRequired": "アプリトークン認証を使うには先にログインしてください。",
+    "invalidRevision": "有効なリビジョンを入力してください。",
+    "invalidProxy": "有効な手動プロキシURLを入力してください。",
+    "submitting": "クローンを作成しています。"
+  },
   "cancel": "キャンセル",
   "created": "クローンタスクが作成されました",
   "errors": {

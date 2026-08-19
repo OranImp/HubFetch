@@ -88,6 +88,16 @@
   },
   "create": "Créer le clone",
   "creating": "Création…",
+  "createDisabled": {
+    "gitNotReady": "Git n'est pas prêt. Installez Git puis vérifiez à nouveau.",
+    "invalidRepoId": "Saisissez un ID de dépôt valide.",
+    "invalidDestination": "Saisissez un dossier de destination.",
+    "sshNotAvailable": "SSH est requis pour le transport SSH, mais n'est pas disponible.",
+    "tokenRequired": "Connectez-vous d'abord pour utiliser l'authentification par jeton de l'app.",
+    "invalidRevision": "Saisissez une révision valide.",
+    "invalidProxy": "Saisissez une URL de proxy manuel valide.",
+    "submitting": "Un clone est déjà en cours de création."
+  },
   "cancel": "Annuler",
   "created": "Tâche de clonage créée",
   "errors": {

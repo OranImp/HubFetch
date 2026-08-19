@@ -88,6 +88,16 @@
   },
   "create": "创建克隆",
   "creating": "创建中…",
+  "createDisabled": {
+    "gitNotReady": "Git 尚未就绪。请安装 Git 后重新检查。",
+    "invalidRepoId": "请输入有效的仓库 ID。",
+    "invalidDestination": "请输入目标文件夹。",
+    "sshNotAvailable": "SSH 传输需要 SSH，但当前不可用。",
+    "tokenRequired": "使用应用令牌身份验证需要先登录。",
+    "invalidRevision": "请输入有效的版本。",
+    "invalidProxy": "请输入有效的手动代理 URL。",
+    "submitting": "正在创建克隆。"
+  },
   "cancel": "取消",
   "created": "克隆任务已创建",
   "errors": {

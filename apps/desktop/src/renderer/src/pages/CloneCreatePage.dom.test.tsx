@@ -47,10 +47,7 @@ interface ReportOverrides {
   xetUninitialized?: boolean
 }
 
-function diagnosticReport(
-  gitPass: boolean,
-  overrides: ReportOverrides = {}
-): DiagnosticReport {
+function diagnosticReport(gitPass: boolean, overrides: ReportOverrides = {}): DiagnosticReport {
   const { sshPass = true, xetUninitialized = false } = overrides
   const checkedAt = '2026-08-17T00:00:00.000Z'
   return {
@@ -152,7 +149,7 @@ describe('CloneCreatePage', () => {
     renderPage()
     await waitForReady()
     fireEvent.change(screen.getByLabelText('clones:id.label'), {
-      target: { value: 'https://huggingface.co/acme/model' }
+      target: { value: 'https://example.com/x/y' }
     })
     fireEvent.change(screen.getByLabelText('clones:destination.label'), {
       target: { value: 'E:\\empty-clone-dest' }
@@ -162,15 +159,59 @@ describe('CloneCreatePage', () => {
     expect(clones.createClone).not.toHaveBeenCalled()
   })
 
+  it('shows a live repo id error without a submit attempt', async () => {
+    renderPage()
+    await waitForReady()
+    fireEvent.change(screen.getByLabelText('clones:id.label'), {
+      target: { value: 'acme' }
+    })
+    expect(screen.getByText('clones:id.invalid')).toBeTruthy()
+    expect(clones.createClone).not.toHaveBeenCalled()
+  })
+
+  it('enables create when the form is valid and shows a disabled reason when a field is invalid', async () => {
+    renderPage()
+    await waitForReady()
+    fireEvent.change(screen.getByLabelText('clones:id.label'), {
+      target: { value: 'acme/demo-model' }
+    })
+    fireEvent.change(screen.getByLabelText('clones:destination.label'), {
+      target: { value: 'E:\\empty-clone-dest' }
+    })
+    expect(createButton().disabled).toBe(false)
+    expect(screen.queryByText('clones:createDisabled.invalidRepoId')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('clones:id.label'), {
+      target: { value: 'acme' }
+    })
+    expect(createButton().disabled).toBe(true)
+    expect(screen.getByText('clones:createDisabled.invalidRepoId')).toBeTruthy()
+  })
+
+  it('normalizes a pasted Hugging Face URL before create', async () => {
+    renderPage()
+    await waitForReady()
+    fireEvent.change(screen.getByLabelText('clones:id.label'), {
+      target: { value: 'https://huggingface.co/acme/model' }
+    })
+    fireEvent.change(screen.getByLabelText('clones:destination.label'), {
+      target: { value: 'E:\\empty-clone-dest' }
+    })
+    expect(createButton().disabled).toBe(false)
+    fireEvent.click(createButton())
+    await waitFor(() => expect(clones.createClone).toHaveBeenCalledTimes(1))
+    expect(clones.createClone.mock.calls[0]?.[0]).toMatchObject({
+      id: 'acme/model'
+    })
+  })
+
   it('does not call create when Git is missing', async () => {
     diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport(false))
     renderPage()
     await waitForReady('Git is not installed')
     // The Git row offers the guided actions: open the official page + copy winget.
     const gitRow = screen.getByTestId('clone-prereq-row-git')
-    expect(
-      within(gitRow).getByRole('button', { name: 'clones:diagnostics.install' })
-    ).toBeTruthy()
+    expect(within(gitRow).getByRole('button', { name: 'clones:diagnostics.install' })).toBeTruthy()
     expect(
       within(gitRow).getByRole('button', { name: 'clones:diagnostics.copyWinget' })
     ).toBeTruthy()
@@ -191,9 +232,7 @@ describe('CloneCreatePage', () => {
     await waitForReady()
     fireEvent.click(screen.getByRole('radio', { name: 'clones:transport.ssh' }))
     const sshRow = await screen.findByTestId('clone-prereq-row-ssh')
-    expect(
-      within(sshRow).queryByRole('button', { name: 'clones:diagnostics.install' })
-    ).toBeNull()
+    expect(within(sshRow).queryByRole('button', { name: 'clones:diagnostics.install' })).toBeNull()
     expect(
       within(sshRow).queryByRole('button', { name: 'clones:diagnostics.copyWinget' })
     ).toBeNull()
@@ -212,15 +251,11 @@ describe('CloneCreatePage', () => {
   })
 
   it('offers copy-configure only when Git-Xet is installed but uninitialized', async () => {
-    diagnostics.runDiagnostics.mockResolvedValue(
-      diagnosticReport(true, { xetUninitialized: true })
-    )
+    diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport(true, { xetUninitialized: true }))
     renderPage()
     await waitForReady()
     const xetRow = screen.getByTestId('clone-prereq-row-git-xet')
-    expect(
-      within(xetRow).queryByRole('button', { name: 'clones:diagnostics.install' })
-    ).toBeNull()
+    expect(within(xetRow).queryByRole('button', { name: 'clones:diagnostics.install' })).toBeNull()
     expect(
       within(xetRow).queryByRole('button', { name: 'clones:diagnostics.copyWinget' })
     ).toBeNull()

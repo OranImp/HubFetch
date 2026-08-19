@@ -9,6 +9,7 @@ import {
   cloneNamespaceNameSchema,
   cloneTagSchema,
   deriveCloneUrl,
+  normalizeCloneRepoId,
   type CloneAuthMode,
   type CloneRepoKind,
   type CloneRequest,
@@ -44,6 +45,41 @@ function checkById(
 }
 
 type RevisionKind = 'branch' | 'tag' | 'commit'
+
+type CreateDisabledReason =
+  | 'gitNotReady'
+  | 'invalidRepoId'
+  | 'invalidDestination'
+  | 'sshNotAvailable'
+  | 'tokenRequired'
+  | 'invalidRevision'
+  | 'invalidProxy'
+  | 'submitting'
+
+function createDisabledReasonKey(reason: CreateDisabledReason): string {
+  switch (reason) {
+    case 'gitNotReady':
+      return 'clones:createDisabled.gitNotReady'
+    case 'invalidRepoId':
+      return 'clones:createDisabled.invalidRepoId'
+    case 'invalidDestination':
+      return 'clones:createDisabled.invalidDestination'
+    case 'sshNotAvailable':
+      return 'clones:createDisabled.sshNotAvailable'
+    case 'tokenRequired':
+      return 'clones:createDisabled.tokenRequired'
+    case 'invalidRevision':
+      return 'clones:createDisabled.invalidRevision'
+    case 'invalidProxy':
+      return 'clones:createDisabled.invalidProxy'
+    case 'submitting':
+      return 'clones:createDisabled.submitting'
+    default: {
+      const _exhaustive: never = reason
+      return _exhaustive
+    }
+  }
+}
 
 interface ValidationState {
   id: string | null
@@ -103,8 +139,9 @@ export function CloneCreatePage(): React.JSX.Element {
   // Validation functions
   const validateRepoId = useCallback(
     (value: string): string | null => {
-      if (!value.trim()) return t('clones:id.invalid')
-      const result = cloneNamespaceNameSchema.safeParse(value.trim())
+      const normalized = normalizeCloneRepoId(value.trim())
+      if (!normalized) return t('clones:id.invalid')
+      const result = cloneNamespaceNameSchema.safeParse(normalized)
       return result.success ? null : t('clones:id.invalid')
     },
     [t]
@@ -154,15 +191,18 @@ export function CloneCreatePage(): React.JSX.Element {
   const effectiveAuthMode: CloneAuthMode =
     authMode === 'app-token' && tokenAvailable ? 'app-token' : 'system'
 
+  const normalizedRepoId = useMemo(() => normalizeCloneRepoId(repoId.trim()), [repoId])
+
   const derivedUrl = useMemo(() => {
-    const trimmedId = repoId.trim()
-    if (!trimmedId || !cloneNamespaceNameSchema.safeParse(trimmedId).success) return ''
+    if (!normalizedRepoId || !cloneNamespaceNameSchema.safeParse(normalizedRepoId).success) {
+      return ''
+    }
     try {
-      return deriveCloneUrl(kind, trimmedId, transport)
+      return deriveCloneUrl(kind, normalizedRepoId, transport)
     } catch {
       return ''
     }
-  }, [kind, repoId, transport])
+  }, [kind, normalizedRepoId, transport])
 
   const revision: CloneRevision | undefined = useMemo(() => {
     if (!hasRevision || !revisionValue.trim()) return undefined
@@ -209,7 +249,7 @@ export function CloneCreatePage(): React.JSX.Element {
     if (!gitAvailable) return false
     if (transport === 'ssh' && !sshAvailable) return false
     if (authMode === 'app-token' && !tokenAvailable) return false
-    if (!repoId.trim() || validateRepoId(repoId.trim()) !== null) return false
+    if (!normalizedRepoId || validateRepoId(normalizedRepoId) !== null) return false
     if (validateDestination(destination) !== null) return false
     if (hasRevision && revisionValue.trim() && !revision) return false
     if (proxyMode === 'manual' && proxyOverride === null) return false
@@ -221,7 +261,7 @@ export function CloneCreatePage(): React.JSX.Element {
     tokenAvailable,
     transport,
     authMode,
-    repoId,
+    normalizedRepoId,
     destination,
     hasRevision,
     revisionValue,
@@ -232,17 +272,67 @@ export function CloneCreatePage(): React.JSX.Element {
     validateDestination
   ])
 
+  const disabledReason = useMemo((): CreateDisabledReason | null => {
+    if (canSubmit) return null
+    if (!gitAvailable) return 'gitNotReady'
+    if (!normalizedRepoId || validateRepoId(normalizedRepoId) !== null) return 'invalidRepoId'
+    if (validateDestination(destination) !== null) return 'invalidDestination'
+    if (transport === 'ssh' && !sshAvailable) return 'sshNotAvailable'
+    if (authMode === 'app-token' && !tokenAvailable) return 'tokenRequired'
+    if (hasRevision && revisionValue.trim() && !revision) return 'invalidRevision'
+    if (proxyMode === 'manual' && proxyOverride === null) return 'invalidProxy'
+    if (submitting) return 'submitting'
+    return null
+  }, [
+    canSubmit,
+    gitAvailable,
+    normalizedRepoId,
+    destination,
+    transport,
+    sshAvailable,
+    authMode,
+    tokenAvailable,
+    hasRevision,
+    revisionValue,
+    revision,
+    proxyMode,
+    proxyOverride,
+    submitting,
+    validateRepoId,
+    validateDestination
+  ])
+
+  const handleRepoIdChange = useCallback(
+    (value: string) => {
+      setRepoId(value)
+      setErrors((prev) => ({ ...prev, id: validateRepoId(value), form: null }))
+    },
+    [validateRepoId]
+  )
+
+  const handleRepoIdBlur = useCallback(() => {
+    setErrors((prev) => ({ ...prev, id: validateRepoId(repoId) }))
+  }, [repoId, validateRepoId])
+
   // Destination is a text input — user provides the path directly.
-  const handleDestinationChange = useCallback((value: string) => {
-    setDestination(value)
-    setErrors((prev) => ({ ...prev, destination: null, form: null }))
-  }, [])
+  const handleDestinationChange = useCallback(
+    (value: string) => {
+      setDestination(value)
+      setErrors((prev) => ({ ...prev, destination: validateDestination(value), form: null }))
+    },
+    [validateDestination]
+  )
+
+  const handleDestinationBlur = useCallback(() => {
+    setErrors((prev) => ({ ...prev, destination: validateDestination(destination) }))
+  }, [destination, validateDestination])
 
   const handleCreate = useCallback(async () => {
     if (submitting || submitLock.current) return
     submitLock.current = true
 
-    const idError = validateRepoId(repoId.trim())
+    const normalizedId = normalizeCloneRepoId(repoId.trim())
+    const idError = validateRepoId(normalizedId)
     const revError = hasRevision ? validateRevision(revisionKind, revisionValue) : null
     const proxyError = validateProxy(proxyMode, manualProxyDraft)
     const destError = validateDestination(destination)
@@ -270,7 +360,7 @@ export function CloneCreatePage(): React.JSX.Element {
     try {
       const request: CloneRequest = {
         kind,
-        id: repoId.trim(),
+        id: normalizedId,
         revision,
         transport,
         destination: destination.trim(),
@@ -404,10 +494,8 @@ export function CloneCreatePage(): React.JSX.Element {
             <Input
               id={repoIdInputId}
               value={repoId}
-              onChange={(e) => {
-                setRepoId(e.target.value)
-                setErrors((prev) => ({ ...prev, id: null }))
-              }}
+              onChange={(e) => handleRepoIdChange(e.target.value)}
+              onBlur={handleRepoIdBlur}
               placeholder={t('clones:id.placeholder')}
               aria-invalid={errors.id !== null}
             />
@@ -495,6 +583,7 @@ export function CloneCreatePage(): React.JSX.Element {
               id={destinationId}
               value={destination}
               onChange={(e) => handleDestinationChange(e.target.value)}
+              onBlur={handleDestinationBlur}
               placeholder={t('clones:destination.placeholder')}
               spellCheck={false}
               aria-invalid={errors.destination !== null}
@@ -631,20 +720,27 @@ export function CloneCreatePage(): React.JSX.Element {
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
-            {t('clones:cancel')}
-          </Button>
-          <Button
-            variant="cta"
-            size="sm"
-            onClick={handleCreate}
-            disabled={!canSubmit}
-            loading={submitting}
-          >
-            <GitBranch className="size-4" aria-hidden />
-            {submitting ? t('clones:creating') : t('clones:create')}
-          </Button>
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
+              {t('clones:cancel')}
+            </Button>
+            <Button
+              variant="cta"
+              size="sm"
+              onClick={handleCreate}
+              disabled={!canSubmit}
+              loading={submitting}
+            >
+              <GitBranch className="size-4" aria-hidden />
+              {submitting ? t('clones:creating') : t('clones:create')}
+            </Button>
+          </div>
+          {!canSubmit && disabledReason !== null ? (
+            <span role="alert" className="text-[12px] text-error">
+              {t(createDisabledReasonKey(disabledReason))}
+            </span>
+          ) : null}
         </div>
       </div>
     </div>

@@ -88,6 +88,16 @@
   },
   "create": "Create clone",
   "creating": "Creating…",
+  "createDisabled": {
+    "gitNotReady": "Git is not ready. Install Git and check again.",
+    "invalidRepoId": "Enter a valid repository ID.",
+    "invalidDestination": "Enter a destination folder.",
+    "sshNotAvailable": "SSH is required for SSH transport but is not available.",
+    "tokenRequired": "Sign in first to use app token authentication.",
+    "invalidRevision": "Enter a valid revision.",
+    "invalidProxy": "Enter a valid manual proxy URL.",
+    "submitting": "A clone is already being created."
+  },
   "cancel": "Cancel",
   "created": "Clone task created",
   "queue": {

@@ -88,6 +88,16 @@
   },
   "create": "建立複製",
   "creating": "建立中…",
+  "createDisabled": {
+    "gitNotReady": "Git 尚未就緒。請安裝 Git 後重新檢查。",
+    "invalidRepoId": "請輸入有效的儲存庫 ID。",
+    "invalidDestination": "請輸入目標資料夾。",
+    "sshNotAvailable": "SSH 傳輸需要 SSH，但目前無法使用。",
+    "tokenRequired": "使用應用程式權杖驗證需要先登入。",
+    "invalidRevision": "請輸入有效的版本。",
+    "invalidProxy": "請輸入有效的手動代理 URL。",
+    "submitting": "正在建立複製。"
+  },
   "cancel": "取消",
   "created": "複製任務已建立",
   "errors": {
