@@ -14,9 +14,12 @@ See [signing.md](signing.md).
 Clones require **system Git** on `PATH`. If a repo uses Git-Xet filters, **Git-Xet** must also be
 installed and on `PATH`.
 
-1. Open the **Diagnostics** page and check the Git and Git-Xet readiness rows.
-2. Install Git (and Git-Xet if needed), then restart HubFetch.
-3. The clone now reports a clear readiness result instead of failing at startup.
+1. Open **Settings → Clone tools** and check the Git and Git-Xet readiness rows.
+2. Install Git (and Git-Xet if needed) from the official download pages the rows link to, then
+   press **Recheck**.
+3. If a tool is still reported missing after Recheck, **restart HubFetch** so it picks up the
+   updated `PATH`.
+4. The clone now reports a clear readiness result instead of failing at startup.
 
 ## Clone fails with an authentication error
 

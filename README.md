@@ -57,6 +57,12 @@ with your OS keychain (Electron `safeStorage`) and stored in
 - **Git-Xet** installed and on `PATH` — required for cloning repos that use Git-Xet filters. If a
   repo needs Git-Xet and it is missing, the clone reports a clear readiness error (see the
   Diagnostics page).
+
+HubFetch does **not** bundle Git, Git-Xet, or Git Credential Manager. Open **Settings → Clone
+tools** to check readiness, jump to the **official download pages** for any missing tool, and press
+**Recheck** after installing. If Recheck still reports a tool missing, restart HubFetch so it picks
+up the updated `PATH`.
+
 - **Node.js ≥ 22** and **pnpm ≥ 11** — only needed to build from source, not to run the app.
 
 See [docs/user-guide.en.md](docs/user-guide.en.md) (English) or

@@ -23,7 +23,8 @@ The ZIP is **unsigned**. Windows SmartScreen may show a warning on first launch;
 installer and no auto-updater — to update, download a newer build and replace the files.
 
 Requirements: Windows x64. For the clone feature, **Git** (and **Git-Xet** for Xet-backed repos)
-must be installed and on `PATH`.
+must be installed and on `PATH`. HubFetch does **not** bundle these tools; open **Settings → Clone
+tools** to check readiness and reach their official download pages when something is missing.
 
 ## Signing in
 
@@ -61,6 +62,9 @@ Git-Xet** when the repo uses Xet filters).
 - Clones run **one at a time** under a durable scheduler.
 - You can clone a branch, tag, or full commit; progress is shown and work is **recovered on
   restart**.
+- **Prerequisites**: before your first clone, open **Settings → Clone tools** and check the Git,
+  Git-Xet, and Git Credential Manager rows. Missing tools link to their official download pages;
+  after installing, press **Recheck** — restart HubFetch if a tool is still reported missing.
 - **Authentication**: Git clones authenticate through system Git (Git Credential Manager / SSH) or,
   for app-token clones, through a secure Job-bound AskPass helper. The helper never writes the token
   to disk.
@@ -97,6 +101,10 @@ sent to any third party.
 From **Settings** you can manage: language (nine locales), theme (system/light/dark), download
 concurrency and speed limits, notifications, polling interval, UI scale and density, accent color,
 cache directory, the Hub endpoint, proxy, launch at login, close-to-tray, and per-repo open target.
+
+**Clone tools** (under Connection) shows Git, Git-Xet, and Git Credential Manager readiness with
+links to their official download pages. Use **Recheck** after installing and restart HubFetch if a
+tool is still reported missing.
 
 You can **export** and **import** your settings (excluding the machine-specific cache directory) to
 move them between machines.
