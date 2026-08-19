@@ -53,6 +53,35 @@ function checkById(
   return checks?.find((check) => check.id === id)
 }
 
+/**
+ * Maps a diagnostic check to the underlying tool state string that
+ * `cloneToolRowActions` understands. The Xet probe collapses every non-pass
+ * outcome into `status: 'warning'`, so the fine-grained state must come from
+ * `reasonCode` (mirrors `ClonePrerequisiteRow.checkState`).
+ */
+function checkState(check: DiagnosticCheck | undefined, tool: CloneToolId): string {
+  if (!check) return 'unknown'
+  if (check.status === 'pass') return 'pass'
+  if (tool === 'git-xet') {
+    switch (check.reasonCode) {
+      case 'outdated':
+        return 'old'
+      case 'unconfigured':
+        return 'uninitialized'
+      case 'missing':
+        return 'missing'
+      case 'timeout':
+        return 'timeout'
+      case 'nonzero':
+        return 'nonzero'
+      default:
+        return 'unknown'
+    }
+  }
+  // git / gcm: the helper treats every non-pass state identically.
+  return 'missing'
+}
+
 function StatusIcon({ status }: { status: DiagnosticStatus | undefined }): React.JSX.Element {
   if (status === 'pass') return <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
   if (status === 'failure') return <XCircle className="size-4 shrink-0 text-error" aria-hidden />
@@ -94,7 +123,7 @@ export function CloneToolsSection(): React.JSX.Element {
     const check = checkById(checks, row.checkId)
     const actions = cloneToolRowActions({
       tool: row.id,
-      status: check?.status ?? 'unknown',
+      status: checkState(check, row.id),
       gitPass
     })
     const wingetCommand = actions.showCopyWinget ? actions.wingetCommand : null

@@ -43,6 +43,7 @@ const TECHNICAL_ALLOWLIST = new Set([
   'Pull request',
   'Daily Papers',
   'Enterprise Plus',
+  'Git Credential Manager',
   '> 1T',
   '< 1K',
   '> 30B',

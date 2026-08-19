@@ -24,24 +24,28 @@ function makeCheck(
   id: string,
   category: DiagnosticCheck['category'],
   status: DiagnosticStatus,
-  message: string
+  message: string,
+  reasonCode: DiagnosticCheck['reasonCode'] = status === 'pass' ? 'ok' : 'missing'
 ): DiagnosticCheck {
   return {
     id,
     category,
     status,
-    reasonCode: status === 'pass' ? 'ok' : 'missing',
+    reasonCode,
     message,
     durationMs: 1,
     checkedAt: CHECKED_AT
   }
 }
 
-function makeReport(statuses: {
-  git: DiagnosticStatus
-  xet: DiagnosticStatus
-  gcm: DiagnosticStatus
-}): DiagnosticReport {
+function makeReport(
+  statuses: {
+    git: DiagnosticStatus
+    xet: DiagnosticStatus
+    gcm: DiagnosticStatus
+  },
+  reasonCodes?: { xet?: DiagnosticCheck['reasonCode'] }
+): DiagnosticReport {
   return {
     completedAt: CHECKED_AT,
     checks: [
@@ -55,7 +59,8 @@ function makeReport(statuses: {
         'git.xet',
         'git',
         statuses.xet,
-        statuses.xet === 'pass' ? 'Git-Xet is ready' : 'Git-Xet is not installed'
+        statuses.xet === 'pass' ? 'Git-Xet is ready' : 'Git-Xet is not installed',
+        reasonCodes?.xet
       ),
       makeCheck(
         'git.gcm',
@@ -111,6 +116,28 @@ describe('CloneToolsSection', () => {
     await screen.findByText('Git is not installed')
     const gcmRow = screen.getByTestId('clone-tool-row-gcm')
     expect(within(gcmRow).queryByRole('button', { name: 'settings:cloneTools.install' })).toBeNull()
+  })
+
+  it('shows only the configure action when Xet is unconfigured', async () => {
+    diagnostics.runDiagnostics.mockResolvedValue(
+      makeReport({ git: 'pass', xet: 'warning', gcm: 'pass' }, { xet: 'unconfigured' })
+    )
+    renderSection()
+    await screen.findByText('Git-Xet is not installed')
+    const xetRow = screen.getByTestId('clone-tool-row-git-xet')
+    expect(within(xetRow).getByRole('button', { name: 'settings:cloneTools.copyConfigure' })).toBeTruthy()
+    expect(within(xetRow).queryByRole('button', { name: 'settings:cloneTools.install' })).toBeNull()
+  })
+
+  it('shows install and winget-copy actions when Xet is missing', async () => {
+    diagnostics.runDiagnostics.mockResolvedValue(
+      makeReport({ git: 'pass', xet: 'warning', gcm: 'pass' }, { xet: 'missing' })
+    )
+    renderSection()
+    await screen.findByText('Git-Xet is not installed')
+    const xetRow = screen.getByTestId('clone-tool-row-git-xet')
+    expect(within(xetRow).getByRole('button', { name: 'settings:cloneTools.install' })).toBeTruthy()
+    expect(within(xetRow).getByRole('button', { name: 'settings:cloneTools.copyWinget' })).toBeTruthy()
   })
 
   it('recheck runs diagnostics and writes the report to the shared query', async () => {
