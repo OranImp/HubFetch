@@ -1,6 +1,6 @@
 {
   "name": "@hubfetch/hub-api",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "private": true,
   "description": "Pure-TypeScript Hugging Face Hub API client (zero Electron dependencies)",
   "license": "Apache-2.0",
