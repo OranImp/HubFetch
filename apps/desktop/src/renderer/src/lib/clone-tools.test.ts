@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CLONE_TOOLS, cloneToolRowActions } from '@hubfetch/shared'
+import { CLONE_TOOLS, cloneToolRowActions, normalizeCloneRepoId } from '@hubfetch/shared'
 import { performCloneToolInstall } from './clone-tools'
 
 const ipc = vi.hoisted(() => ({
@@ -22,9 +22,7 @@ describe('CLONE_TOOLS catalog', () => {
   })
 
   it('pins the Git-Xet winget command, id, and configure command', () => {
-    expect(CLONE_TOOLS['git-xet'].wingetCommand).toBe(
-      'winget install --id HuggingFace.Git-Xet -e'
-    )
+    expect(CLONE_TOOLS['git-xet'].wingetCommand).toBe('winget install --id HuggingFace.Git-Xet -e')
     expect(CLONE_TOOLS['git-xet'].wingetId).toBe('HuggingFace.Git-Xet')
     expect(CLONE_TOOLS['git-xet'].configureCommand).toBe('git xet install')
   })
@@ -110,5 +108,27 @@ describe('performCloneToolInstall dispatcher', () => {
     expect(ipc.openExternal).toHaveBeenCalledTimes(1)
     expect(ipc.openExternal).toHaveBeenCalledWith('https://git-scm.com/download/win')
     expect(ipc.invoke).not.toHaveBeenCalled()
+  })
+})
+
+describe('normalizeCloneRepoId', () => {
+  it('normalizes an https HF clone URL to namespace/name', () => {
+    expect(normalizeCloneRepoId('https://huggingface.co/acme/model')).toBe('acme/model')
+  })
+
+  it('normalizes an http HF clone URL with a trailing slash', () => {
+    expect(normalizeCloneRepoId('http://huggingface.co/acme/model/')).toBe('acme/model')
+  })
+
+  it('passes a bare namespace/name through unchanged', () => {
+    expect(normalizeCloneRepoId('acme/model')).toBe('acme/model')
+  })
+
+  it('passes a non-HF URL through unchanged', () => {
+    expect(normalizeCloneRepoId('https://example.com/x/y')).toBe('https://example.com/x/y')
+  })
+
+  it('passes a bare namespace through unchanged', () => {
+    expect(normalizeCloneRepoId('acme')).toBe('acme')
   })
 })

@@ -72,6 +72,26 @@ export function parseCloneNamespaceName(value: string): CloneNamespaceName | nul
 }
 
 /**
+ * Exact `https?://huggingface.co/{ns}/{name}` URL shape with an optional
+ * trailing slash. Reuses the strict segment charset from `CLONE_SEGMENT_RE`.
+ */
+const HF_REPO_URL_RE =
+  /^https?:\/\/huggingface\.co\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/?$/
+
+/**
+ * Strip the HF host from a full clone URL to its `namespace/name` id. Only the
+ * exact `huggingface.co` host matches (https or http, optional trailing
+ * slash); every other input — non-HF hosts and bare strings — passes through
+ * unchanged. Cosmetic only: the result is not validated against
+ * `cloneNamespaceNameSchema`.
+ */
+export function normalizeCloneRepoId(value: string): string {
+  const match = HF_REPO_URL_RE.exec(value)
+  if (match === null) return value
+  return `${match[1]}/${match[2]}`
+}
+
+/**
  * Shared guard for branch/tag refs. Rejects option injection (leading `-`),
  * hidden refs (leading `.`), traversal (`..`), reflog syntax (`@`), refspec
  * (`:`), whitespace, path separators (`\`), and every control character
