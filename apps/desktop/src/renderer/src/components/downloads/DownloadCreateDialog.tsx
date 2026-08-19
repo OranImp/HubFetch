@@ -60,9 +60,11 @@ export function DownloadCreateDialog({
   }
 
   const parsed = resolveCreateProxy({ useDefault, mode, manualUrl: manualDraft })
-  // Disabled when an explicit Manual selection fails the shared URL validation —
-  // the confirm never fires with a bad override.
-  const canConfirm = parsed !== null && !pending
+  // "Use settings default" resolves to null (omit-override) and is ALWAYS
+  // confirmable. An explicit Manual selection that fails the shared URL
+  // validation resolves to null too, which keeps confirm disabled — the
+  // confirm never fires with a bad override.
+  const canConfirm = (useDefault || parsed !== null) && !pending
   const defaultModeName = t(`downloads:proxyModes.${settingsProxy.mode}`)
 
   return (
