@@ -242,9 +242,10 @@ describe('clone IPC failure path (reject before the manager)', () => {
     )
     // selectDestination is a void-request channel: any payload is rejected
     // before the dialog is ever opened.
-    const selectHandler = mock.handlers.get(
-      'clones:selectDestination'
-    ) as (e: unknown, p: unknown) => unknown
+    const selectHandler = mock.handlers.get('clones:selectDestination') as (
+      e: unknown,
+      p: unknown
+    ) => unknown
     await expectRejected(
       Promise.resolve(selectHandler(trusted, { path: 'C:\\qa\\smuggled' })),
       'select-rejects-payload'
@@ -391,14 +392,9 @@ describe('clone IPC failure path (reject before the manager)', () => {
 
     const removeSpy = vi.spyOn(harness.manager, 'remove')
     const rogue = makeRogueEvent()
-    const removeHandler = mock.handlers.get('clones:remove') as (
-      e: unknown,
-      p: unknown
-    ) => unknown
+    const removeHandler = mock.handlers.get('clones:remove') as (e: unknown, p: unknown) => unknown
     await expect(
-      Promise.resolve(
-        removeHandler(rogue, { id: '123e4567-e89b-12d3-a456-426614174000' })
-      )
+      Promise.resolve(removeHandler(rogue, { id: '123e4567-e89b-12d3-a456-426614174000' }))
     ).rejects.toThrow(/IPC sender rejected/)
     expect(removeSpy).not.toHaveBeenCalled()
 

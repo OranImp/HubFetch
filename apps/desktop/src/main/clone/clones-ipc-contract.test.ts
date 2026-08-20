@@ -373,10 +373,7 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
       )
 
       const removeSpy = vi.spyOn(harness.manager, 'remove')
-      const dialogSpy = vi.spyOn(
-        (await import('electron')).dialog,
-        'showOpenDialog'
-      )
+      const dialogSpy = vi.spyOn((await import('electron')).dialog, 'showOpenDialog')
       const removeHandler = mock.handlers.get('clones:remove')!
       await expect(Promise.resolve(removeHandler(rogue, { id: UUID }))).rejects.toThrow(
         /IPC sender rejected/
@@ -440,10 +437,7 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
       expect(listSpy).not.toHaveBeenCalled()
 
       const removeSpy = vi.spyOn(harness.manager, 'remove')
-      const dialogSpy = vi.spyOn(
-        (await import('electron')).dialog,
-        'showOpenDialog'
-      )
+      const dialogSpy = vi.spyOn((await import('electron')).dialog, 'showOpenDialog')
       const removeEvent = mock.handlers.get('clones:remove')
       await expect(
         Promise.resolve(
@@ -506,17 +500,14 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
         sender: { id: 7, getURL: () => PACKAGED_ENTRY, mainFrame: frame },
         senderFrame: frame
       }
-      const removeEvent = mock.handlers.get('clones:remove') as (
-        e: unknown,
-        p: unknown
-      ) => unknown
+      const removeEvent = mock.handlers.get('clones:remove') as (e: unknown, p: unknown) => unknown
       const created = await harness.api.clones.create(
         makeValidRequest(join(harness.scratchDir, 'trusted-remove'))
       )
       await waitFor(() => harness.store.get(created.id)?.status === 'completed', 'completed')
-      const removed = (await Promise.resolve(
-        removeEvent(trusted, { id: created.id })
-      )) as Array<{ id: string }>
+      const removed = (await Promise.resolve(removeEvent(trusted, { id: created.id }))) as Array<{
+        id: string
+      }>
       expect(removed.some((record) => record.id === created.id)).toBe(false)
       expect(harness.store.list().some((record) => record.id === created.id)).toBe(false)
       // Trusted void request opens the OS dialog; the mocked dialog cancels -> null.
