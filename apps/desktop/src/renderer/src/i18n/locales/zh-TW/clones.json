@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "選擇資料夾…",
     "selected": "已選擇：{{path}}",
-    "invalid": "目標為必填",
+    "invalid": "請輸入有效的目標資料夾",
     "nonEmpty": "目標必須是空目錄",
     "inaccessible": "無法存取目標資料夾"
   },
@@ -145,9 +145,9 @@
     "running": "正在克隆到目標資料夾",
     "cancelling": "正在取消執行中的克隆",
     "completed": "克隆已完成並驗證",
-    "failed": "克隆失敗。請重試到新的空資料夾。",
-    "cancelled": "此克隆已取消。請重試到新的空資料夾。",
-    "interrupted": "因應用程式關閉或當機而中斷。目標資料夾可能不完整。請重試到新的空資料夾。"
+    "failed": "克隆失敗。請重試到空的資料夾；原資料夾僅在缺失或為空時才允許使用。",
+    "cancelled": "此克隆已取消。請重試到空的資料夾；原資料夾僅在缺失或為空時才允許使用。",
+    "interrupted": "因應用程式關閉或當機而中斷。目標資料夾可能不完整。請重試到空的資料夾；原資料夾僅在缺失或為空時才允許使用。"
   },
   "phase": {
     "enumerating": "正在列舉物件",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "第 {{id}} 次嘗試的重試",
     "prerequisites": "必要條件",
     "retryInfo": "重試機制",
-    "retryInfoBody": "不支援原地續傳。重試會重新將儲存庫克隆到一個新的空資料夾；磁碟上已有的檔案不會被覆寫或刪除。"
+    "retryInfoBody": "不支援原地續傳。重試會將儲存庫重新克隆到空的資料夾；僅當該資料夾缺失或為空時，才允許使用原目標。磁碟上已有的檔案不會被覆寫或刪除。"
   },
   "action": {
     "copyDetails": "複製詳細資料",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "取消此克隆？",
     "cancelConfirmBody": "克隆將被停止。目標資料夾可能不完整，且絕不會被刪除。",
     "cancelConfirmConfirm": "取消克隆",
+    "remove": "移除記錄",
+    "removeConfirmTitle": "移除此克隆記錄？",
+    "removeConfirmBody": "克隆記錄將從佇列中移除。磁碟上的檔案絕不會被刪除。",
+    "removeConfirmConfirm": "移除記錄",
+    "removeSuccess": "克隆記錄已移除",
     "retry": "重試克隆",
     "retryTitle": "重試克隆",
-    "retryBody": "重試會克隆到一個新的空資料夾。不支援原地續傳，既有檔案絕不會被覆寫或刪除。",
-    "retryDestinationLabel": "新的空目標資料夾",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "重試會克隆到空的資料夾。僅當原資料夾缺失或為空時，才允許使用原目標。不支援原地續傳，既有檔案絕不會被覆寫或刪除。",
+    "retryDestinationLabel": "目標資料夾",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "請輸入新的空目標資料夾",
-      "same": "請選擇其他資料夾 — 上一次嘗試的資料夾可能包含不完整檔案。",
+      "required": "請輸入目標資料夾",
       "invalid": "請輸入有效的目標路徑"
     },
     "retryStart": "開始重試",

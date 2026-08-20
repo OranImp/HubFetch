@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "폴더 선택…",
     "selected": "선택됨: {{path}}",
-    "invalid": "대상이 필요합니다",
+    "invalid": "유효한 대상 폴더를 입력하세요",
     "nonEmpty": "대상은 빈 디렉토리여야 합니다",
     "inaccessible": "대상 폴더에 액세스할 수 없습니다"
   },
@@ -145,9 +145,9 @@
     "running": "대상 폴더에 클론하는 중",
     "cancelling": "실행 중인 클론을 취소하는 중",
     "completed": "클론 완료 및 검증됨",
-    "failed": "클론이 실패했습니다. 새 빈 폴더로 다시 시도하세요.",
-    "cancelled": "이 클론은 취소되었습니다. 새 빈 폴더로 다시 시도하세요.",
-    "interrupted": "종료 또는 충돌로 중단되었습니다. 대상 폴더가 불완전할 수 있습니다. 새 빈 폴더로 다시 시도하세요."
+    "failed": "클론이 실패했습니다. 빈 폴더로 다시 시도하세요. 원래 폴더는 없거나 비어 있는 경우에만 사용할 수 있습니다.",
+    "cancelled": "이 클론은 취소되었습니다. 빈 폴더로 다시 시도하세요. 원래 폴더는 없거나 비어 있는 경우에만 사용할 수 있습니다.",
+    "interrupted": "종료 또는 충돌로 중단되었습니다. 대상 폴더가 불완전할 수 있습니다. 빈 폴더로 다시 시도하세요. 원래 폴더는 없거나 비어 있는 경우에만 사용할 수 있습니다."
   },
   "phase": {
     "enumerating": "개체 열거 중",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "시도 {{id}} 재시도",
     "prerequisites": "전제 조건",
     "retryInfo": "재시도 방식",
-    "retryInfoBody": "자리 이어서 재개는 지원되지 않습니다. 재시도는 새 빈 폴더에 리포지토리를 다시 클론하며, 디스크의 기존 파일은 덮어쓰거나 삭제되지 않습니다."
+    "retryInfoBody": "자리 이어서 재개는 지원되지 않습니다. 재시도는 리포지토리를 빈 폴더에 다시 클론하며, 원래 대상 폴더는 해당 폴더가 없거나 비어 있는 경우에만 허용됩니다. 디스크에 이미 있는 파일은 덮어쓰거나 삭제되지 않습니다."
   },
   "action": {
     "copyDetails": "세부 정보 복사",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "이 클론을 취소할까요?",
     "cancelConfirmBody": "클론이 중지됩니다. 대상 폴더는 불완전하게 남을 수 있으며 삭제되지 않습니다.",
     "cancelConfirmConfirm": "클론 취소",
+    "remove": "기록 제거",
+    "removeConfirmTitle": "이 클론 기록을 제거할까요?",
+    "removeConfirmBody": "클론 기록이 대기열에서 제거됩니다. 디스크의 파일은 삭제되지 않습니다.",
+    "removeConfirmConfirm": "기록 제거",
+    "removeSuccess": "클론 기록이 제거되었습니다",
     "retry": "클론 재시도",
     "retryTitle": "클론 재시도",
-    "retryBody": "재시도는 새 빈 폴더에 클론합니다. 자리 이어서 재개는 지원되지 않으며 기존 파일은 덮어쓰거나 삭제되지 않습니다.",
-    "retryDestinationLabel": "새 빈 대상 폴더",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "재시도는 빈 폴더에 클론합니다. 원래 대상 폴더는 해당 폴더가 없거나 비어 있는 경우에만 허용됩니다. 자리 이어서 재개는 지원되지 않으며 기존 파일은 덮어쓰거나 삭제되지 않습니다.",
+    "retryDestinationLabel": "대상 폴더",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "새 빈 대상 폴더를 입력하세요",
-      "same": "다른 폴더를 선택하세요 — 이전 시도의 폴더에는 불완전한 파일이 있을 수 있습니다.",
+      "required": "대상 폴더를 입력하세요",
       "invalid": "유효한 대상 경로를 입력하세요"
     },
     "retryStart": "재시도 시작",

@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "Ordner wählen…",
     "selected": "Ausgewählt: {{path}}",
-    "invalid": "Ziel ist erforderlich",
+    "invalid": "Geben Sie einen gültigen Zielordner ein",
     "nonEmpty": "Ziel muss ein leeres Verzeichnis sein",
     "inaccessible": "Auf Zielordner kann nicht zugegriffen werden"
   },
@@ -145,9 +145,9 @@
     "running": "Kloniert in den Zielordner",
     "cancelling": "Bricht den laufenden Klon ab",
     "completed": "Klon abgeschlossen und verifiziert",
-    "failed": "Der Klon ist fehlgeschlagen. Wiederholen Sie in einen neuen leeren Ordner.",
-    "cancelled": "Dieser Klon wurde abgebrochen. Wiederholen Sie in einen neuen leeren Ordner.",
-    "interrupted": "Durch Herunterfahren oder Absturz unterbrochen. Der Zielordner kann unvollständig sein. Wiederholen Sie in einen neuen leeren Ordner."
+    "failed": "Der Klon ist fehlgeschlagen. Wiederholen Sie in einen leeren Ordner; der ursprüngliche Ordner ist nur zulässig, wenn er fehlt oder leer ist.",
+    "cancelled": "Dieser Klon wurde abgebrochen. Wiederholen Sie in einen leeren Ordner; der ursprüngliche Ordner ist nur zulässig, wenn er fehlt oder leer ist.",
+    "interrupted": "Durch Herunterfahren oder Absturz unterbrochen. Der Zielordner kann unvollständig sein. Wiederholen Sie in einen leeren Ordner; der ursprüngliche Ordner ist nur zulässig, wenn er fehlt oder leer ist."
   },
   "phase": {
     "enumerating": "Objekte werden aufgezählt",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "Wiederholung von Versuch {{id}}",
     "prerequisites": "Voraussetzungen",
     "retryInfo": "So funktionieren Wiederholungen",
-    "retryInfoBody": "Wiederaufnahme an Ort und Stelle wird nicht unterstützt. Eine Wiederholung klont das Repository erneut in einen NEUEN leeren Ordner; vorhandene Dateien werden weder überschrieben noch gelöscht."
+    "retryInfoBody": "Eine Wiederaufnahme an Ort und Stelle wird nicht unterstützt. Eine Wiederholung klont das Repository erneut in einen leeren Ordner. Der ursprüngliche Zielordner ist nur zulässig, wenn dieser fehlt oder leer ist; bereits vorhandene Dateien werden weder überschrieben noch gelöscht."
   },
   "action": {
     "copyDetails": "Details kopieren",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "Diesen Klon abbrechen?",
     "cancelConfirmBody": "Der Klon wird gestoppt. Der Zielordner kann unvollständig bleiben und wird nie gelöscht.",
     "cancelConfirmConfirm": "Klon abbrechen",
+    "remove": "Eintrag entfernen",
+    "removeConfirmTitle": "Diesen Klon-Eintrag entfernen?",
+    "removeConfirmBody": "Der Klon-Eintrag wird aus der Warteschlange entfernt. Dateien auf der Festplatte werden niemals gelöscht.",
+    "removeConfirmConfirm": "Eintrag entfernen",
+    "removeSuccess": "Klon-Eintrag entfernt",
     "retry": "Klon wiederholen",
     "retryTitle": "Klon wiederholen",
-    "retryBody": "Eine Wiederholung klont in einen NEUEN leeren Ordner. Wiederaufnahme an Ort und Stelle wird nicht unterstützt, und vorhandene Dateien werden nie überschrieben oder gelöscht.",
-    "retryDestinationLabel": "Neuer leerer Zielordner",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "Eine Wiederholung klont in einen leeren Ordner. Der ursprüngliche Zielordner ist nur zulässig, wenn dieser fehlt oder leer ist. Eine Wiederaufnahme an Ort und Stelle wird nicht unterstützt, und vorhandene Dateien werden nie überschrieben oder gelöscht.",
+    "retryDestinationLabel": "Zielordner",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "Geben Sie einen neuen leeren Zielordner ein",
-      "same": "Wählen Sie einen anderen Ordner — der Ordner des vorherigen Versuchs kann unvollständige Dateien enthalten.",
+      "required": "Geben Sie einen Zielordner ein",
       "invalid": "Geben Sie einen gültigen Zielpfad ein"
     },
     "retryStart": "Wiederholung starten",

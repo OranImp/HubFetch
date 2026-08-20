@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "选择文件夹…",
     "selected": "已选择：{{path}}",
-    "invalid": "目标是必需的",
+    "invalid": "请输入有效的目标文件夹",
     "nonEmpty": "目标必须是空目录",
     "inaccessible": "无法访问目标文件夹"
   },
@@ -145,9 +145,9 @@
     "running": "正在克隆到目标文件夹",
     "cancelling": "正在取消运行中的克隆",
     "completed": "克隆已完成并验证",
-    "failed": "克隆失败。请重试到新的空文件夹。",
-    "cancelled": "此克隆已取消。请重试到新的空文件夹。",
-    "interrupted": "因应用关闭或崩溃而中断。目标文件夹可能不完整。请重试到新的空文件夹。"
+    "failed": "克隆失败。请重试到空文件夹；原文件夹仅在缺失或为空时才允许使用。",
+    "cancelled": "此克隆已取消。请重试到空文件夹；原文件夹仅在缺失或为空时才允许使用。",
+    "interrupted": "因应用关闭或崩溃而中断。目标文件夹可能不完整。请重试到空文件夹；原文件夹仅在缺失或为空时才允许使用。"
   },
   "phase": {
     "enumerating": "正在枚举对象",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "第 {{id}} 次尝试的重试",
     "prerequisites": "前提条件",
     "retryInfo": "重试机制",
-    "retryInfoBody": "不支持原地续传。重试会重新将仓库克隆到一个新的空文件夹；磁盘上已有的文件不会被覆盖或删除。"
+    "retryInfoBody": "不支持原地续传。重试会将仓库重新克隆到空文件夹；仅当该文件夹缺失或为空时才允许使用原目标。磁盘上已有的文件不会被覆盖或删除。"
   },
   "action": {
     "copyDetails": "复制详情",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "取消此克隆？",
     "cancelConfirmBody": "克隆将被停止。目标文件夹可能不完整，且绝不会被删除。",
     "cancelConfirmConfirm": "取消克隆",
+    "remove": "移除记录",
+    "removeConfirmTitle": "移除此克隆记录？",
+    "removeConfirmBody": "克隆记录将从队列中移除。磁盘上的文件绝不会被删除。",
+    "removeConfirmConfirm": "移除记录",
+    "removeSuccess": "克隆记录已移除",
     "retry": "重试克隆",
     "retryTitle": "重试克隆",
-    "retryBody": "重试会克隆到一个新的空文件夹。不支持原地续传，已有文件绝不会被覆盖或删除。",
-    "retryDestinationLabel": "新的空目标文件夹",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "重试会克隆到空文件夹。仅当原文件夹缺失或为空时才允许使用原目标。不支持原地续传，已有文件绝不会被覆盖或删除。",
+    "retryDestinationLabel": "目标文件夹",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "请输入新的空目标文件夹",
-      "same": "请选择其他文件夹 — 上一次尝试的文件夹可能包含不完整文件。",
+      "required": "请输入目标文件夹",
       "invalid": "请输入有效的目标路径"
     },
     "retryStart": "开始重试",

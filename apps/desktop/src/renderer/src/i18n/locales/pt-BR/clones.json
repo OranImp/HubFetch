@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "Escolher pasta…",
     "selected": "Selecionado: {{path}}",
-    "invalid": "O destino é obrigatório",
+    "invalid": "Digite uma pasta de destino válida",
     "nonEmpty": "O destino deve ser um diretório vazio",
     "inaccessible": "Não é possível acessar a pasta de destino"
   },
@@ -145,9 +145,9 @@
     "running": "Clonando para a pasta de destino",
     "cancelling": "Cancelando o clone em andamento",
     "completed": "Clone concluído e verificado",
-    "failed": "O clone falhou. Tente novamente em uma nova pasta vazia.",
-    "cancelled": "Este clone foi cancelado. Tente novamente em uma nova pasta vazia.",
-    "interrupted": "Interrompido por um desligamento ou travamento. A pasta de destino pode estar parcial. Tente novamente em uma nova pasta vazia."
+    "failed": "O clone falhou. Tente novamente em uma pasta vazia; a pasta original só é permitida se estiver ausente ou vazia.",
+    "cancelled": "Este clone foi cancelado. Tente novamente em uma pasta vazia; a pasta original só é permitida se estiver ausente ou vazia.",
+    "interrupted": "Interrompido por um desligamento ou travamento. A pasta de destino pode estar parcial. Tente novamente em uma pasta vazia; a pasta original só é permitida se estiver ausente ou vazia."
   },
   "phase": {
     "enumerating": "Enumerando objetos",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "Nova tentativa da tentativa {{id}}",
     "prerequisites": "Pré-requisitos",
     "retryInfo": "Como funcionam as novas tentativas",
-    "retryInfoBody": "Retomar no mesmo local não é suportado. Uma nova tentativa clona o repositório novamente em uma pasta NOVA e vazia; nenhum arquivo existente é sobrescrito ou excluído."
+    "retryInfoBody": "Retomar no mesmo local não é suportado. Uma nova tentativa clona o repositório novamente em uma pasta vazia. A pasta de destino original só é permitida quando essa pasta está ausente ou vazia; nenhum arquivo já existente é sobrescrito ou excluído."
   },
   "action": {
     "copyDetails": "Copiar detalhes",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "Cancelar este clone?",
     "cancelConfirmBody": "O clone é interrompido. A pasta de destino pode ficar parcial e nunca é excluída.",
     "cancelConfirmConfirm": "Cancelar clone",
+    "remove": "Remover registro",
+    "removeConfirmTitle": "Remover este registro de clone?",
+    "removeConfirmBody": "O registro de clone é removido da fila. Os arquivos no disco nunca são excluídos.",
+    "removeConfirmConfirm": "Remover registro",
+    "removeSuccess": "Registro de clone removido",
     "retry": "Tentar novamente",
     "retryTitle": "Tentar novamente o clone",
-    "retryBody": "Uma nova tentativa clona em uma pasta NOVA e vazia. Retomar no mesmo local não é suportado e arquivos existentes nunca são sobrescritos ou excluídos.",
-    "retryDestinationLabel": "Nova pasta de destino vazia",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "Uma nova tentativa clona em uma pasta vazia. A pasta de destino original só é permitida quando essa pasta está ausente ou vazia. Retomar no mesmo local não é suportado e arquivos existentes nunca são sobrescritos ou excluídos.",
+    "retryDestinationLabel": "Pasta de destino",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "Informe uma nova pasta de destino vazia",
-      "same": "Escolha outra pasta — a pasta da tentativa anterior pode conter arquivos parciais.",
+      "required": "Informe uma pasta de destino",
       "invalid": "Informe um caminho de destino válido"
     },
     "retryStart": "Iniciar nova tentativa",

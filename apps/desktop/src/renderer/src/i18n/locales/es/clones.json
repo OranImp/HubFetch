@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "Elegir carpeta…",
     "selected": "Seleccionado: {{path}}",
-    "invalid": "El destino es obligatorio",
+    "invalid": "Ingrese una carpeta de destino válida",
     "nonEmpty": "El destino debe ser un directorio vacío",
     "inaccessible": "No se puede acceder a la carpeta de destino"
   },
@@ -145,9 +145,9 @@
     "running": "Clonando en la carpeta de destino",
     "cancelling": "Cancelando el clon en curso",
     "completed": "Clon completado y verificado",
-    "failed": "El clon falló. Reintente en una carpeta nueva y vacía.",
-    "cancelled": "Este clon fue cancelado. Reintente en una carpeta nueva y vacía.",
-    "interrupted": "Interrumpido por un cierre o un bloqueo. La carpeta de destino puede estar incompleta. Reintente en una carpeta nueva y vacía."
+    "failed": "El clon falló. Reintente en una carpeta vacía; la carpeta original solo se permite si no existe o está vacía.",
+    "cancelled": "Este clon fue cancelado. Reintente en una carpeta vacía; la carpeta original solo se permite si no existe o está vacía.",
+    "interrupted": "Interrumpido por un cierre o un bloqueo. La carpeta de destino puede estar incompleta. Reintente en una carpeta vacía; la carpeta original solo se permite si no existe o está vacía."
   },
   "phase": {
     "enumerating": "Enumerando objetos",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "Reintento del intento {{id}}",
     "prerequisites": "Requisitos previos",
     "retryInfo": "Cómo funcionan los reintentos",
-    "retryInfoBody": "No se admite reanudar en el mismo lugar. Un reintento clona el repositorio de nuevo en una carpeta NUEVA y vacía; los archivos existentes nunca se sobrescriben ni eliminan."
+    "retryInfoBody": "No se admite reanudar en el mismo lugar. Un reintento clona el repositorio de nuevo en una carpeta vacía. La carpeta de destino original solo se permite cuando esa carpeta no existe o está vacía; los archivos ya existentes nunca se sobrescriben ni eliminan."
   },
   "action": {
     "copyDetails": "Copiar detalles",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "¿Cancelar este clon?",
     "cancelConfirmBody": "El clon se detiene. La carpeta de destino puede quedar incompleta y nunca se elimina.",
     "cancelConfirmConfirm": "Cancelar clon",
+    "remove": "Quitar registro",
+    "removeConfirmTitle": "¿Quitar este registro de clonación?",
+    "removeConfirmBody": "El registro de clonación se quita de la cola. Los archivos del disco nunca se eliminan.",
+    "removeConfirmConfirm": "Quitar registro",
+    "removeSuccess": "Registro de clonación quitado",
     "retry": "Reintentar clon",
     "retryTitle": "Reintentar clon",
-    "retryBody": "Un reintento clona en una carpeta NUEVA y vacía. No se admite reanudar en el mismo lugar y los archivos existentes nunca se sobrescriben ni eliminan.",
-    "retryDestinationLabel": "Nueva carpeta de destino vacía",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "Un reintento clona en una carpeta vacía. La carpeta de destino original solo se permite cuando esa carpeta no existe o está vacía. No se admite reanudar en el mismo lugar y los archivos existentes nunca se sobrescriben ni eliminan.",
+    "retryDestinationLabel": "Carpeta de destino",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "Introduzca una nueva carpeta de destino vacía",
-      "same": "Elija otra carpeta: la carpeta del intento anterior puede contener archivos incompletos.",
+      "required": "Introduzca una carpeta de destino",
       "invalid": "Introduzca una ruta de destino válida"
     },
     "retryStart": "Iniciar reintento",

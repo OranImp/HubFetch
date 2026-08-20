@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "Choisir un dossier…",
     "selected": "Sélectionné : {{path}}",
-    "invalid": "La destination est requise",
+    "invalid": "Entrez un dossier de destination valide",
     "nonEmpty": "La destination doit être un répertoire vide",
     "inaccessible": "Impossible d'accéder au dossier de destination"
   },
@@ -145,9 +145,9 @@
     "running": "Clonage dans le dossier de destination",
     "cancelling": "Annulation du clon en cours",
     "completed": "Clon terminé et vérifié",
-    "failed": "Le clon a échoué. Réessayez dans un nouveau dossier vide.",
-    "cancelled": "Ce clon a été annulé. Réessayez dans un nouveau dossier vide.",
-    "interrupted": "Interrompu par un arrêt ou un plantage. Le dossier de destination peut être partiel. Réessayez dans un nouveau dossier vide."
+    "failed": "Le clon a échoué. Réessayez dans un dossier vide ; le dossier d'origine n'est autorisé que s'il est manquant ou vide.",
+    "cancelled": "Ce clon a été annulé. Réessayez dans un dossier vide ; le dossier d'origine n'est autorisé que s'il est manquant ou vide.",
+    "interrupted": "Interrompu par un arrêt ou un plantage. Le dossier de destination peut être partiel. Réessayez dans un dossier vide ; le dossier d'origine n'est autorisé que s'il est manquant ou vide."
   },
   "phase": {
     "enumerating": "Énumération des objets",
@@ -192,7 +192,7 @@
     "retryOfAttempt": "Nouvelle tentative de la tentative {{id}}",
     "prerequisites": "Prérequis",
     "retryInfo": "Fonctionnement des nouvelles tentatives",
-    "retryInfoBody": "La reprise sur place n’est pas prise en charge. Une nouvelle tentative reclone le dépôt dans un dossier NOUVEAU et vide ; aucun fichier existant n’est écrasé ni supprimé."
+    "retryInfoBody": "La reprise sur place n’est pas prise en charge. Une nouvelle tentative reclone le dépôt dans un dossier vide. Le dossier de destination d’origine n’est autorisé que s’il est manquant ou vide ; les fichiers déjà présents ne sont ni écrasés ni supprimés."
   },
   "action": {
     "copyDetails": "Copier les détails",
@@ -202,14 +202,18 @@
     "cancelConfirmTitle": "Annuler ce clon ?",
     "cancelConfirmBody": "Le clon est arrêté. Le dossier de destination peut rester partiel et n’est jamais supprimé.",
     "cancelConfirmConfirm": "Annuler le clon",
+    "remove": "Retirer l’enregistrement",
+    "removeConfirmTitle": "Retirer cet enregistrement de clonage ?",
+    "removeConfirmBody": "L’enregistrement de clonage est retiré de la file. Les fichiers sur le disque ne sont jamais supprimés.",
+    "removeConfirmConfirm": "Retirer l’enregistrement",
+    "removeSuccess": "Enregistrement de clonage retiré",
     "retry": "Réessayer le clon",
     "retryTitle": "Réessayer le clon",
-    "retryBody": "Une nouvelle tentative clone dans un dossier NOUVEAU et vide. La reprise sur place n’est pas prise en charge et les fichiers existants ne sont jamais écrasés ni supprimés.",
-    "retryDestinationLabel": "Nouveau dossier de destination vide",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "Une nouvelle tentative clone dans un dossier vide. Le dossier de destination d’origine n’est autorisé que s’il est manquant ou vide. La reprise sur place n’est pas prise en charge et les fichiers existants ne sont jamais écrasés ni supprimés.",
+    "retryDestinationLabel": "Dossier de destination",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "Saisissez un nouveau dossier de destination vide",
-      "same": "Choisissez un autre dossier — celui de la tentative précédente peut contenir des fichiers partiels.",
+      "required": "Saisissez un dossier de destination",
       "invalid": "Saisissez un chemin de destination valide"
     },
     "retryStart": "Lancer la nouvelle tentative",
