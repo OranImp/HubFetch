@@ -520,6 +520,27 @@ export class CloneStore {
     return this.mapRow(row)
   }
 
+  /**
+   * Delete one terminal queue record. Detaches direct retry children so the
+   * self-referencing `retry_of` FK (no ON DELETE) cannot fail, then deletes
+   * the selected row. Never touches destination files. Active/queued rows
+   * are rejected — removal is not a status transition.
+   */
+  removeTerminal(id: string): CloneRecord[] {
+    return this.db.transaction(() => {
+      const current = this.row(id)
+      if (current === undefined) {
+        throw new CloneNotFoundError(id)
+      }
+      if (CLONE_TERMINAL_STATUSES.includes(current.status as CloneStatus) === false) {
+        throw new CloneStoreError(`cannot remove clone ${id} in status ${current.status}`)
+      }
+      this.db.prepare('UPDATE clone_tasks SET retry_of = NULL WHERE retry_of = ?').run(id)
+      this.db.prepare('DELETE FROM clone_tasks WHERE id = ?').run(id)
+      return this.list()
+    })()
+  }
+
   /** Persist frozen progress for a running/cancelling attempt. */
   updateProgress(id: string, progress: CloneProgress, now = new Date()): CloneRecord {
     const parsed = this.parseOrThrow(

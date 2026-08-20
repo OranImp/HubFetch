@@ -9,8 +9,8 @@
 // better-sqlite3 is built for Electron's ABI, so these tests run the store
 // against node:sqlite (a real SQLite engine) via a duck-typed adapter with a
 // real BEGIN IMMEDIATE transaction wrapper.
-import { randomUUID } from 'node:crypto'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -670,5 +670,166 @@ describe('record round-trip', () => {
       expect(store.get(record.id)).toEqual(record)
     }
     expect(store.get('00000000-0000-4000-8000-000000000000')).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Terminal-only record removal (queue row delete; destination files untouched)
+// ---------------------------------------------------------------------------
+
+describe('removeTerminal', () => {
+  function seedTerminal(
+    status: 'completed' | 'failed' | 'cancelled' | 'interrupted'
+  ): CloneRecord {
+    switch (status) {
+      case 'cancelled':
+        return store.cancelQueued(store.createQueued(makeInput()).id)
+      case 'completed': {
+        const queued = store.createQueued(makeInput())
+        return store.complete(store.start(queued.id).id)
+      }
+      case 'failed': {
+        const queued = store.createQueued(makeInput())
+        return store.fail(store.start(queued.id).id, {
+          errorCode: 'network',
+          error: 'connection refused (sanitized)'
+        })
+      }
+      case 'interrupted': {
+        const queued = store.createQueued(makeInput())
+        store.start(queued.id)
+        const recovered = store.recoverInterrupted()
+        const record = recovered[0]
+        if (record === undefined) {
+          throw new CloneStoreError('expected recovered interrupted row')
+        }
+        return record
+      }
+      default: {
+        const _exhaustive: never = status
+        return _exhaustive
+      }
+    }
+  }
+
+  it.each(['completed', 'failed', 'cancelled', 'interrupted'] as const)(
+    'removes a %s row from the returned list and from the database',
+    (status) => {
+      const record = seedTerminal(status)
+      const sibling = store.createQueued(makeInput({ id: 'qa-author/model-keep' }))
+
+      const returned = store.removeTerminal(record.id)
+
+      expect(returned.find((row) => row.id === record.id)).toBeUndefined()
+      expect(returned.map((row) => row.id)).toContain(sibling.id)
+      expect(store.list().find((row) => row.id === record.id)).toBeUndefined()
+      expect(store.get(record.id)).toBeUndefined()
+      expect(cloneTaskRows().find((row) => row.id === record.id)).toBeUndefined()
+      expect(statusOf(sibling.id)).toBe('queued')
+    }
+  )
+
+  it('detaches a retry child then deletes the parent without an FK failure', () => {
+    db.exec('PRAGMA foreign_keys = ON')
+    const parent = seedTerminal('failed')
+    const child = store.retry(
+      parent.id,
+      makeInput({ destination: join(tmpdir(), `t023-retry-child-${parent.id}`) })
+    )
+    expect(child.retryOf).toBe(parent.id)
+
+    const returned = store.removeTerminal(parent.id)
+
+    expect(returned.find((row) => row.id === parent.id)).toBeUndefined()
+    expect(store.list().find((row) => row.id === parent.id)).toBeUndefined()
+    expect(cloneTaskRows().find((row) => row.id === parent.id)).toBeUndefined()
+
+    const surviving = store.get(child.id)
+    expect(surviving?.id).toBe(child.id)
+    expect(surviving?.retryOf).toBeUndefined()
+    const raw = db.prepare('SELECT retry_of FROM clone_tasks WHERE id = ?').get(child.id) as
+      | { retry_of: string | null }
+      | undefined
+    expect(raw).toEqual({ retry_of: null })
+  })
+
+  it.each(['queued', 'running', 'cancelling'] as const)(
+    'rejects removing a %s row and leaves the database unchanged',
+    (status) => {
+      const queued = store.createQueued(makeInput())
+      let target: CloneRecord
+      switch (status) {
+        case 'queued':
+          target = queued
+          break
+        case 'running':
+          target = store.start(queued.id)
+          break
+        case 'cancelling':
+          target = store.requestCancel(store.start(queued.id).id)
+          break
+        default: {
+          const _exhaustive: never = status
+          return _exhaustive
+        }
+      }
+      const before = cloneTaskRows()
+
+      let thrown: unknown
+      try {
+        store.removeTerminal(target.id)
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).toBeInstanceOf(CloneStoreError)
+      expect(thrown).not.toBeInstanceOf(IllegalCloneTransitionError)
+      expect(thrown).not.toBeInstanceOf(CloneNotFoundError)
+      expect(thrown instanceof Error ? thrown.message : '').toBe(
+        `cannot remove clone ${target.id} in status ${status}`
+      )
+      expect(cloneTaskRows()).toEqual(before)
+      expect(store.get(target.id)?.status).toBe(status)
+    }
+  )
+
+  it('throws CloneNotFoundError for a missing id and mutates nothing', () => {
+    const kept = store.createQueued(makeInput())
+    const before = cloneTaskRows()
+    const missing = '00000000-0000-4000-8000-000000000000'
+
+    expect(() => store.removeTerminal(missing)).toThrow(CloneNotFoundError)
+    expect(cloneTaskRows()).toEqual(before)
+    expect(store.get(kept.id)?.id).toBe(kept.id)
+  })
+
+  it('leaves the destination directory byte-for-byte unchanged after removing the record', () => {
+    const dest = mkdtempSync(join(tmpdir(), 't023-remove-dest-'))
+    writeFileSync(join(dest, 'model.bin'), Buffer.from('clone-bytes-must-stay'))
+    writeFileSync(join(dest, 'config.json'), '{"ok":true}')
+    const namesBefore = readdirSync(dest).sort()
+    const hash = createHash('sha256')
+    for (const name of namesBefore) {
+      hash.update(name)
+      hash.update('\0')
+      hash.update(readFileSync(join(dest, name)))
+    }
+    const digestBefore = hash.digest('hex')
+
+    const queued = store.createQueued(makeInput({ destination: dest }))
+    const completed = store.complete(store.start(queued.id).id)
+    store.removeTerminal(completed.id)
+
+    expect(store.get(completed.id)).toBeUndefined()
+    expect(cloneTaskRows().find((row) => row.id === completed.id)).toBeUndefined()
+    const namesAfter = readdirSync(dest).sort()
+    expect(namesAfter).toEqual(namesBefore)
+    const hashAfter = createHash('sha256')
+    for (const name of namesAfter) {
+      hashAfter.update(name)
+      hashAfter.update('\0')
+      hashAfter.update(readFileSync(join(dest, name)))
+    }
+    expect(hashAfter.digest('hex')).toBe(digestBefore)
   })
 })

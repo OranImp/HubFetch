@@ -802,3 +802,56 @@ describe('CloneManager: exactly one terminal event per attempt', () => {
     expect(h.store.activeCount()).toBe(0)
   })
 })
+
+describe('CloneManager: remove', () => {
+  it('publishes exactly once and never calls host cancel or start', () => {
+    const db = new DatabaseSync(':memory:')
+    for (const sql of MIGRATIONS) db.exec(sql)
+    const store = new CloneStore(nodeStoreDb(db))
+    const queued = store.createQueued(makeInput(join(tmpdir(), 't023-mgr-remove')))
+    const completed = store.complete(store.start(queued.id).id)
+    const waiting = store.createQueued(makeInput(join(tmpdir(), 't023-mgr-keep')))
+
+    const host = {
+      startClone: vi.fn(async () => ({
+        assignmentId: completed.id,
+        steps: [],
+        outcome: 'completed' as const,
+        exitCode: 0,
+        signal: null,
+        zeroProven: true,
+        degradedTaskkill: false,
+        error: null,
+        gitPid: null,
+        utilityPid: null,
+        receivedProgress: 0,
+        receivedLog: 0,
+        refusedCode: null,
+        appToken: false,
+        askPassMerged: false,
+        askPassPipeName: null
+      })),
+      cancelClone: vi.fn(),
+      shutdown: vi.fn(),
+      activeIds: vi.fn(() => [])
+    }
+    const published: CloneRecord[][] = []
+    const manager = new CloneManager({
+      store,
+      host,
+      diagnostics: makeDiagnostics(),
+      publish: (records) => published.push(records)
+    })
+
+    const list = manager.remove(completed.id)
+
+    expect(published).toEqual([list])
+    expect(list.find((record) => record.id === completed.id)).toBeUndefined()
+    expect(store.get(completed.id)).toBeUndefined()
+    expect(store.get(waiting.id)?.status).toBe('queued')
+    expect(host.startClone).toHaveBeenCalledTimes(0)
+    expect(host.cancelClone).toHaveBeenCalledTimes(0)
+    expect(host.shutdown).toHaveBeenCalledTimes(0)
+    db.close()
+  })
+})

@@ -209,6 +209,17 @@ export class CloneManager {
   }
 
   /**
+   * Remove one terminal queue record. Delegates to the store, publishes once,
+   * and returns the updated list. Never cancels workers, never deletes
+   * destination files, never pumps the scheduler.
+   */
+  remove(id: string): CloneRecord[] {
+    const records = this.store.removeTerminal(id)
+    this.publishNow()
+    return records
+  }
+
+  /**
    * Startup recovery: every running/cancelling row becomes interrupted, then
    * the oldest queued attempt is pumped. Idempotent.
    */
