@@ -34,6 +34,10 @@ export function openCloneDestination(id: string): Promise<void> {
   return window.hubfetch.clones.openDestination(id)
 }
 
+export function selectDestination(): Promise<string | null> {
+  return window.hubfetch.clones.selectDestination()
+}
+
 export function onClonesChanged(listener: (records: CloneRecord[]) => void): () => void {
   return window.hubfetch.clones.onClonesChanged(listener)
 }

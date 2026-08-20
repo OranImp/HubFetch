@@ -21,7 +21,7 @@ vi.hoisted(() => {
   })
 })
 
-const clones = vi.hoisted(() => ({ createClone: vi.fn() }))
+const clones = vi.hoisted(() => ({ createClone: vi.fn(), selectDestination: vi.fn() }))
 const diagnostics = vi.hoisted(() => ({ runDiagnostics: vi.fn() }))
 const cloneTools = vi.hoisted(() => ({ performCloneToolInstall: vi.fn() }))
 const router = vi.hoisted(() => ({ navigate: vi.fn() }))
@@ -122,6 +122,7 @@ function createButton(): HTMLButtonElement {
 afterEach(() => {
   cleanup()
   clones.createClone.mockReset()
+  clones.selectDestination.mockReset()
   diagnostics.runDiagnostics.mockReset()
   cloneTools.performCloneToolInstall.mockReset()
   router.navigate.mockReset()
@@ -135,6 +136,7 @@ beforeEach(() => {
   })
   diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport(true))
   clones.createClone.mockResolvedValue({ id: CREATED_ID } satisfies Pick<CloneRecord, 'id'>)
+  clones.selectDestination.mockResolvedValue(null)
 })
 
 describe('CloneCreatePage', () => {
@@ -315,5 +317,43 @@ describe('CloneCreatePage', () => {
       destination: 'E:\\empty-clone-dest',
       auth: 'system'
     })
+  })
+
+  it('keeps the typed destination when the folder picker is cancelled', async () => {
+    clones.selectDestination.mockResolvedValue(null)
+    renderPage()
+    await waitForReady()
+    const dest = screen.getByLabelText('clones:destination.label') as HTMLInputElement
+    fireEvent.change(dest, { target: { value: 'E:\\typed-manual' } })
+    fireEvent.click(screen.getByRole('button', { name: 'clones:destination.select' }))
+    await waitFor(() => expect(clones.selectDestination).toHaveBeenCalledTimes(1))
+    expect(dest.value).toBe('E:\\typed-manual')
+    expect(screen.queryByText('clones:destination.invalid')).toBeNull()
+    expect(screen.queryByText('clones:destination.inaccessible')).toBeNull()
+  })
+
+  it('fills the destination with the picker path and clears a field error', async () => {
+    clones.selectDestination.mockResolvedValue('E:\\canonical-picked')
+    renderPage()
+    await waitForReady()
+    const dest = screen.getByLabelText('clones:destination.label') as HTMLInputElement
+    fireEvent.blur(dest)
+    expect(screen.getByText('clones:destination.invalid')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'clones:destination.select' }))
+    await waitFor(() => expect(dest.value).toBe('E:\\canonical-picked'))
+    expect(screen.queryByText('clones:destination.invalid')).toBeNull()
+  })
+
+  it('shows a localized destination error when the picker rejects a non-directory', async () => {
+    clones.selectDestination.mockRejectedValue(
+      new Error('Selected clone destination is not a regular directory')
+    )
+    renderPage()
+    await waitForReady()
+    const dest = screen.getByLabelText('clones:destination.label') as HTMLInputElement
+    fireEvent.change(dest, { target: { value: 'E:\\typed-manual' } })
+    fireEvent.click(screen.getByRole('button', { name: 'clones:destination.select' }))
+    await waitFor(() => expect(screen.getByText('clones:destination.invalid')).toBeTruthy())
+    expect(dest.value).toBe('E:\\typed-manual')
   })
 })

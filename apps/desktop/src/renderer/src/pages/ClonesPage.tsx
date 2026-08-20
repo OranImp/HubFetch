@@ -381,7 +381,9 @@ export function ClonesPage(): React.JSX.Element {
           record={retryTarget}
           busy={busyId === retryTarget.id}
           onClose={() => setRetryTarget(null)}
-          onConfirm={(request) => retry.mutate({ parentId: retryTarget.id, request })}
+          onConfirm={async (request) => {
+            await retry.mutateAsync({ parentId: retryTarget.id, request })
+          }}
         />
       ) : null}
     </div>

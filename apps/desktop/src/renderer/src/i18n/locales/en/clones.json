@@ -45,7 +45,7 @@
     "placeholder": "C:\\Users\\YourName\\Repos\\my-model",
     "select": "Choose folder…",
     "selected": "Selected: {{path}}",
-    "invalid": "Destination is required",
+    "invalid": "Enter a valid destination folder",
     "nonEmpty": "Destination must be an empty directory",
     "inaccessible": "Cannot access destination folder"
   },
@@ -128,9 +128,9 @@
     "running": "Cloning into the destination folder",
     "cancelling": "Cancelling the running clone",
     "completed": "Clone finished and verified",
-    "failed": "The clone failed. Retry into a new empty folder.",
-    "cancelled": "This clone was cancelled. Retry into a new empty folder.",
-    "interrupted": "Interrupted by a shutdown or crash. The destination folder may be partial. Retry into a new empty folder."
+    "failed": "The clone failed. Retry into an empty folder; the original is allowed if it is missing or empty.",
+    "cancelled": "This clone was cancelled. Retry into an empty folder; the original is allowed if it is missing or empty.",
+    "interrupted": "Interrupted by a shutdown or crash. The destination folder may be partial. Retry into an empty folder; the original is allowed if it is missing or empty."
   },
   "phase": {
     "enumerating": "Enumerating objects",
@@ -175,7 +175,7 @@
     "retryOfAttempt": "Retry of attempt {{id}}",
     "prerequisites": "Prerequisites",
     "retryInfo": "How retries work",
-    "retryInfoBody": "In-place resume is not supported. A retry clones the repository again into a NEW EMPTY folder; nothing already on disk is overwritten or deleted."
+    "retryInfoBody": "In-place resume is not supported. A retry clones the repository again into an empty folder. The original destination is allowed only when that folder is missing or empty; nothing already on disk is overwritten or deleted."
   },
   "action": {
     "copyDetails": "Copy details",
@@ -187,12 +187,11 @@
     "cancelConfirmConfirm": "Cancel clone",
     "retry": "Retry clone",
     "retryTitle": "Retry clone",
-    "retryBody": "A retry clones into a NEW EMPTY folder. Resume in place is not supported and existing files are never overwritten or deleted.",
-    "retryDestinationLabel": "New empty destination folder",
-    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model-retry",
+    "retryBody": "A retry clones into an empty folder. The original destination is allowed only when that folder is missing or empty. Resume in place is not supported and existing files are never overwritten or deleted.",
+    "retryDestinationLabel": "Destination folder",
+    "retryDestinationPlaceholder": "C:\\Users\\YourName\\Repos\\my-model",
     "retryError": {
-      "required": "Enter a new empty destination folder",
-      "same": "Choose a different folder — the previous attempt's folder may contain partial files.",
+      "required": "Enter a destination folder",
       "invalid": "Enter a valid destination path"
     },
     "retryStart": "Start retry",

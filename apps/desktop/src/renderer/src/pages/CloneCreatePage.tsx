@@ -18,8 +18,8 @@ import {
   type DiagnosticCheck,
   type ProxyMode
 } from '@hubfetch/shared'
-import { GitBranch, RefreshCw } from 'lucide-react'
-import { createClone } from '@/lib/clones'
+import { FolderOpen, GitBranch, RefreshCw } from 'lucide-react'
+import { createClone, selectDestination } from '@/lib/clones'
 import { runDiagnostics } from '@/lib/diagnostics'
 import { describeError } from '@/lib/errors'
 import { parseManualProxyDraft } from '@/lib/proxy'
@@ -314,7 +314,8 @@ export function CloneCreatePage(): React.JSX.Element {
     setErrors((prev) => ({ ...prev, id: validateRepoId(repoId) }))
   }, [repoId, validateRepoId])
 
-  // Destination is a text input — user provides the path directly.
+  // Destination is a text input — user provides the path directly, or picks
+  // a canonical folder through the owner-bound native dialog.
   const handleDestinationChange = useCallback(
     (value: string) => {
       setDestination(value)
@@ -326,6 +327,21 @@ export function CloneCreatePage(): React.JSX.Element {
   const handleDestinationBlur = useCallback(() => {
     setErrors((prev) => ({ ...prev, destination: validateDestination(destination) }))
   }, [destination, validateDestination])
+
+  const handleSelectDestination = useCallback(async () => {
+    try {
+      const selected = await selectDestination()
+      if (selected === null) return
+      setDestination(selected)
+      setErrors((prev) => ({ ...prev, destination: null, form: null }))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const localized = /not a regular directory/i.test(message)
+        ? t('clones:destination.invalid')
+        : t('clones:destination.inaccessible')
+      setErrors((prev) => ({ ...prev, destination: localized }))
+    }
+  }, [t])
 
   const handleCreate = useCallback(async () => {
     if (submitting || submitLock.current) return
@@ -579,15 +595,29 @@ export function CloneCreatePage(): React.JSX.Element {
             <label htmlFor={destinationId} className="text-[12.5px] font-medium text-ink-strong">
               {t('clones:destination.label')}
             </label>
-            <Input
-              id={destinationId}
-              value={destination}
-              onChange={(e) => handleDestinationChange(e.target.value)}
-              onBlur={handleDestinationBlur}
-              placeholder={t('clones:destination.placeholder')}
-              spellCheck={false}
-              aria-invalid={errors.destination !== null}
-            />
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Input
+                id={destinationId}
+                className="min-w-0 flex-1"
+                value={destination}
+                onChange={(e) => handleDestinationChange(e.target.value)}
+                onBlur={handleDestinationBlur}
+                placeholder={t('clones:destination.placeholder')}
+                spellCheck={false}
+                aria-invalid={errors.destination !== null}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="shrink-0"
+                aria-label={t('clones:destination.select')}
+                disabled={submitting}
+                onClick={() => void handleSelectDestination()}
+              >
+                <FolderOpen className="size-4" aria-hidden />
+              </Button>
+            </div>
             {errors.destination && (
               <span role="alert" className="text-[12px] text-error">
                 {errors.destination}

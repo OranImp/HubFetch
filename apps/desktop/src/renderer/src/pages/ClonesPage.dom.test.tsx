@@ -40,6 +40,7 @@ const lib = vi.hoisted(() => ({
   retryClone: vi.fn(),
   removeClone: vi.fn(),
   openCloneDestination: vi.fn(),
+  selectDestination: vi.fn(),
   onClonesChanged: vi.fn()
 }))
 const diagnostics = vi.hoisted(() => ({ runDiagnostics: vi.fn() }))
@@ -200,6 +201,7 @@ afterEach(() => {
   lib.retryClone.mockReset()
   lib.removeClone.mockReset()
   lib.openCloneDestination.mockReset()
+  lib.selectDestination.mockReset()
   lib.onClonesChanged.mockReset()
   diagnostics.runDiagnostics.mockReset()
 })
@@ -220,6 +222,7 @@ beforeEach(() => {
     )
   )
   lib.openCloneDestination.mockResolvedValue(undefined)
+  lib.selectDestination.mockResolvedValue(null)
   lib.onClonesChanged.mockImplementation((fn: (records: CloneRecord[]) => void) => {
     pushedListener = fn
     return () => undefined
@@ -311,18 +314,114 @@ describe('ClonesPage', () => {
     await waitFor(() => expect(lib.openCloneDestination).toHaveBeenLastCalledWith(INTERRUPTED_ID))
   })
 
-  it('refuses an in-place retry (same destination) with a localized reason', async () => {
+  it('opens retry prefilled with the original destination and submits that path', async () => {
     renderPage()
     await waitForQueue()
     const card = within(screen.getByTestId(`clone-card-${FAILED_ID}`))
     fireEvent.click(card.getByLabelText('clones:action.retry'))
     const dialog = await screen.findByRole('dialog')
+    const dest = within(dialog).getByLabelText(
+      'clones:action.retryDestinationLabel'
+    ) as HTMLInputElement
+    expect(dest.value).toBe('E:\\Repos\\44444444')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'clones:action.retryStart' }))
+    await waitFor(() => expect(lib.retryClone).toHaveBeenCalledTimes(1))
+    const [parentId, request] = lib.retryClone.mock.calls[0] as [string, Record<string, unknown>]
+    expect(parentId).toBe(FAILED_ID)
+    expect(request).toMatchObject({
+      kind: 'model',
+      id: 'acme/44444444',
+      transport: 'https',
+      destination: 'E:\\Repos\\44444444',
+      auth: 'system',
+      proxy: { mode: 'system' }
+    })
+  })
+
+  it('keeps typed retry destination when the folder picker is cancelled', async () => {
+    lib.selectDestination.mockResolvedValue(null)
+    renderPage()
+    await waitForQueue()
+    const card = within(screen.getByTestId(`clone-card-${FAILED_ID}`))
+    fireEvent.click(card.getByLabelText('clones:action.retry'))
+    const dialog = await screen.findByRole('dialog')
+    const dest = within(dialog).getByLabelText(
+      'clones:action.retryDestinationLabel'
+    ) as HTMLInputElement
+    fireEvent.change(dest, { target: { value: 'E:\\typed-retry' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'clones:destination.select' }))
+    await waitFor(() => expect(lib.selectDestination).toHaveBeenCalledTimes(1))
+    expect(dest.value).toBe('E:\\typed-retry')
+  })
+
+  it('fills retry destination from a successful folder pick', async () => {
+    lib.selectDestination.mockResolvedValue('E:\\canonical-retry')
+    renderPage()
+    await waitForQueue()
+    const card = within(screen.getByTestId(`clone-card-${FAILED_ID}`))
+    fireEvent.click(card.getByLabelText('clones:action.retry'))
+    const dialog = await screen.findByRole('dialog')
+    const dest = within(dialog).getByLabelText(
+      'clones:action.retryDestinationLabel'
+    ) as HTMLInputElement
+    fireEvent.click(within(dialog).getByRole('button', { name: 'clones:destination.select' }))
+    await waitFor(() => expect(dest.value).toBe('E:\\canonical-retry'))
+  })
+
+  it('keeps the retry dialog open with an inline error when the destination is not empty', async () => {
+    lib.retryClone.mockRejectedValue(
+      new Error('clone retry destination unavailable: path exists and is not empty')
+    )
+    renderPage()
+    await waitForQueue()
+    const card = within(screen.getByTestId(`clone-card-${FAILED_ID}`))
+    fireEvent.click(card.getByLabelText('clones:action.retry'))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'clones:action.retryStart' }))
+    await waitFor(() => expect(lib.retryClone).toHaveBeenCalledTimes(1))
+    expect(lib.retryClone.mock.calls[0]?.[1]).toMatchObject({
+      destination: 'E:\\Repos\\44444444'
+    })
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(within(dialog).getByText('clones:destination.nonEmpty')).toBeTruthy()
+    expect(screen.queryByText('clones:action.retryStarted')).toBeNull()
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  it('retries into an alternate folder after a non-empty rejection', async () => {
+    lib.retryClone
+      .mockRejectedValueOnce(
+        new Error('clone retry destination unavailable: path exists and is not empty')
+      )
+      .mockImplementation((_parentId: string, request: { destination: string }) =>
+        Promise.resolve(
+          clone({
+            id: '99999999-9999-4999-8999-999999999999',
+            status: 'queued',
+            attempt: 2,
+            destination: request.destination
+          })
+        )
+      )
+    renderPage()
+    await waitForQueue()
+    const card = within(screen.getByTestId(`clone-card-${FAILED_ID}`))
+    fireEvent.click(card.getByLabelText('clones:action.retry'))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'clones:action.retryStart' }))
+    await waitFor(() =>
+      expect(within(dialog).getByText('clones:destination.nonEmpty')).toBeTruthy()
+    )
     fireEvent.change(within(dialog).getByLabelText('clones:action.retryDestinationLabel'), {
-      target: { value: 'E:\\Repos\\44444444' }
+      target: { value: 'E:\\Repos\\retry-alternate' }
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'clones:action.retryStart' }))
-    expect(within(dialog).getByText('clones:action.retryError.same')).toBeTruthy()
-    expect(lib.retryClone).not.toHaveBeenCalled()
+    await waitFor(() => expect(lib.retryClone).toHaveBeenCalledTimes(2))
+    expect(lib.retryClone.mock.calls[1]?.[1]).toMatchObject({
+      destination: 'E:\\Repos\\retry-alternate'
+    })
+    await waitFor(() => expect(screen.queryByText('clones:action.retryTitle')).toBeNull())
+    expect(screen.getByText('clones:action.retryStarted')).toBeTruthy()
   })
 
   it('retries a failed attempt into a NEW empty destination with the frozen attempt config', async () => {

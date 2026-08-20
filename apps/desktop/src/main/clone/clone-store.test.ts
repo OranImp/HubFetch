@@ -475,6 +475,66 @@ describe('retry', () => {
     expect(statusOf(parent.id)).toBe('failed')
   })
 
+  function failedParentAt(destination: string): CloneRecord {
+    const queued = store.createQueued(
+      makeInput({ revision: { kind: 'tag', name: 'v1' }, destination })
+    )
+    const running = store.start(queued.id)
+    return store.fail(running.id, { errorCode: 'network', error: 'connection refused (sanitized)' })
+  }
+
+  it('retries to the exact original path when that path is absent', () => {
+    const original = join(tmpdir(), `t31-retry-same-absent-${randomUUID()}`)
+    const parent = failedParentAt(original)
+    const before = cloneTaskRows().length
+
+    const retried = store.retry(
+      parent.id,
+      makeInput({ destination: original, revision: { kind: 'tag', name: 'v1' } })
+    )
+
+    expect(retried.destination).toBe(original)
+    expect(retried.retryOf).toBe(parent.id)
+    expect(retried.status).toBe('queued')
+    expect(cloneTaskRows().length).toBe(before + 1)
+    expect(statusOf(parent.id)).toBe('failed')
+  })
+
+  it('retries to the exact original path when that path is an empty directory', () => {
+    const original = mkdtempSync(join(tmpdir(), 't31-retry-same-empty-'))
+    const parent = failedParentAt(original)
+    const before = cloneTaskRows().length
+
+    const retried = store.retry(
+      parent.id,
+      makeInput({ destination: original, revision: { kind: 'tag', name: 'v1' } })
+    )
+
+    expect(retried.destination).toBe(original)
+    expect(retried.retryOf).toBe(parent.id)
+    expect(cloneTaskRows().length).toBe(before + 1)
+    expect(statusOf(parent.id)).toBe('failed')
+    expect(readdirSync(original)).toEqual([])
+  })
+
+  it('rejects a retry to the exact original path when that directory is non-empty', () => {
+    const original = mkdtempSync(join(tmpdir(), 't31-retry-same-nonempty-'))
+    writeFileSync(join(original, 'partial.txt'), 'leftover clone data')
+    const parent = failedParentAt(original)
+    const before = cloneTaskRows().length
+
+    expect(() =>
+      store.retry(
+        parent.id,
+        makeInput({ destination: original, revision: { kind: 'tag', name: 'v1' } })
+      )
+    ).toThrow(CloneDestinationError)
+    expect(cloneTaskRows().length).toBe(before)
+    expect(statusOf(parent.id)).toBe('failed')
+    expect(readFileSync(join(original, 'partial.txt'), 'utf8')).toBe('leftover clone data')
+    expect(readdirSync(original)).toEqual(['partial.txt'])
+  })
+
   it('rejects retrying the parent row itself (terminal, not retryable-linked again)', () => {
     const parent = failedParent()
     expect(() =>
@@ -678,9 +738,7 @@ describe('record round-trip', () => {
 // ---------------------------------------------------------------------------
 
 describe('removeTerminal', () => {
-  function seedTerminal(
-    status: 'completed' | 'failed' | 'cancelled' | 'interrupted'
-  ): CloneRecord {
+  function seedTerminal(status: 'completed' | 'failed' | 'cancelled' | 'interrupted'): CloneRecord {
     switch (status) {
       case 'cancelled':
         return store.cancelQueued(store.createQueued(makeInput()).id)
@@ -748,8 +806,7 @@ describe('removeTerminal', () => {
     expect(surviving?.id).toBe(child.id)
     expect(surviving?.retryOf).toBeUndefined()
     const raw = db.prepare('SELECT retry_of FROM clone_tasks WHERE id = ?').get(child.id) as
-      | { retry_of: string | null }
-      | undefined
+      { retry_of: string | null } | undefined
     expect(raw).toEqual({ retry_of: null })
   })
 
