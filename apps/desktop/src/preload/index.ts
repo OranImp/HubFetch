@@ -65,6 +65,12 @@ const cloneBridge: CloneBridge = {
   openDestination(id: string): Promise<void> {
     return ipcRenderer.invoke('clones:openDestination', { id }) as Promise<void>
   },
+  remove(id: string): Promise<CloneRecord[]> {
+    return ipcRenderer.invoke('clones:remove', { id }) as Promise<CloneRecord[]>
+  },
+  selectDestination(): Promise<string | null> {
+    return ipcRenderer.invoke('clones:selectDestination') as Promise<string | null>
+  },
   onClonesChanged(listener: (records: CloneRecord[]) => void): () => void {
     const wrapped = (_event: unknown, payload: CloneRecord[]): void => listener(payload)
     ipcRenderer.on('evt:clones', wrapped)

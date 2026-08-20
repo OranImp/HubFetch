@@ -486,6 +486,10 @@ export interface IpcInvokeContract {
   'clones:retry': { req: { parentId: string; request: CloneRequest }; res: CloneRecord }
   /** Open the recorded clone destination folder in the OS file manager. */
   'clones:openDestination': { req: { id: string }; res: void }
+  /** Remove one terminal queue record; returns the updated list. */
+  'clones:remove': { req: { id: string }; res: CloneRecord[] }
+  /** Owner-bound directory picker; null when the user cancels. */
+  'clones:selectDestination': { req: void; res: string | null }
 
   'cache:scan': { req: void; res: CacheReport }
   'cache:deleteRevisions': {
@@ -686,6 +690,8 @@ export const IPC_INVOKE_CHANNELS = [
   'clones:cancel',
   'clones:retry',
   'clones:openDestination',
+  'clones:remove',
+  'clones:selectDestination',
   'cache:scan',
   'cache:deleteRevisions',
   'cache:cleanPartials',
@@ -793,6 +799,10 @@ export interface CloneBridge {
   retry(parentId: string, request: CloneRequest): Promise<CloneRecord>
   /** Open the recorded destination folder of one attempt (owner-bound). */
   openDestination(id: string): Promise<void>
+  /** Remove one terminal queue record; returns the updated list. */
+  remove(id: string): Promise<CloneRecord[]>
+  /** Owner-bound directory picker; null when the user cancels. */
+  selectDestination(): Promise<string | null>
   /** Subscribe to `evt:clones`; returns an unsubscribe function. */
   onClonesChanged(listener: (records: CloneRecord[]) => void): () => void
 }

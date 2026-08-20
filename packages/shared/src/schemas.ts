@@ -689,5 +689,6 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
   'clones:create': z.object({ request: cloneRequestSchema }).strict(),
   'clones:cancel': z.object({ id: z.uuid() }).strict(),
   'clones:retry': z.object({ parentId: z.uuid(), request: cloneRequestSchema }).strict(),
-  'clones:openDestination': z.object({ id: z.uuid() }).strict()
+  'clones:openDestination': z.object({ id: z.uuid() }).strict(),
+  'clones:remove': z.object({ id: z.uuid() }).strict()
 }

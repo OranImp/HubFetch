@@ -14,9 +14,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { vi } from 'vitest'
-import type { RendererApi } from '@hubfetch/shared'
+import type { IpcInvokeChannel, RendererApi } from '@hubfetch/shared'
+import { ipcRequestSchemas } from '@hubfetch/shared'
 import { MIGRATIONS } from '../db'
 import { registerIpcHandlers, type AppContext } from '../ipc'
+import { checkSenderTrust } from '../ipc-guard'
 import type { CloneEnvelope, CloneEvent } from '../../utility/clone-protocol'
 import type { CloneManagerHost } from './clone-manager'
 import { CloneManager } from './clone-manager'
@@ -230,6 +232,11 @@ export function makeClonesIpcHarness(mock: ClonesIpcMock): ClonesIpcHarness {
     diagnostics: {} as never
   } as unknown as AppContext
   registerIpcHandlers(ctx, { packagedEntry: PACKAGED_ENTRY, devOrigin: null })
+  // Todo 2 contract-only: product handlers land in Todo 3. Until then, bind
+  // the same Zod + sender-trust wrapper so contract tests can prove
+  // rejection happens before any manager/dialog call. Skip when already
+  // registered so later QA tests keep the real handlers.
+  registerMissingCloneContractChannels(mock)
 
   return {
     db,
@@ -243,4 +250,55 @@ export function makeClonesIpcHarness(mock: ClonesIpcMock): ClonesIpcHarness {
       rmSync(scratchDir, { recursive: true, force: true })
     }
   }
+}
+
+/**
+ * Contract-only stubs for clone channels whose product handlers are not yet
+ * registered. Mirrors the central `handle()` wrapper: schema-present
+ * channels parse with Zod; schema-absent (void-request) channels reject any
+ * payload; sender trust is checked before the stub body. The stub body never
+ * calls CloneManager or `dialog.showOpenDialog`.
+ */
+function registerMissingCloneContractChannels(mock: ClonesIpcMock): void {
+  registerCloneContractChannel(mock, 'clones:remove', () => [])
+  registerCloneContractChannel(mock, 'clones:selectDestination', () => null)
+}
+
+function registerCloneContractChannel(
+  mock: ClonesIpcMock,
+  channel: Extract<IpcInvokeChannel, 'clones:remove' | 'clones:selectDestination'>,
+  onTrusted: () => unknown
+): void {
+  if (mock.handlers.has(channel)) return
+  // Async to match the real `handle()` wrapper: throws become rejected
+  // promises so `Promise.resolve(handler())` can assert `.rejects`.
+  mock.handlers.set(channel, async (event, payload) => {
+    const schema = ipcRequestSchemas[channel]
+    if (schema) {
+      const parsed = schema.safeParse(payload)
+      if (!parsed.success) {
+        throw new Error(`Invalid payload for ${channel}: ${parsed.error.message}`)
+      }
+    } else if (payload !== undefined && payload !== null) {
+      throw new Error(`Channel ${channel} accepts no payload`)
+    }
+    const senderEvent = event as {
+      sender?: { id?: number; getURL?: () => string; mainFrame?: unknown }
+      senderFrame?: unknown
+    }
+    const sender = senderEvent.sender
+    const getURL = sender?.getURL
+    const check = checkSenderTrust(
+      { packagedEntry: PACKAGED_ENTRY, devOrigin: null },
+      {
+        webContentsId: sender?.id ?? 0,
+        isMainFrame: senderEvent.senderFrame === sender?.mainFrame,
+        url: getURL === undefined ? '' : getURL()
+      }
+    )
+    if (!check.ok) {
+      throw new Error(`IPC sender rejected: ${check.reason}`)
+    }
+    return onTrusted()
+  })
 }

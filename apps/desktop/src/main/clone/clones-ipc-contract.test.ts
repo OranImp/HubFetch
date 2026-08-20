@@ -20,7 +20,7 @@ import type {
   IpcResponse,
   RendererApi
 } from '@hubfetch/shared'
-import { cloneRecordSchema, ipcRequestSchemas } from '@hubfetch/shared'
+import { cloneRecordSchema, IPC_INVOKE_CHANNELS, ipcRequestSchemas } from '@hubfetch/shared'
 import type { CloneBridge } from '@hubfetch/shared'
 import { makeRogueEvent, PACKAGED_ENTRY, type ClonesIpcMock } from './clones-ipc-test-utils'
 
@@ -149,6 +149,8 @@ describe('clone IPC contract (type-level)', () => {
     expectTypeOf<IpcResponse<'clones:cancel'>>().toEqualTypeOf<CloneRecord[]>()
     expectTypeOf<IpcResponse<'clones:retry'>>().toEqualTypeOf<CloneRecord>()
     expectTypeOf<IpcResponse<'clones:openDestination'>>().toEqualTypeOf<void>()
+    expectTypeOf<IpcResponse<'clones:remove'>>().toEqualTypeOf<CloneRecord[]>()
+    expectTypeOf<IpcResponse<'clones:selectDestination'>>().toEqualTypeOf<string | null>()
   })
 
   it('types clones:create/retry requests as the validated CloneRequest', () => {
@@ -159,6 +161,8 @@ describe('clone IPC contract (type-level)', () => {
     }>()
     expectTypeOf<IpcRequest<'clones:get'>>().toEqualTypeOf<{ id: string }>()
     expectTypeOf<IpcRequest<'clones:list'>>().toEqualTypeOf<void>()
+    expectTypeOf<IpcRequest<'clones:remove'>>().toEqualTypeOf<{ id: string }>()
+    expectTypeOf<IpcRequest<'clones:selectDestination'>>().toEqualTypeOf<void>()
   })
 
   it('binds the evt:clones event payload to CloneRecord[]', () => {
@@ -173,6 +177,8 @@ describe('clone IPC contract (type-level)', () => {
       cancel: undefined,
       retry: undefined,
       openDestination: undefined,
+      remove: undefined,
+      selectDestination: undefined,
       onClonesChanged: undefined
     } as unknown as CloneBridge
     expectTypeOf(bridge.list).returns.toEqualTypeOf<Promise<CloneRecord[]>>()
@@ -187,6 +193,10 @@ describe('clone IPC contract (type-level)', () => {
     expectTypeOf(bridge.retry).returns.toEqualTypeOf<Promise<CloneRecord>>()
     expectTypeOf(bridge.openDestination).parameter(0).toBeString()
     expectTypeOf(bridge.openDestination).returns.toEqualTypeOf<Promise<void>>()
+    expectTypeOf(bridge.remove).parameter(0).toBeString()
+    expectTypeOf(bridge.remove).returns.toEqualTypeOf<Promise<CloneRecord[]>>()
+    expectTypeOf(bridge.selectDestination).parameters.toEqualTypeOf<[]>()
+    expectTypeOf(bridge.selectDestination).returns.toEqualTypeOf<Promise<string | null>>()
     expectTypeOf(bridge.onClonesChanged)
       .parameter(0)
       .toEqualTypeOf<(records: CloneRecord[]) => void>()
@@ -263,8 +273,13 @@ describe('clone IPC request schemas (runtime)', () => {
     ).toBe(false)
   })
 
-  it('clones:get/cancel/openDestination require branded UUID ids', () => {
-    for (const channel of ['clones:get', 'clones:cancel', 'clones:openDestination'] as const) {
+  it('clones:get/cancel/openDestination/remove require branded UUID ids', () => {
+    for (const channel of [
+      'clones:get',
+      'clones:cancel',
+      'clones:openDestination',
+      'clones:remove'
+    ] as const) {
       const schema = ipcRequestSchemas[channel]!
       expect(schema.safeParse({ id: 'not-a-uuid' }).success).toBe(false)
       expect(schema.safeParse({ id: 'f'.repeat(36) }).success).toBe(false)
@@ -291,6 +306,18 @@ describe('clone IPC request schemas (runtime)', () => {
   it('clones:list is a void-request channel (no schema entry)', () => {
     expect(ipcRequestSchemas['clones:list']).toBeUndefined()
     expectTypeOf<IpcRequest<'clones:list'>>().toEqualTypeOf<void>()
+  })
+
+  it('clones:selectDestination is a void-request channel (no schema entry)', () => {
+    expect(ipcRequestSchemas['clones:selectDestination']).toBeUndefined()
+    expectTypeOf<IpcRequest<'clones:selectDestination'>>().toEqualTypeOf<void>()
+  })
+
+  it('allowlist covers clones:remove and schema-absent clones:selectDestination', () => {
+    expect(IPC_INVOKE_CHANNELS.includes('clones:remove')).toBe(true)
+    expect(IPC_INVOKE_CHANNELS.includes('clones:selectDestination')).toBe(true)
+    expect(ipcRequestSchemas['clones:remove']).toBeDefined()
+    expect(ipcRequestSchemas['clones:selectDestination']).toBeUndefined()
   })
 })
 
@@ -336,6 +363,22 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
       await expect(Promise.resolve(openHandler(rogue, { id: UUID }))).rejects.toThrow(
         /IPC sender rejected/
       )
+
+      const removeSpy = vi.spyOn(harness.manager, 'remove')
+      const dialogSpy = vi.spyOn(
+        (await import('electron')).dialog,
+        'showOpenDialog'
+      )
+      const removeHandler = mock.handlers.get('clones:remove')!
+      await expect(Promise.resolve(removeHandler(rogue, { id: UUID }))).rejects.toThrow(
+        /IPC sender rejected/
+      )
+      expect(removeSpy).not.toHaveBeenCalled()
+      const selectHandler = mock.handlers.get('clones:selectDestination')!
+      await expect(Promise.resolve(selectHandler(rogue, undefined))).rejects.toThrow(
+        /IPC sender rejected/
+      )
+      expect(dialogSpy).not.toHaveBeenCalled()
     } finally {
       harness.cleanup()
     }
@@ -387,6 +430,86 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
         Promise.resolve((listEvent as (e: unknown, p: unknown) => unknown)(trusted, { id: UUID }))
       ).rejects.toThrow(/accepts no payload/)
       expect(listSpy).not.toHaveBeenCalled()
+
+      const removeSpy = vi.spyOn(harness.manager, 'remove')
+      const dialogSpy = vi.spyOn(
+        (await import('electron')).dialog,
+        'showOpenDialog'
+      )
+      const removeEvent = mock.handlers.get('clones:remove')
+      await expect(
+        Promise.resolve(
+          (removeEvent as (e: unknown, p: unknown) => unknown)(trusted, { id: 'not-a-uuid' })
+        )
+      ).rejects.toThrow(/Invalid payload/)
+      expect(removeSpy).not.toHaveBeenCalled()
+      await expect(
+        Promise.resolve(
+          (removeEvent as (e: unknown, p: unknown) => unknown)(trusted, { id: UUID, extra: true })
+        )
+      ).rejects.toThrow(/Invalid payload/)
+      expect(removeSpy).not.toHaveBeenCalled()
+
+      const selectEvent = mock.handlers.get('clones:selectDestination')
+      await expect(
+        Promise.resolve(
+          (selectEvent as (e: unknown, p: unknown) => unknown)(trusted, { path: 'C:\\\\qa' })
+        )
+      ).rejects.toThrow(/accepts no payload/)
+      expect(dialogSpy).not.toHaveBeenCalled()
+      await expect(
+        Promise.resolve((selectEvent as (e: unknown, p: unknown) => unknown)(trusted, ''))
+      ).rejects.toThrow(/accepts no payload/)
+      expect(dialogSpy).not.toHaveBeenCalled()
+    } finally {
+      harness.cleanup()
+    }
+  })
+
+  it('preload CloneBridge exposes remove and selectDestination with contract arities', async () => {
+    const harness = makeClonesIpcHarness(mock)
+    try {
+      expect(typeof harness.api.clones.remove).toBe('function')
+      expect(harness.api.clones.remove.length).toBe(1)
+      expect(typeof harness.api.clones.selectDestination).toBe('function')
+      expect(harness.api.clones.selectDestination.length).toBe(0)
+      const removeSpy = vi.spyOn(harness.manager, 'remove')
+      const dialogSpy = vi.spyOn((await import('electron')).dialog, 'showOpenDialog')
+      await expect(harness.api.clones.remove(UUID)).resolves.toEqual([])
+      expect(removeSpy).not.toHaveBeenCalled()
+      await expect(harness.api.clones.selectDestination()).resolves.toBeNull()
+      expect(dialogSpy).not.toHaveBeenCalled()
+    } finally {
+      harness.cleanup()
+    }
+  })
+
+  it('trusted clones:remove UUID is accepted; any selectDestination payload is rejected', async () => {
+    const harness = makeClonesIpcHarness(mock)
+    try {
+      const removeSpy = vi.spyOn(harness.manager, 'remove')
+      const dialogSpy = vi.spyOn((await import('electron')).dialog, 'showOpenDialog')
+      const frame = {}
+      const trusted = {
+        sender: { id: 7, getURL: () => PACKAGED_ENTRY, mainFrame: frame },
+        senderFrame: frame
+      }
+      const removeEvent = mock.handlers.get('clones:remove') as (
+        e: unknown,
+        p: unknown
+      ) => unknown
+      await expect(Promise.resolve(removeEvent(trusted, { id: UUID }))).resolves.toEqual([])
+      expect(removeSpy).not.toHaveBeenCalled()
+      const selectEvent = mock.handlers.get('clones:selectDestination') as (
+        e: unknown,
+        p: unknown
+      ) => unknown
+      await expect(Promise.resolve(selectEvent(trusted, undefined))).resolves.toBeNull()
+      expect(dialogSpy).not.toHaveBeenCalled()
+      await expect(Promise.resolve(selectEvent(trusted, { id: UUID }))).rejects.toThrow(
+        /accepts no payload/
+      )
+      expect(dialogSpy).not.toHaveBeenCalled()
     } finally {
       harness.cleanup()
     }
