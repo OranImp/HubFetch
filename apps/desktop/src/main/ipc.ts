@@ -701,6 +701,28 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   handle('clones:retry', ({ parentId, request }) =>
     ctx.clones.retry(parentId, withResolvedCloneProxy(request))
   )
+  // Terminal-only record removal. The UUID is validated and the sender trusted
+  // by the central wrapper BEFORE the manager call; the manager removes the
+  // terminal row, publishes the shortened list, and never touches files.
+  handle('clones:remove', ({ id }) => ctx.clones.remove(id))
+  // Owner-bound destination picker for new/retry clones. The OS dialog is the
+  // only source of a selection — the renderer never supplies a path. Cancel
+  // returns null and mutates nothing; a selection must be a regular,
+  // non-symlink directory and is returned canonically (realpath).
+  handle('clones:selectDestination', async (_req, event) => {
+    const parent = ownerWindow(event)
+    const options: Electron.OpenDialogOptions = { properties: ['openDirectory'] }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, options)
+      : await dialog.showOpenDialog(options)
+    const selected = result.filePaths[0]
+    if (result.canceled || !selected) return null
+    const entry = await lstat(selected)
+    if (!entry.isDirectory() || entry.isSymbolicLink()) {
+      throw new Error('Selected clone destination is not a regular directory')
+    }
+    return realpath(selected)
+  })
   // Owner-bound open: the path is resolved ONLY from the validated stored
   // record (never an arbitrary renderer-supplied path), canonicalized, and
   // confirmed to be a real directory before the OS file manager opens it.

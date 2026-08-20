@@ -36,6 +36,10 @@ export interface ClonesIpcMock {
   exposed: { key: string | null; api: RendererApi | null }
   trustedUrl: string
   openPathCalls: string[]
+  /** Next result for the mocked `dialog.showOpenDialog` (QA picker tests). */
+  showOpenDialogResult?: { canceled: boolean; filePaths: string[] }
+  /** Count of `dialog.showOpenDialog` invocations (rogue-sender proofs). */
+  showOpenDialogCalls?: number
 }
 
 export function makeMockContainer(): ClonesIpcMock {
@@ -44,7 +48,9 @@ export function makeMockContainer(): ClonesIpcMock {
     rendererListeners: new Map(),
     exposed: { key: null, api: null },
     trustedUrl: PACKAGED_ENTRY,
-    openPathCalls: []
+    openPathCalls: [],
+    showOpenDialogResult: { canceled: true, filePaths: [] },
+    showOpenDialogCalls: 0
   }
 }
 

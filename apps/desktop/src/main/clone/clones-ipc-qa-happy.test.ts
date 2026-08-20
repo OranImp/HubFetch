@@ -13,6 +13,7 @@
 //
 // Evidence is written to .omo/evidence/task-33-adopt-ohmyhf-main/ (gitignored).
 import { join, resolve } from 'node:path'
+import { mkdir, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import type { CloneRecord, CloneRequest, RendererApi } from '@hubfetch/shared'
@@ -85,7 +86,10 @@ vi.mock('electron', () => {
     },
     BrowserWindow: { fromWebContents: () => null, getAllWindows: () => [] },
     dialog: {
-      showOpenDialog: async () => ({ canceled: true, filePaths: [] }),
+      showOpenDialog: async () => {
+        mock.showOpenDialogCalls = (mock.showOpenDialogCalls ?? 0) + 1
+        return mock.showOpenDialogResult ?? { canceled: true, filePaths: [] }
+      },
       showSaveDialog: async () => ({ canceled: true })
     },
     shell: {
@@ -237,6 +241,68 @@ describe('clone IPC happy path (preload -> wrapper -> manager)', () => {
         unsubscribeNoLeak: afterUnsub.status === 'queued' && seen.length === beforeUnsubscribe,
         shutdown: { zeroProven: shutdown.zeroProven, storeActive: shutdown.storeActive },
         note: 'create(proxy resolved from settings) -> evt:clones -> list/get -> cancel running -> openDestination -> unsubscribe no-leak'
+      })
+    )
+    await writeQaHappy(lines)
+  }, 30_000)
+
+  it('removes a terminal record and picks canonical destinations through the picker', async () => {
+    const harness = makeClonesIpcHarness(mock)
+    harnesses.push(harness)
+    const lines: string[] = []
+
+    // --- Create a terminal record -------------------------------------------
+    const dest = join(harness.scratchDir, 'remove-me')
+    const created = await harness.api.clones.create(makeRequest(dest))
+    await waitFor(() => harness.store.get(created.id)?.status === 'completed', 'terminal record')
+    expect(harness.store.get(created.id)?.status).toBe('completed')
+
+    // --- Trusted terminal removal: returns/publishes the shortened list ------
+    const seen: CloneRecord[][] = []
+    const unsubscribe = harness.api.clones.onClonesChanged((records) => seen.push(records))
+    const before = await harness.api.clones.list()
+    const removed = await harness.api.clones.remove(created.id)
+    // The returned list is exactly the pre-removal list minus the removed id.
+    expect(removed.length).toBe(before.length - 1)
+    expect(removed.some((record) => record.id === created.id)).toBe(false)
+    expect(harness.store.list().some((record) => record.id === created.id)).toBe(false)
+    // The published evt:clones payload reflects the removal too.
+    await waitFor(() => seen.length > 0, 'removal published')
+    const lastEvent = seen[seen.length - 1] as CloneRecord[]
+    expect(lastEvent.some((record) => record.id === created.id)).toBe(false)
+    unsubscribe()
+
+    // --- Picker cancel: null, zero mutation ----------------------------------
+    mock.showOpenDialogResult = { canceled: true, filePaths: [] }
+    const listBeforeCancel = await harness.api.clones.list()
+    const canceled = await harness.api.clones.selectDestination()
+    expect(canceled).toBeNull()
+    expect(await harness.api.clones.list()).toEqual(listBeforeCancel)
+
+    // --- Picker success: canonical path for a Unicode + spaced temp dir ------
+    const dir = join(harness.scratchDir, 'QA 目录 with spaces')
+    await mkdir(dir, { recursive: true })
+    const canonical = await realpath(dir)
+    mock.showOpenDialogResult = { canceled: false, filePaths: [dir] }
+    const selected = await harness.api.clones.selectDestination()
+    expect(selected).toBe(canonical)
+    expect(selected).not.toBeNull()
+
+    lines.push(
+      JSON.stringify({
+        scenario: 'happy-remove-and-picker',
+        removed: { returnedCount: removed.length, beforeCount: before.length, id: created.id },
+        removedFromReturned: removed.some((record) => record.id === created.id),
+        removedFromStore: harness.store.list().some((record) => record.id === created.id),
+        removedFromPublished: lastEvent.some((record) => record.id === created.id),
+        pickerCancel: { result: canceled, mutation: (await harness.api.clones.list()).length },
+        pickerSuccess: {
+          selected,
+          canonical,
+          equal: selected === canonical,
+          source: dir
+        },
+        note: 'terminal remove returns/publishes shortened list; picker cancel -> null; picker -> realpath(canonical)'
       })
     )
     await writeQaHappy(lines)

@@ -141,6 +141,14 @@ function makeValidRequest(destination = 'C:\\qa\\clone-dest'): CloneRequest {
   }
 }
 
+async function waitFor(cond: () => boolean, label: string, timeoutMs = 8000): Promise<void> {
+  const start = Date.now()
+  while (!cond()) {
+    if (Date.now() - start > timeoutMs) throw new Error(`waitFor timed out: ${label}`)
+    await new Promise((r) => setImmediate(r))
+  }
+}
+
 describe('clone IPC contract (type-level)', () => {
   it('types every clone operation response against CloneRecord', () => {
     expectTypeOf<IpcResponse<'clones:list'>>().toEqualTypeOf<CloneRecord[]>()
@@ -473,21 +481,25 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
       expect(harness.api.clones.remove.length).toBe(1)
       expect(typeof harness.api.clones.selectDestination).toBe('function')
       expect(harness.api.clones.selectDestination.length).toBe(0)
-      const removeSpy = vi.spyOn(harness.manager, 'remove')
+      // Real handler: removing the sole terminal record returns the empty list.
+      const created = await harness.api.clones.create(
+        makeValidRequest(join(harness.scratchDir, 'remove-contract'))
+      )
+      await waitFor(() => harness.store.get(created.id)?.status === 'completed', 'completed')
+      const removed = await harness.api.clones.remove(created.id)
+      expect(removed).toEqual([])
+      // Real handler: the owner-bound picker opens the OS dialog; cancel -> null.
       const dialogSpy = vi.spyOn((await import('electron')).dialog, 'showOpenDialog')
-      await expect(harness.api.clones.remove(UUID)).resolves.toEqual([])
-      expect(removeSpy).not.toHaveBeenCalled()
       await expect(harness.api.clones.selectDestination()).resolves.toBeNull()
-      expect(dialogSpy).not.toHaveBeenCalled()
+      expect(dialogSpy).toHaveBeenCalled()
     } finally {
       harness.cleanup()
     }
   })
 
-  it('trusted clones:remove UUID is accepted; any selectDestination payload is rejected', async () => {
+  it('trusted clones:remove removes a terminal row; any selectDestination payload is rejected', async () => {
     const harness = makeClonesIpcHarness(mock)
     try {
-      const removeSpy = vi.spyOn(harness.manager, 'remove')
       const dialogSpy = vi.spyOn((await import('electron')).dialog, 'showOpenDialog')
       const frame = {}
       const trusted = {
@@ -498,18 +510,26 @@ describe('central wrapper gates the clone operations (Todo 18)', () => {
         e: unknown,
         p: unknown
       ) => unknown
-      await expect(Promise.resolve(removeEvent(trusted, { id: UUID }))).resolves.toEqual([])
-      expect(removeSpy).not.toHaveBeenCalled()
+      const created = await harness.api.clones.create(
+        makeValidRequest(join(harness.scratchDir, 'trusted-remove'))
+      )
+      await waitFor(() => harness.store.get(created.id)?.status === 'completed', 'completed')
+      const removed = (await Promise.resolve(
+        removeEvent(trusted, { id: created.id })
+      )) as Array<{ id: string }>
+      expect(removed.some((record) => record.id === created.id)).toBe(false)
+      expect(harness.store.list().some((record) => record.id === created.id)).toBe(false)
+      // Trusted void request opens the OS dialog; the mocked dialog cancels -> null.
       const selectEvent = mock.handlers.get('clones:selectDestination') as (
         e: unknown,
         p: unknown
       ) => unknown
       await expect(Promise.resolve(selectEvent(trusted, undefined))).resolves.toBeNull()
-      expect(dialogSpy).not.toHaveBeenCalled()
+      expect(dialogSpy).toHaveBeenCalled()
+      // Any payload on the void-request channel is rejected before the dialog.
       await expect(Promise.resolve(selectEvent(trusted, { id: UUID }))).rejects.toThrow(
         /accepts no payload/
       )
-      expect(dialogSpy).not.toHaveBeenCalled()
     } finally {
       harness.cleanup()
     }
