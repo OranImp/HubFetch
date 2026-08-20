@@ -101,7 +101,9 @@ beforeEach(() => {
 
 describe('CloneToolsSection', () => {
   it('shows the GCM install action when Git passes and GCM is missing', async () => {
-    diagnostics.runDiagnostics.mockResolvedValue(makeReport({ git: 'pass', xet: 'pass', gcm: 'failure' }))
+    diagnostics.runDiagnostics.mockResolvedValue(
+      makeReport({ git: 'pass', xet: 'pass', gcm: 'failure' })
+    )
     renderSection()
     // Wait until the diagnostics report has landed so the row reflects real data.
     await screen.findByText('GCM is not available')
@@ -110,7 +112,9 @@ describe('CloneToolsSection', () => {
   })
 
   it('hides the GCM install action when Git is missing and GCM is missing', async () => {
-    diagnostics.runDiagnostics.mockResolvedValue(makeReport({ git: 'failure', xet: 'pass', gcm: 'failure' }))
+    diagnostics.runDiagnostics.mockResolvedValue(
+      makeReport({ git: 'failure', xet: 'pass', gcm: 'failure' })
+    )
     renderSection()
     // Wait until the diagnostics report has landed so the row reflects real data.
     await screen.findByText('Git is not installed')
@@ -125,7 +129,9 @@ describe('CloneToolsSection', () => {
     renderSection()
     await screen.findByText('Git-Xet is not installed')
     const xetRow = screen.getByTestId('clone-tool-row-git-xet')
-    expect(within(xetRow).getByRole('button', { name: 'settings:cloneTools.copyConfigure' })).toBeTruthy()
+    expect(
+      within(xetRow).getByRole('button', { name: 'settings:cloneTools.copyConfigure' })
+    ).toBeTruthy()
     expect(within(xetRow).queryByRole('button', { name: 'settings:cloneTools.install' })).toBeNull()
   })
 
@@ -137,8 +143,55 @@ describe('CloneToolsSection', () => {
     await screen.findByText('Git-Xet is not installed')
     const xetRow = screen.getByTestId('clone-tool-row-git-xet')
     expect(within(xetRow).getByRole('button', { name: 'settings:cloneTools.install' })).toBeTruthy()
-    expect(within(xetRow).getByRole('button', { name: 'settings:cloneTools.copyWinget' })).toBeTruthy()
+    expect(
+      within(xetRow).getByRole('button', { name: 'settings:cloneTools.copyWinget' })
+    ).toBeTruthy()
   })
+
+  it('places Recheck beside the description on a row below the title', async () => {
+    diagnostics.runDiagnostics.mockResolvedValue(
+      makeReport({ git: 'pass', xet: 'pass', gcm: 'pass' })
+    )
+    renderSection()
+
+    const title = screen.getByTestId('clone-tools-title')
+    const description = screen.getByTestId('clone-tools-description')
+    const meta = screen.getByTestId('clone-tools-meta')
+    const header = screen.getByTestId('clone-tools-header')
+    const recheck = screen.getByRole('button', { name: 'settings:cloneTools.recheck' })
+
+    expect(title.tagName).toBe('H2')
+    expect(title.textContent).toBe('settings:cloneTools.title')
+    expect(description.textContent).toBe('settings:cloneTools.description')
+
+    // Distinct row containers: title is the header's first child; description
+    // and Recheck share the following meta row. Recheck must not sit on the
+    // title row (that collision is what overlapped the global Dialog close X).
+    expect(header.contains(title)).toBe(true)
+    expect(header.contains(meta)).toBe(true)
+    expect(header.firstElementChild).toBe(title)
+    expect(title.nextElementSibling).toBe(meta)
+    expect(meta.contains(title)).toBe(false)
+    expect(meta.contains(description)).toBe(true)
+    expect(meta.contains(recheck)).toBe(true)
+    expect(description.parentElement).toBe(meta)
+    expect(recheck.parentElement).toBe(meta)
+    expect(title.parentElement).not.toBe(meta)
+
+    // Recheck remains available and clickable after the reflow.
+    expect(recheck).toBeInstanceOf(HTMLButtonElement)
+    if (!(recheck instanceof HTMLButtonElement)) {
+      throw new Error('expected Recheck to render as a button')
+    }
+    expect(recheck.disabled).toBe(false)
+    fireEvent.click(recheck)
+    await waitFor(() => expect(diagnostics.runDiagnostics).toHaveBeenCalledTimes(2))
+  })
+
+  // Visual QA (F3 / settings-clone-tools.png): at the existing desktop
+  // screenshot viewport (1360×860) and a narrow settings pane, English /
+  // zh-CN / zh-TW description must wrap inside clone-tools-meta (flex-wrap +
+  // min-w-0 + header pr-*) and never clip or run under the Dialog close X.
 
   it('recheck runs diagnostics and writes the report to the shared query', async () => {
     const initial = makeReport({ git: 'pass', xet: 'pass', gcm: 'failure' })
@@ -156,18 +209,26 @@ describe('CloneToolsSection', () => {
   })
 
   it('copies the winget command and toasts success', async () => {
-    diagnostics.runDiagnostics.mockResolvedValue(makeReport({ git: 'failure', xet: 'pass', gcm: 'pass' }))
+    diagnostics.runDiagnostics.mockResolvedValue(
+      makeReport({ git: 'failure', xet: 'pass', gcm: 'pass' })
+    )
     renderSection()
     const gitRow = await screen.findByTestId('clone-tool-row-git')
-    const copyButton = within(gitRow).getByRole('button', { name: 'settings:cloneTools.copyWinget' })
+    const copyButton = within(gitRow).getByRole('button', {
+      name: 'settings:cloneTools.copyWinget'
+    })
     fireEvent.click(copyButton)
     await waitFor(() =>
-      expect(window.navigator.clipboard.writeText).toHaveBeenCalledWith('winget install --id Git.Git -e')
+      expect(window.navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'winget install --id Git.Git -e'
+      )
     )
     await waitFor(() => {
       const toasts = useToasts.getState().toasts
       expect(
-        toasts.some((toast) => toast.message === 'settings:cloneTools.copied' && toast.variant === 'success')
+        toasts.some(
+          (toast) => toast.message === 'settings:cloneTools.copied' && toast.variant === 'success'
+        )
       ).toBe(true)
     })
   })

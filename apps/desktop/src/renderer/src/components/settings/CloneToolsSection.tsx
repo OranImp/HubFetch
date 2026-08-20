@@ -83,7 +83,8 @@ function checkState(check: DiagnosticCheck | undefined, tool: CloneToolId): stri
 }
 
 function StatusIcon({ status }: { status: DiagnosticStatus | undefined }): React.JSX.Element {
-  if (status === 'pass') return <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
+  if (status === 'pass')
+    return <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
   if (status === 'failure') return <XCircle className="size-4 shrink-0 text-error" aria-hidden />
   return <CircleAlert className="size-4 shrink-0 text-warning" aria-hidden />
 }
@@ -135,26 +136,35 @@ export function CloneToolsSection(): React.JSX.Element {
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-smd font-semibold text-ink-strong">
-            {t('settings:cloneTools.title')}
-          </h2>
-          <p className="text-[12.5px] leading-relaxed text-ink-muted">
+      <header
+        data-testid="clone-tools-header"
+        className="flex min-w-0 max-w-full flex-col gap-1 pr-8"
+      >
+        <h2 data-testid="clone-tools-title" className="text-smd font-semibold text-ink-strong">
+          {t('settings:cloneTools.title')}
+        </h2>
+        <div
+          data-testid="clone-tools-meta"
+          className="flex min-w-0 flex-wrap items-start justify-between gap-3"
+        >
+          <p
+            data-testid="clone-tools-description"
+            className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink-muted"
+          >
             {t('settings:cloneTools.description')}
           </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="shrink-0"
+            loading={recheck.isPending}
+            onClick={() => recheck.mutate()}
+          >
+            <RefreshCw className="size-3.5" aria-hidden />
+            {t('settings:cloneTools.recheck')}
+          </Button>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="shrink-0"
-          loading={recheck.isPending}
-          onClick={() => recheck.mutate()}
-        >
-          <RefreshCw className="size-3.5" aria-hidden />
-          {t('settings:cloneTools.recheck')}
-        </Button>
-      </div>
+      </header>
 
       <div className="flex flex-col gap-2">
         {rows.map((row) => {
@@ -178,9 +188,7 @@ export function CloneToolsSection(): React.JSX.Element {
                     </Badge>
                   </div>
                   {row.check?.message ? (
-                    <span className="truncate text-[12px] text-ink-muted">
-                      {row.check.message}
-                    </span>
+                    <span className="truncate text-[12px] text-ink-muted">{row.check.message}</span>
                   ) : null}
                 </div>
               </div>
@@ -202,11 +210,7 @@ export function CloneToolsSection(): React.JSX.Element {
                   </Button>
                 ) : null}
                 {configureCommand ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyText(configureCommand)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => copyText(configureCommand)}>
                     <Copy className="size-3.5" aria-hidden />
                     {t('settings:cloneTools.copyConfigure')}
                   </Button>
