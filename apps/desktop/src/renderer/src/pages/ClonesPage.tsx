@@ -9,7 +9,7 @@ import {
   type CloneStatus
 } from '@hubfetch/shared'
 import { GitBranch, Plus, RefreshCw } from 'lucide-react'
-import { cancelClone, openCloneDestination, retryClone } from '@/lib/clones'
+import { cancelClone, openCloneDestination, removeClone, retryClone } from '@/lib/clones'
 import { serializeCloneDetails } from '@/lib/clone-detail'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ import { useClonesQuery, CLONES_QUERY_KEY } from '@/hooks/use-clones'
 
 type CloneFilter = CloneStatus | 'all'
 
-type RowAction = 'cancel' | 'retry' | 'open' | 'copy' | 'view' | 'viewParent'
+type RowAction = 'cancel' | 'retry' | 'open' | 'copy' | 'view' | 'viewParent' | 'remove'
 
 const FILTER_ORDER: readonly CloneFilter[] = ['all', ...CLONE_STATUSES]
 
@@ -73,6 +73,7 @@ export function ClonesPage(): React.JSX.Element {
 
   const [filter, setFilter] = useState<CloneFilter>('all')
   const [cancelTarget, setCancelTarget] = useState<CloneRecord | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<CloneRecord | null>(null)
   const [retryTarget, setRetryTarget] = useState<CloneRecord | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -125,6 +126,18 @@ export function ClonesPage(): React.JSX.Element {
     onSettled: () => setBusyId(null)
   })
 
+  const remove = useMutation({
+    mutationFn: (id: string) => removeClone(id),
+    onMutate: (id) => setBusyId(id),
+    onSuccess: (next, id) => {
+      applyList(next)
+      setRemoveTarget(null)
+      push(t('clones:action.removeSuccess'), 'success')
+      if (selectedId === id) navigate('/clones')
+    },
+    onSettled: () => setBusyId(null)
+  })
+
   const openFolder = useCallback(
     (record: CloneRecord) => {
       setBusyId(record.id)
@@ -164,6 +177,9 @@ export function ClonesPage(): React.JSX.Element {
           break
         case 'copy':
           copyDetails(record)
+          break
+        case 'remove':
+          setRemoveTarget(record)
           break
       }
     },
@@ -326,6 +342,35 @@ export function ClonesPage(): React.JSX.Element {
               onClick={() => cancelTarget && cancel.mutate(cancelTarget.id)}
             >
               {t('clones:action.cancelConfirmConfirm')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Removing a terminal queue record detaches it from the list — files stay. */}
+      <Dialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => (open ? undefined : setRemoveTarget(null))}
+      >
+        <DialogContent>
+          <DialogTitle className="text-[14px] font-semibold">
+            {t('clones:action.removeConfirmTitle')}
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-[13px] text-ink-muted">
+            {t('clones:action.removeConfirmBody')}
+          </DialogDescription>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setRemoveTarget(null)}>
+              {t('common:cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={busyId !== null}
+              loading={busyId === removeTarget?.id}
+              onClick={() => removeTarget && remove.mutate(removeTarget.id)}
+            >
+              {t('clones:action.removeConfirmConfirm')}
             </Button>
           </div>
         </DialogContent>

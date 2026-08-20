@@ -9,6 +9,7 @@ import {
   describeCloneProxy,
   describeCloneRevision,
   findRetryParent,
+  isTerminalCloneStatus,
   redactCloneText,
   serializeCloneDetails
 } from './clone-detail'
@@ -178,6 +179,18 @@ describe('redactCloneText', () => {
 
   it('leaves clean text untouched', () => {
     expect(redactCloneText('queued at 2026-08-17')).toBe('queued at 2026-08-17')
+  })
+})
+
+describe('isTerminalCloneStatus', () => {
+  it('is true only for completed, failed, cancelled, and interrupted', () => {
+    expect(isTerminalCloneStatus('completed')).toBe(true)
+    expect(isTerminalCloneStatus('failed')).toBe(true)
+    expect(isTerminalCloneStatus('cancelled')).toBe(true)
+    expect(isTerminalCloneStatus('interrupted')).toBe(true)
+    expect(isTerminalCloneStatus('queued')).toBe(false)
+    expect(isTerminalCloneStatus('running')).toBe(false)
+    expect(isTerminalCloneStatus('cancelling')).toBe(false)
   })
 })
 

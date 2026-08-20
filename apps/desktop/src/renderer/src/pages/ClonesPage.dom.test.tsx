@@ -38,6 +38,7 @@ const lib = vi.hoisted(() => ({
   listClones: vi.fn(),
   cancelClone: vi.fn(),
   retryClone: vi.fn(),
+  removeClone: vi.fn(),
   openCloneDestination: vi.fn(),
   onClonesChanged: vi.fn()
 }))
@@ -78,6 +79,7 @@ vi.mock('react-i18next', () => {
 })
 
 import { ClonesPage } from './ClonesPage'
+import { Toaster, useToasts } from '@/components/ui/toaster'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 const RUNNING_ID = '11111111-1111-4111-8111-111111111111'
@@ -176,6 +178,7 @@ function renderPage(records: CloneRecord[] = allStatuses, search = ''): void {
     <TooltipProvider delayDuration={0}>
       <QueryClientProvider client={client}>
         <ClonesPage />
+        <Toaster />
       </QueryClientProvider>
     </TooltipProvider>
   )
@@ -190,10 +193,12 @@ async function waitForQueue(): Promise<void> {
 
 afterEach(() => {
   cleanup()
+  useToasts.setState({ toasts: [] })
   router.navigate.mockReset()
   lib.listClones.mockReset()
   lib.cancelClone.mockReset()
   lib.retryClone.mockReset()
+  lib.removeClone.mockReset()
   lib.openCloneDestination.mockReset()
   lib.onClonesChanged.mockReset()
   diagnostics.runDiagnostics.mockReset()
@@ -203,6 +208,7 @@ beforeEach(() => {
   pushedListener = undefined
   diagnostics.runDiagnostics.mockResolvedValue(diagnosticReport())
   lib.cancelClone.mockResolvedValue(allStatuses)
+  lib.removeClone.mockResolvedValue(allStatuses)
   lib.retryClone.mockImplementation((_parentId: string, request: { destination: string }) =>
     Promise.resolve(
       clone({
@@ -438,5 +444,101 @@ describe('ClonesPage', () => {
         .getByRole('button', { name: /clones:filter\.all/ })
         .getAttribute('aria-pressed')
     ).toBe('true')
+  })
+
+  it('shows remove on terminal cards and never on queued, running, or cancelling', async () => {
+    renderPage()
+    await waitForQueue()
+    for (const id of [COMPLETED_ID, FAILED_ID, CANCELLED_ID, INTERRUPTED_ID]) {
+      const card = within(screen.getByTestId(`clone-card-${id}`))
+      expect(card.getByLabelText('clones:action.remove')).toBeTruthy()
+    }
+    for (const id of [QUEUED_ID, RUNNING_ID, CANCELLING_ID]) {
+      const card = within(screen.getByTestId(`clone-card-${id}`))
+      expect(card.queryByLabelText('clones:action.remove')).toBeNull()
+    }
+  })
+
+  it('shows remove in the detail drawer only for terminal records', async () => {
+    const cases: ReadonlyArray<{ id: string; shown: boolean }> = [
+      { id: COMPLETED_ID, shown: true },
+      { id: FAILED_ID, shown: true },
+      { id: CANCELLED_ID, shown: true },
+      { id: INTERRUPTED_ID, shown: true },
+      { id: QUEUED_ID, shown: false },
+      { id: RUNNING_ID, shown: false },
+      { id: CANCELLING_ID, shown: false }
+    ]
+    for (const { id, shown } of cases) {
+      cleanup()
+      renderPage(allStatuses, `?selected=${id}`)
+      const dialog = await screen.findByRole('dialog')
+      const remove = within(dialog).queryByRole('button', { name: 'clones:action.remove' })
+      if (shown) {
+        expect(remove).toBeTruthy()
+      } else {
+        expect(remove).toBeNull()
+      }
+    }
+  })
+
+  it('confirms removal from the returned list, toasts success, and does not navigate when unselected', async () => {
+    const remaining = [clone({ id: QUEUED_ID, status: 'queued' })]
+    lib.removeClone.mockResolvedValue(remaining)
+    renderPage()
+    await waitForQueue()
+    const card = within(screen.getByTestId(`clone-card-${COMPLETED_ID}`))
+    fireEvent.click(card.getByLabelText('clones:action.remove'))
+    expect(screen.getByText('clones:action.removeConfirmTitle')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'clones:action.removeConfirmConfirm' }))
+    await waitFor(() => expect(lib.removeClone).toHaveBeenCalledTimes(1))
+    expect(lib.removeClone).toHaveBeenCalledWith(COMPLETED_ID)
+    await waitFor(() => {
+      expect(screen.queryByTestId(`clone-card-${COMPLETED_ID}`)).toBeNull()
+      expect(screen.queryByTestId(`clone-card-${FAILED_ID}`)).toBeNull()
+    })
+    expect(screen.getByTestId(`clone-card-${QUEUED_ID}`)).toBeTruthy()
+    expect(screen.getByText('clones:action.removeSuccess')).toBeTruthy()
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  it('navigates to /clones when the selected drawer record is removed', async () => {
+    lib.removeClone.mockResolvedValue(allStatuses.filter((record) => record.id !== COMPLETED_ID))
+    renderPage(allStatuses, `?selected=${COMPLETED_ID}`)
+    const drawer = await screen.findByRole('dialog')
+    fireEvent.click(within(drawer).getByRole('button', { name: 'clones:action.remove' }))
+    fireEvent.click(screen.getByRole('button', { name: 'clones:action.removeConfirmConfirm' }))
+    await waitFor(() => expect(lib.removeClone).toHaveBeenCalledTimes(1))
+    expect(lib.removeClone).toHaveBeenCalledWith(COMPLETED_ID)
+    await waitFor(() => expect(screen.queryByTestId(`clone-card-${COMPLETED_ID}`)).toBeNull())
+    expect(router.navigate).toHaveBeenCalledWith('/clones')
+    expect(screen.getByText('clones:action.removeSuccess')).toBeTruthy()
+  })
+
+  it('makes no remove call when confirmation is cancelled', async () => {
+    renderPage()
+    await waitForQueue()
+    const card = within(screen.getByTestId(`clone-card-${FAILED_ID}`))
+    fireEvent.click(card.getByLabelText('clones:action.remove'))
+    expect(screen.getByText('clones:action.removeConfirmTitle')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'common:cancel' }))
+    expect(lib.removeClone).not.toHaveBeenCalled()
+    expect(screen.queryByText('clones:action.removeConfirmTitle')).toBeNull()
+    expect(screen.getByTestId(`clone-card-${FAILED_ID}`)).toBeTruthy()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('leaves the record, drawer, and toast/navigation intact when removal is rejected', async () => {
+    lib.removeClone.mockRejectedValue(new Error('cannot remove an active clone record'))
+    renderPage(allStatuses, `?selected=${COMPLETED_ID}`)
+    const drawer = await screen.findByRole('dialog')
+    fireEvent.click(within(drawer).getByRole('button', { name: 'clones:action.remove' }))
+    fireEvent.click(screen.getByRole('button', { name: 'clones:action.removeConfirmConfirm' }))
+    await waitFor(() => expect(lib.removeClone).toHaveBeenCalledTimes(1))
+    expect(lib.removeClone).toHaveBeenCalledWith(COMPLETED_ID)
+    expect(screen.getByTestId(`clone-card-${COMPLETED_ID}`)).toBeTruthy()
+    expect(screen.getByText('clones:detail.repository')).toBeTruthy()
+    expect(screen.queryByText('clones:action.removeSuccess')).toBeNull()
+    expect(router.navigate).not.toHaveBeenCalled()
   })
 })

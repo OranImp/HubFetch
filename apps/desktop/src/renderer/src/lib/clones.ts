@@ -22,6 +22,10 @@ export function cancelClone(id: string): Promise<CloneRecord[]> {
   return window.hubfetch.clones.cancel(id)
 }
 
+export function removeClone(id: string): Promise<CloneRecord[]> {
+  return window.hubfetch.clones.remove(id)
+}
+
 export function retryClone(parentId: string, request: CloneRequest): Promise<CloneRecord> {
   return window.hubfetch.clones.retry(parentId, request)
 }

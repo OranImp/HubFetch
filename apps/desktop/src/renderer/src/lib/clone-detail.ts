@@ -21,6 +21,25 @@ import {
 /** Non-terminal statuses that occupy the single-active FIFO line. */
 const LINE_STATUSES: readonly CloneStatus[] = ['queued', 'running', 'cancelling']
 
+/**
+ * Terminal queue records may be removed (and never cancelled). Cards and the
+ * detail drawer MUST share this predicate so the remove action cannot appear
+ * on queued/running/cancelling rows.
+ */
+export function isTerminalCloneStatus(status: CloneStatus): boolean {
+  switch (status) {
+    case 'completed':
+    case 'failed':
+    case 'cancelled':
+    case 'interrupted':
+      return true
+    case 'queued':
+    case 'running':
+    case 'cancelling':
+      return false
+  }
+}
+
 /** Deterministic FIFO comparator (created_at, id) used by the manager's list. */
 export function compareCloneFifo(a: CloneRecord, b: CloneRecord): number {
   if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1

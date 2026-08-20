@@ -2,8 +2,13 @@ import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CloneRecord, DiagnosticCheck } from '@hubfetch/shared'
-import { Copy, FolderOpen, RefreshCw, TriangleAlert, XCircle } from 'lucide-react'
-import { cloneDetailLines, cloneQueuePosition, describeClonePhase } from '@/lib/clone-detail'
+import { Copy, FolderOpen, RefreshCw, Trash2, TriangleAlert, XCircle } from 'lucide-react'
+import {
+  cloneDetailLines,
+  cloneQueuePosition,
+  describeClonePhase,
+  isTerminalCloneStatus
+} from '@/lib/clone-detail'
 import { runDiagnostics } from '@/lib/diagnostics'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -26,7 +31,7 @@ function checkById(
   return checks?.find((check) => check.id === id)
 }
 
-export type CloneDrawerAction = 'cancel' | 'retry' | 'open' | 'copy' | 'viewParent'
+export type CloneDrawerAction = 'cancel' | 'retry' | 'open' | 'copy' | 'viewParent' | 'remove'
 
 export interface CloneDetailDrawerProps {
   record: CloneRecord
@@ -73,6 +78,7 @@ export function CloneDetailDrawer({
   const retryable =
     record.status === 'failed' || record.status === 'cancelled' || record.status === 'interrupted'
   const openable = record.status === 'completed' || record.status === 'interrupted'
+  const removable = isTerminalCloneStatus(record.status)
 
   // Prerequisites — reuse the existing Todo 28 diagnostics run for the drawer.
   const diagnostics = useQuery({
@@ -230,6 +236,17 @@ export function CloneDetailDrawer({
               >
                 <FolderOpen className="size-3.5" aria-hidden />
                 {t('clones:action.openFolder')}
+              </Button>
+            )}
+            {removable && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => onAction('remove', record)}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                {t('clones:action.remove')}
               </Button>
             )}
           </div>

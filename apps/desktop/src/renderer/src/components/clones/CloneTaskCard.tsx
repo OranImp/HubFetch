@@ -1,5 +1,5 @@
 import type { CloneRecord } from '@hubfetch/shared'
-import { Copy, FolderOpen, GitBranch, RefreshCw, X } from 'lucide-react'
+import { Copy, FolderOpen, GitBranch, RefreshCw, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   cloneQueuePosition,
@@ -7,7 +7,8 @@ import {
   describeClonePhase,
   describeCloneProxy,
   describeCloneRevision,
-  formatCloneTimestamp
+  formatCloneTimestamp,
+  isTerminalCloneStatus
 } from '@/lib/clone-detail'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -15,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { CloneStatusBadge } from '@/components/clones/CloneStatusBadge'
 
 /** Labeled action buttons a task row exposes for one attempt. */
-export type CloneRowAction = 'cancel' | 'retry' | 'open' | 'copy' | 'view' | 'viewParent'
+export type CloneRowAction = 'cancel' | 'retry' | 'open' | 'copy' | 'view' | 'viewParent' | 'remove'
 
 export interface CloneTaskCardProps {
   record: CloneRecord
@@ -214,6 +215,22 @@ export function CloneTaskCard({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('clones:action.openFolder')}</TooltipContent>
+            </Tooltip>
+          ) : null}
+          {isTerminalCloneStatus(record.status) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('clones:action.remove')}
+                  disabled={busy}
+                  onClick={() => onAction('remove', record)}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('clones:action.remove')}</TooltipContent>
             </Tooltip>
           ) : null}
         </span>
