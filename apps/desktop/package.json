@@ -26,9 +26,9 @@
     "package:win": "electron-vite build && electron-builder --win --x64"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
-    "hyparquet": "^1.26.2",
-    "ignore": "^5.3.2"
+    "better-sqlite3": "^13.0.3",
+    "hyparquet": "^1.29.2",
+    "ignore": "^7.0.8"
   },
   "devDependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.2.10",
