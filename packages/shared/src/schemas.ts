@@ -6,7 +6,19 @@ import { z } from 'zod'
 import type { IpcInvokeChannel } from './ipc'
 import { cloneRequestSchema } from './clone'
 import { downloadProxyOverride, manualProxyUrlSchema as manualProxyUrl } from './proxy-override'
-import { DIAGNOSTIC_REASON_CODES, SUPPORTED_LOCALES } from './types'
+import {
+  DATASET_EXPORT_FORMATS,
+  DATASET_EXPORT_MAX_LENGTH,
+  DIAGNOSTIC_REASON_CODES,
+  HUB_CAPABILITY_CLASSES,
+  HUB_CAPABILITY_DEGRADATIONS,
+  HUB_CAPABILITY_DOMAINS,
+  HUB_CAPABILITY_ERROR_CODES,
+  HUB_CAPABILITY_KEYS,
+  LLM_PROVIDERS,
+  SPACE_HARDWARE_FLAVORS,
+  SUPPORTED_LOCALES
+} from './types'
 
 // Re-exported from './proxy-override' so existing importers of this module
 // (e.g. the clone persistence schemas) keep resolving the same binding.
@@ -49,9 +61,26 @@ export const diagnosticCheckSchema = z
   })
   .strict()
 
+export const hubCapabilityStatusSchema = z
+  .object({
+    key: z.enum(HUB_CAPABILITY_KEYS),
+    sourceClass: z.enum(HUB_CAPABILITY_CLASSES),
+    domain: z.enum(HUB_CAPABILITY_DOMAINS),
+    status: z.enum(HUB_CAPABILITY_DEGRADATIONS),
+    lastCheckedAt: z.string().datetime({ offset: true })
+  })
+  .strict()
+
+export const hubCapabilityErrorCodeSchema = z.enum(HUB_CAPABILITY_ERROR_CODES)
+
+export const hubCapabilityStatusesSchema = z
+  .array(hubCapabilityStatusSchema)
+  .length(HUB_CAPABILITY_KEYS.length)
+
 export const diagnosticReportSchema = z
   .object({
     checks: z.array(diagnosticCheckSchema).max(64),
+    capabilities: hubCapabilityStatusesSchema.optional(),
     completedAt: z.string().min(1).max(64)
   })
   .strict()
@@ -65,6 +94,22 @@ const repoId = z
   .max(256)
   .regex(/^[\w.-]+(\/[\w.-]+)?$/, 'invalid repo id')
   .refine((v) => v.split('/').every((segment) => !/^\.+$/.test(segment)), 'invalid repo id')
+
+function isUnsafeDatasetSlice(value: string): boolean {
+  if (/^\.+$/.test(value)) return true
+  for (const char of value) {
+    const code = char.charCodeAt(0)
+    if (code < 32 || char === '/' || char === '\\') return true
+  }
+  return false
+}
+
+/** datasets-server config/split names: no path separators, dots-only, or controls. */
+const datasetSliceName = z
+  .string()
+  .min(1)
+  .max(256)
+  .refine((value) => !isUnsafeDatasetSlice(value), 'unsafe dataset slice')
 
 /**
  * Renderer-safe predicate mirroring the `repoId` schema above: "owner/name" or
@@ -135,6 +180,48 @@ const proxyConfig = z
     'manual proxy mode requires a URL'
   )
 
+const llmProvider = z.enum(LLM_PROVIDERS)
+
+function isHttpUrlWithoutUserinfoQueryOrFragment(value: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(value.trim())
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+  if (parsed.username !== '' || parsed.password !== '') return false
+  if (parsed.search !== '' || parsed.hash !== '') return false
+  return parsed.hostname !== ''
+}
+
+const llmBaseUrl = z
+  .string()
+  .max(2048)
+  .refine(isHttpUrlWithoutUserinfoQueryOrFragment, 'invalid llm base url')
+
+const llmProviderConfig = z
+  .object({
+    modelId: z.string().trim().max(256),
+    baseUrl: z.union([llmBaseUrl, z.null()])
+  })
+  .strict()
+
+const llmSettings = z
+  .object({
+    activeProvider: llmProvider,
+    providers: z
+      .object({
+        openai: llmProviderConfig,
+        anthropic: llmProviderConfig,
+        gemini: llmProviderConfig
+      })
+      .strict()
+  })
+  .strict()
+
+const llmApiKey = z.string().trim().min(8).max(512)
+
 const settingsPatch = z
   .object({
     locale: z.enum(['system', ...SUPPORTED_LOCALES]),
@@ -160,7 +247,8 @@ const settingsPatch = z
     sidebarCollapsed: z.boolean(),
     browsePageSize: z.union([z.literal(20), z.literal(30), z.literal(50)]),
     repoOpenTarget: z.enum(['app', 'browser']),
-    historyLimit: z.union([z.literal(50), z.literal(100), z.literal(200), z.literal(500)])
+    historyLimit: z.union([z.literal(50), z.literal(100), z.literal(200), z.literal(500)]),
+    llm: llmSettings
   })
   .partial()
   .strict()
@@ -177,6 +265,51 @@ const username = z
   .min(1)
   .max(128)
   .regex(/^[\w.-]+$/, 'invalid username')
+
+const accountSummaryUser = z
+  .object({
+    name: username,
+    fullname: z.string().max(256).optional(),
+    email: z.string().max(320).optional(),
+    avatarUrl: z.string().max(2048).optional(),
+    isPro: z.boolean().optional(),
+    orgs: z
+      .array(
+        z
+          .object({
+            name: username,
+            fullname: z.string().max(256).optional(),
+            avatarUrl: z.string().max(2048).optional(),
+            plan: z.enum(['team', 'enterprise', 'plus', 'academia']).optional()
+          })
+          .strict()
+      )
+      .max(100)
+  })
+  .strict()
+
+/** Renderer-facing account shape; secret fields are intentionally impossible. */
+export const accountSummarySchema = z
+  .object({
+    id: z.uuid(),
+    endpoint: z.url({ protocol: /^https?$/ }),
+    user: accountSummaryUser,
+    tokenDisplayName: z.string().max(256).optional(),
+    tokenRole: z.string().max(128).optional(),
+    hubSession: z.boolean(),
+    active: z.boolean(),
+    invalid: z.literal(true).optional()
+  })
+  .strict()
+
+export const accountUsageCountsSchema = z
+  .object({
+    downloads: z.number().int().min(0),
+    clones: z.number().int().min(0),
+    uploads: z.number().int().min(0),
+    total: z.number().int().min(0)
+  })
+  .strict()
 
 /** Collection API path segment: "owner/title-slug-<24hex>". */
 const collectionSlug = z
@@ -201,6 +334,16 @@ const spaceEnvKey = z
   .min(1)
   .max(128)
   .regex(/^[a-zA-Z][_a-zA-Z0-9]*$/, 'invalid key')
+
+/**
+ * Official Space sleep window: a positive integer of seconds, or -1 where the
+ * API accepts "never sleep". Mirrors the OpenAPI bounds.
+ */
+const sleepSeconds = z
+  .number()
+  .int()
+  .refine((v) => v === -1 || v >= 1, 'seconds must be a positive integer or -1')
+  .max(Number.MAX_SAFE_INTEGER)
 
 /** Gated access requests only exist for models and datasets. */
 const gatedRepoKind = z.enum(['model', 'dataset'])
@@ -239,8 +382,11 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
     })
     .strict()
     .optional(),
+  'compatibility:probe': z.object({ key: z.enum(HUB_CAPABILITY_KEYS) }).strict(),
   // No hf_ prefix check: fine-grained/org tokens and mirror deployments vary.
   'auth:signInWithToken': z.object({ token: z.string().trim().min(1).max(512) }),
+  'auth:switchAccount': z.object({ accountId: z.uuid() }).strict(),
+  'auth:removeAccount': z.object({ accountId: z.uuid() }).strict(),
   'hub:search': z.object({ query: searchQuery }),
   'hub:papers': z.object({ cursor: z.string().max(4096).optional() }).optional(),
   'hub:paper': z.object({ paperId: z.string().min(1).max(128) }),
@@ -473,6 +619,16 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
   'hub:spaceVariableDelete': z.object({ repoId, key: spaceEnvKey }),
   'hub:spaceLogs': z.object({ repoId, logType: z.enum(['build', 'run']) }),
   'hub:spaceRestart': z.object({ repoId, factory: z.boolean().optional() }),
+  'hub:spaceRuntime': z.object({ repoId }),
+  'hub:spacePause': z.object({ repoId }),
+  // The official hardware/sleep payloads accept positive seconds or -1 (never
+  // sleep); everything else is rejected before it reaches the network.
+  'hub:spaceHardwareSet': z.object({
+    repoId,
+    flavor: z.enum(SPACE_HARDWARE_FLAVORS),
+    sleepTimeSeconds: sleepSeconds.optional()
+  }),
+  'hub:spaceSleepTimeSet': z.object({ repoId, seconds: sleepSeconds }),
   'hub:likeSet': z.object({ kind: repoKind, repoId, liked: z.boolean() }),
   'hub:followSet': z.object({
     username,
@@ -614,11 +770,21 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
   }),
   'hub:datasetRows': z.object({
     repoId,
-    config: z.string().min(1).max(256),
-    split: z.string().min(1).max(256),
+    config: datasetSliceName,
+    split: datasetSliceName,
     offset: z.number().int().min(0).max(1_000_000).optional(),
-    length: z.number().int().min(1).max(100).optional()
+    length: z.number().int().min(1).max(DATASET_EXPORT_MAX_LENGTH).optional()
   }),
+  'dataset:exportPage': z
+    .object({
+      repoId,
+      config: datasetSliceName,
+      split: datasetSliceName,
+      offset: z.number().int().min(0).max(1_000_000),
+      length: z.number().int().min(1).max(DATASET_EXPORT_MAX_LENGTH),
+      format: z.enum(DATASET_EXPORT_FORMATS)
+    })
+    .strict(),
   'favorites:add': z.object({ summary: repoSummary }),
   'favorites:remove': z.object({ kind: repoKind, repoId }),
   'history:record': z.object({ summary: repoSummary }),
@@ -629,6 +795,21 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
       revision: revision.optional(),
       files: z.array(relPath).max(10000).optional(),
       proxy: downloadProxyOverride.optional()
+    })
+  }),
+  'downloads:plan': z.object({
+    request: z.object({
+      repoId,
+      kind: repoKind,
+      revision: revision.optional(),
+      files: z.array(relPath).max(10000).optional(),
+      proxy: downloadProxyOverride.optional()
+    })
+  }),
+  'downloads:startPlanned': z.object({
+    request: z.object({
+      planId: z.uuid(),
+      paths: z.array(relPath).min(1).max(10000)
     })
   }),
   'downloads:pause': z.object({ id: z.uuid() }),
@@ -646,6 +827,38 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
   }),
   'cache:cleanPartials': z.object({ kind: repoKind, repoId }),
   'cache:revealRepo': z.object({ kind: repoKind, repoId }),
+  // Cache action plans (plan Todo 15). Strict at every level: only logical
+  // repo identity, issue ids ("issue:relativePath"), and 40-hex retained
+  // revisions are accepted — a renderer-supplied path or hash target is
+  // rejected outright before the manager is ever called.
+  'cache:planAction': z
+    .object({
+      request: z
+        .object({
+          action: z.enum(['prune', 'repair']),
+          kind: repoKind,
+          repoId,
+          issueIds: z
+            .array(
+              z
+                .string()
+                .min(1)
+                .max(2048)
+                // "<closed-issue-code>:<relative display path>"; the path part
+                // is matched against main's own re-scan, never used as input.
+                .regex(/^[a-z-]+:[^\0]+$/, 'invalid issue id')
+            )
+            .max(1000)
+            .optional(),
+          retainCommits: z
+            .array(z.string().regex(/^[0-9a-f]{40}$/))
+            .max(100)
+            .optional()
+        })
+        .strict()
+    })
+    .strict(),
+  'cache:applyAction': z.object({ request: z.object({ planId: z.uuid() }).strict() }).strict(),
   'follows:add': z.object({
     type: z.enum(['user', 'org', 'repo', 'papers']),
     target: z.string().max(300)
@@ -671,6 +884,12 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
     })
   }),
   'upload:cancel': z.object({ id: z.uuid() }),
+  'upload:retry': z.object({
+    request: z.object({
+      taskId: z.string()
+    }).strict()
+  }).strict(),
+  'upload:remove': z.object({ id: z.uuid() }).strict(),
   'integrationTasks:revealOutput': z.object({ id: z.uuid() }),
   'inference:run': z.object({
     request: z.object({ model: repoId, input: z.string().max(65536) })
@@ -680,6 +899,24 @@ export const ipcRequestSchemas: Partial<Record<IpcInvokeChannel, z.ZodTypeAny>> 
     request: z.object({ model: repoId, input: z.string().max(65536) })
   }),
   'inference:cancel': z.object({ id: z.uuid() }),
+  'llm:set-credential': z.object({ provider: llmProvider, apiKey: llmApiKey }).strict(),
+  'llm:delete-credential': z.object({ provider: llmProvider }).strict(),
+  'llm:test-connection': z
+    .object({
+      provider: llmProvider,
+      modelId: z.string().trim().min(1).max(256),
+      baseUrl: z.union([llmBaseUrl, z.null()]),
+      apiKey: llmApiKey.optional()
+    })
+    .strict(),
+  'llm:translate': z
+    .object({
+      requestId: z.uuid(),
+      markdown: z.string().max(50_000),
+      targetLocale: z.enum(SUPPORTED_LOCALES)
+    })
+    .strict(),
+  'llm:cancel': z.object({ requestId: z.uuid() }).strict(),
   // Clone operations (plan Todo 33). `.strict()` on the OUTER object too: an
   // unknown top-level field (a raw URL, a token, a forged status) is rejected
   // outright instead of being silently stripped. `cloneRequestSchema` itself

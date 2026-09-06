@@ -5,15 +5,26 @@
  */
 import type {
   AccessRequest,
+  AccountRemoveResult,
+  AccountSummary,
+  AccountSwitchResult,
   ActivityFeed,
   AppInfo,
   AppSettings,
   AuthState,
   BillingUsage,
   TokenSignInResult,
+  SignOutResult,
+  CacheActionPlan,
+  CacheActionPlanRequest,
+  CacheActionResult,
   CacheReport,
+  CacheVerificationProgress,
+  CacheVerificationReport,
   CollectionDetail,
   CollectionSummary,
+  DatasetExportFormat,
+  DatasetExportPageResult,
   DatasetRows,
   DatasetSplit,
   DiagnosticReport,
@@ -24,6 +35,9 @@ import type {
   DiscussionSummary,
   DiscussionType,
   CanPostResult,
+  DownloadPlan,
+  DownloadPlanRequest,
+  DownloadPlanStartRequest,
   DownloadProxyOverride,
   DownloadRequest,
   DownloadTask,
@@ -45,6 +59,12 @@ import type {
   InferenceRequest,
   InferenceResult,
   InferenceStreamEvent,
+  LlmProvider,
+  LlmStatus,
+  LlmTestConnectionRequest,
+  LlmTestConnectionResult,
+  LlmTranslateRequest,
+  LlmTranslateResult,
   MyRepoEntry,
   NotificationsPage,
   Page,
@@ -56,17 +76,24 @@ import type {
   RepoSummary,
   SafetensorsHeader,
   SearchQuery,
+  SpaceHardwareCatalogEntry,
+  SpaceHardwareFlavor,
+  SpaceRuntime,
   SpaceSecret,
   SpaceVariable,
   UploadSelection,
   UploadStartRequest,
+  UploadRetryRequest,
+  UploadTaskRecord,
   WatchedEntry,
   SettingsPatch,
   UserOverview,
   UserSearchResult,
   OrgSearchResult,
   PaperSearchResult,
-  CollectionSearchResult
+  CollectionSearchResult,
+  HubCapabilityKey,
+  HubCapabilityStatus
 } from './types'
 import type { CloneRecord } from './clone-record'
 import type { CloneRequest } from './clone'
@@ -117,6 +144,10 @@ export interface IpcInvokeContract {
     req: { endpoint?: string | null; proxy?: DownloadProxyOverride }
     res: { ok: true; latencyMs: number } | { ok: false; error: string }
   }
+  /** Read local/static Hub capability knowledge; never performs network I/O. */
+  'compatibility:read': { req: void; res: HubCapabilityStatus[] }
+  /** Explicitly probe one capability through the active main-process client. */
+  'compatibility:probe': { req: { key: HubCapabilityKey }; res: HubCapabilityStatus }
 
   'hub:search': { req: { query: SearchQuery }; res: Page<RepoSummary> }
   'hub:papers': { req: { cursor?: string }; res: Page<PaperSummary> }
@@ -235,6 +266,22 @@ export interface IpcInvokeContract {
    * full viewer is unavailable. null when the page carries no sample either.
    */
   'hub:datasetSampleRows': { req: { repoId: string }; res: DatasetRows | null }
+  /**
+   * Re-fetch one datasets-server page and write it as CSV or JSONL via a
+   * main-owned save dialog. Renderer row payloads are rejected; the result
+   * never includes a filesystem path.
+   */
+  'dataset:exportPage': {
+    req: {
+      repoId: string
+      config: string
+      split: string
+      offset: number
+      length: number
+      format: DatasetExportFormat
+    }
+    res: DatasetExportPageResult
+  }
   /** The signed-in account's standing with a gated repo (granted/ask/pending + form fields). */
   'hub:repoAccessGate': { req: { kind: RepoKind; repoId: string }; res: RepoAccessGate }
   /** Submit the gated-repo access form (needs a Hub web session). */
@@ -345,6 +392,22 @@ export interface IpcInvokeContract {
   /** Bounded snapshot of the Space's SSE log stream (never hangs). */
   'hub:spaceLogs': { req: { repoId: string; logType: 'build' | 'run' }; res: { text: string } }
   'hub:spaceRestart': { req: { repoId: string; factory?: boolean }; res: void }
+  /** Owner-scoped runtime state: stage, current/requested hardware, sleep info. */
+  'hub:spaceRuntime': { req: { repoId: string }; res: SpaceRuntime }
+  /** Public hardware catalog (pricing fields are stripped by the client). */
+  'hub:spaceHardwareList': { req: void; res: SpaceHardwareCatalogEntry[] }
+  /** Pauses the Space (free; reversible through a normal restart). */
+  'hub:spacePause': { req: { repoId: string }; res: void }
+  /**
+   * Requests a hardware switch; `sleepTimeSeconds` follows the official API
+   * (positive seconds, or -1 for never-sleep where accepted).
+   */
+  'hub:spaceHardwareSet': {
+    req: { repoId: string; flavor: SpaceHardwareFlavor; sleepTimeSeconds?: number }
+    res: void
+  }
+  /** Sets the sleep window: positive seconds, or -1 where the API accepts never. */
+  'hub:spaceSleepTimeSet': { req: { repoId: string; seconds: number }; res: void }
 
   'hub:likeSet': { req: { kind: RepoKind; repoId: string; liked: boolean }; res: void }
   /** Social follow/unfollow on the Hub (same as the website Follow button). */
@@ -441,9 +504,12 @@ export interface IpcInvokeContract {
   'hub:billingUsage': { req: void; res: BillingUsage }
 
   'auth:getState': { req: void; res: AuthState }
+  'auth:listAccounts': { req: void; res: AccountSummary[] }
   /** Validate + install a pasted User Access Token. */
   'auth:signInWithToken': { req: { token: string }; res: TokenSignInResult }
-  'auth:signOut': { req: void; res: AuthState }
+  'auth:signOut': { req: void; res: SignOutResult }
+  'auth:switchAccount': { req: { accountId: string }; res: AccountSwitchResult }
+  'auth:removeAccount': { req: { accountId: string }; res: AccountRemoveResult }
   /** Open the Hub login window and capture a web-session cookie (supplemental credential). */
   'auth:connectHubSession': { req: void; res: HubSessionConnectResult }
   /** Drop the web-session cookie; the token session stays signed in. */
@@ -461,6 +527,8 @@ export interface IpcInvokeContract {
 
   'downloads:list': { req: void; res: DownloadTask[] }
   'downloads:start': { req: { request: DownloadRequest }; res: DownloadTask[] }
+  'downloads:plan': { req: { request: DownloadPlanRequest }; res: DownloadPlan }
+  'downloads:startPlanned': { req: { request: DownloadPlanStartRequest }; res: DownloadTask[] }
   'downloads:pause': { req: { id: string }; res: DownloadTask[] }
   'downloads:resume': { req: { id: string }; res: DownloadTask[] }
   'downloads:cancel': { req: { id: string }; res: DownloadTask[] }
@@ -498,6 +566,28 @@ export interface IpcInvokeContract {
   }
   'cache:cleanPartials': { req: { kind: RepoKind; repoId: string }; res: CacheReport }
   'cache:revealRepo': { req: { kind: RepoKind; repoId: string }; res: void }
+  /**
+   * Build an expiring main-owned prune/repair plan (plan Todo 15). Accepts ONLY
+   * logical repo identity plus issue ids ("<issue>:<relativePath>") from the
+   * verification report and optional 40-hex retained revisions — never a path
+   * or a hash target. The response is sanitized: relative display paths only.
+   * Absolute paths and expected hashes stay in a main-memory registry.
+   */
+  'cache:planAction': { req: { request: CacheActionPlanRequest }; res: CacheActionPlan }
+  /**
+   * Apply one plan by its unguessable ID (one-shot). Main revalidates expiry,
+   * digest, the protected sets, and the filesystem BEFORE the first mutation;
+   * every failure returns a typed result with zero changes.
+   */
+  'cache:applyAction': { req: { request: { planId: string } }; res: CacheActionResult }
+  /**
+   * Offline integrity verification (plan Todo 14/16). Progress streams on
+   * `evt:cacheVerification`. Cancel is cooperative; an aborted run rejects
+   * with message `aborted` and never implies Hub freshness was checked.
+   */
+  'cache:verify': { req: void; res: CacheVerificationReport }
+  /** Abort the in-flight cache verification worker. */
+  'cache:verifyCancel': { req: void; res: void }
 
   'follows:list': { req: void; res: Follow[] }
   'follows:add': { req: { type: FollowTargetType; target: string }; res: Follow[] }
@@ -515,6 +605,9 @@ export interface IpcInvokeContract {
   'upload:selectFolder': { req: void; res: UploadSelection | null }
   'upload:start': { req: { request: UploadStartRequest }; res: { id: string } }
   'upload:cancel': { req: { id: string }; res: { canceled: boolean } }
+  'upload:retry': { req: { request: UploadRetryRequest }; res: { id: string } }
+  'upload:remove': { req: { id: string }; res: { removed: boolean } }
+  'upload:listPersisted': { req: void; res: UploadTaskRecord[] }
   'integrationTasks:list': { req: void; res: IntegrationTask[] }
   'integrationTasks:revealOutput': { req: { id: string }; res: void }
 
@@ -522,6 +615,13 @@ export interface IpcInvokeContract {
   /** Streams deltas through the `evt:inference` channel, correlated by id. */
   'inference:stream': { req: { id: string; request: InferenceRequest }; res: void }
   'inference:cancel': { req: { id: string }; res: void }
+
+  'llm:get-status': { req: void; res: LlmStatus }
+  'llm:set-credential': { req: { provider: LlmProvider; apiKey: string }; res: LlmStatus }
+  'llm:delete-credential': { req: { provider: LlmProvider }; res: LlmStatus }
+  'llm:test-connection': { req: LlmTestConnectionRequest; res: LlmTestConnectionResult }
+  'llm:translate': { req: LlmTranslateRequest; res: LlmTranslateResult }
+  'llm:cancel': { req: { requestId: string }; res: void }
 
   /**
    * Run every readiness probe once and return the bounded, redacted report.
@@ -552,13 +652,15 @@ export interface IpcEventContract {
   'evt:downloads': DownloadTask[]
   'evt:clones': CloneRecord[]
   'evt:auth': AuthState
-  'evt:inbox': InboxItem[]
+  'evt:inbox': { accountId: string | null; items: InboxItem[] }
   /** Ask the renderer to navigate to an in-app route (menu items, notification clicks). */
   'evt:navigate': string
   'evt:integrationTasks': IntegrationTask[]
   'evt:inference': InferenceStreamEvent
   /** Progress/cancel events for the diagnostics run and support-bundle export. */
   'evt:diagnosticsProgress': DiagnosticsProgress
+  /** Offline cache verification progress (relative repo ids and counts only). */
+  'evt:cacheVerification': CacheVerificationProgress
 }
 
 export type IpcEventChannel = keyof IpcEventContract
@@ -575,6 +677,8 @@ export const IPC_INVOKE_CHANNELS = [
   'settings:import',
   'privacy:clearLocalData',
   'network:testConnection',
+  'compatibility:read',
+  'compatibility:probe',
   'hub:search',
   'hub:papers',
   'hub:paper',
@@ -604,6 +708,7 @@ export const IPC_INVOKE_CHANNELS = [
   'hub:datasetSplits',
   'hub:datasetRows',
   'hub:datasetSampleRows',
+  'dataset:exportPage',
   'hub:repoAccessGate',
   'hub:repoAccessAsk',
   'hub:searchUsers',
@@ -639,6 +744,11 @@ export const IPC_INVOKE_CHANNELS = [
   'hub:spaceVariableDelete',
   'hub:spaceLogs',
   'hub:spaceRestart',
+  'hub:spaceRuntime',
+  'hub:spaceHardwareList',
+  'hub:spacePause',
+  'hub:spaceHardwareSet',
+  'hub:spaceSleepTimeSet',
   'hub:likeSet',
   'hub:followSet',
   'hub:userLikes',
@@ -663,8 +773,11 @@ export const IPC_INVOKE_CHANNELS = [
   'hub:discussionTitleSet',
   'hub:billingUsage',
   'auth:getState',
+  'auth:listAccounts',
   'auth:signInWithToken',
   'auth:signOut',
+  'auth:switchAccount',
+  'auth:removeAccount',
   'auth:connectHubSession',
   'auth:disconnectHubSession',
   'auth:refreshUser',
@@ -676,6 +789,8 @@ export const IPC_INVOKE_CHANNELS = [
   'history:clear',
   'downloads:list',
   'downloads:start',
+  'downloads:plan',
+  'downloads:startPlanned',
   'downloads:pause',
   'downloads:resume',
   'downloads:cancel',
@@ -696,6 +811,10 @@ export const IPC_INVOKE_CHANNELS = [
   'cache:deleteRevisions',
   'cache:cleanPartials',
   'cache:revealRepo',
+  'cache:planAction',
+  'cache:applyAction',
+  'cache:verify',
+  'cache:verifyCancel',
   'follows:list',
   'follows:add',
   'follows:remove',
@@ -709,11 +828,20 @@ export const IPC_INVOKE_CHANNELS = [
   'upload:selectFolder',
   'upload:start',
   'upload:cancel',
+  'upload:retry',
+  'upload:remove',
+  'upload:listPersisted',
   'integrationTasks:list',
   'integrationTasks:revealOutput',
   'inference:run',
   'inference:stream',
   'inference:cancel',
+  'llm:get-status',
+  'llm:set-credential',
+  'llm:delete-credential',
+  'llm:test-connection',
+  'llm:translate',
+  'llm:cancel',
   'diagnostics:run',
   'diagnostics:cancel',
   'diagnostics:export',
@@ -738,7 +866,8 @@ export const IPC_EVENT_CHANNELS: readonly IpcEventChannel[] = [
   'evt:navigate',
   'evt:integrationTasks',
   'evt:inference',
-  'evt:diagnosticsProgress'
+  'evt:diagnosticsProgress',
+  'evt:cacheVerification'
 ] as const
 
 /** Shape of the API exposed on `window.hubfetch` by the preload script. */
@@ -755,6 +884,8 @@ export interface RendererApi {
    * convenience namespace, never a bypass of sender validation.
    */
   diagnostics: DiagnosticsBridge
+  /** Typed local-read and explicit-probe compatibility surface. */
+  compatibility: CompatibilityBridge
   /**
    * Typed clone surface exposed as `window.hubfetch.clones.*`. Every method
    * delegates to the central validated invoke path (Zod + sender trust) — a
@@ -777,6 +908,11 @@ export interface DiagnosticsBridge {
   cancelExport(): Promise<void>
   /** Subscribe to run/export progress; returns an unsubscribe function. */
   onProgress(listener: (progress: DiagnosticsProgress) => void): () => void
+}
+
+export interface CompatibilityBridge {
+  read(): Promise<HubCapabilityStatus[]>
+  probe(key: HubCapabilityKey): Promise<HubCapabilityStatus>
 }
 
 /**

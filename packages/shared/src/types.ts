@@ -15,6 +15,177 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number]
 
 export type RepoKind = 'model' | 'dataset' | 'space'
 
+/** Closed source classes used by the Hub capability registry. */
+export const HUB_CAPABILITY_CLASSES = [
+  'official-token',
+  'official-public',
+  'cookie-web',
+  'ssr-scrape',
+  'datasets-server'
+] as const
+export type HubCapabilitySourceClass = (typeof HUB_CAPABILITY_CLASSES)[number]
+/** Compatibility alias used by the Hub API package's Todo 3 registry. */
+export type HubCapabilityClass = HubCapabilitySourceClass
+
+/** Closed capability outcomes. `available` is the only non-error outcome. */
+export const HUB_CAPABILITY_DEGRADATIONS = [
+  'available',
+  'session-required',
+  'unauthorized',
+  'forbidden',
+  'rate-limited',
+  'upstream-changed',
+  'network'
+] as const
+export type HubCapabilityDegradation = (typeof HUB_CAPABILITY_DEGRADATIONS)[number]
+export const HUB_CAPABILITY_ERROR_CODES = [
+  'session-required',
+  'unauthorized',
+  'forbidden',
+  'rate-limited',
+  'upstream-changed',
+  'network'
+] as const
+export type HubCapabilityErrorCode = (typeof HUB_CAPABILITY_ERROR_CODES)[number]
+
+export const HUB_CAPABILITY_DOMAINS = [
+  'account',
+  'collections',
+  'community',
+  'datasets',
+  'datasets-server',
+  'discussions',
+  'gated-access',
+  'models',
+  'notifications',
+  'papers',
+  'profiles',
+  'repository-admin',
+  'spaces',
+  'transport'
+] as const
+export type HubCapabilityDomain = (typeof HUB_CAPABILITY_DOMAINS)[number]
+
+/**
+ * Public HubClient method keys from Todo 3. Keeping the closed list in shared
+ * lets IPC schemas reject unknown capability probes without importing Electron
+ * or creating a package cycle back into hub-api.
+ */
+export const HUB_CAPABILITY_KEYS = [
+  'buildSearchUrl',
+  'searchRepos',
+  'getRepoDetail',
+  'resolveUrl',
+  'getReadme',
+  'getFileTree',
+  'getDailyPapers',
+  'getPaper',
+  'getPaperComments',
+  'listDiscussions',
+  'getDiscussionDiff',
+  'getPosts',
+  'getRecentActivity',
+  'getDiscussion',
+  'commentOnDiscussion',
+  'createDiscussion',
+  'whoAmI',
+  'whoAmIWithToken',
+  'whoAmIWithCookie',
+  'getNotifications',
+  'markNotificationsRead',
+  'clearNotifications',
+  'listByAuthor',
+  'getFileText',
+  'fetchFileResponse',
+  'fetchFileRange',
+  'getSafetensorsHeader',
+  'getRepoAccessGate',
+  'askRepoAccess',
+  'getDatasetSampleRows',
+  'getDatasetSplits',
+  'getDatasetRows',
+  'getPostDetail',
+  'getUserOverview',
+  'getOrgMembers',
+  'getUserFollowing',
+  'searchUsers',
+  'searchOrgs',
+  'searchPapers',
+  'searchCollections',
+  'isInferenceAvailable',
+  'listCollections',
+  'getCollection',
+  'createCollection',
+  'updateCollection',
+  'deleteCollection',
+  'addCollectionItem',
+  'updateCollectionItem',
+  'removeCollectionItem',
+  'updateWatch',
+  'listWatched',
+  'setWatch',
+  'listMyRepos',
+  'updateRepoSettings',
+  'moveRepo',
+  'deleteRepo',
+  'duplicateSpace',
+  'createBranch',
+  'deleteBranch',
+  'createTag',
+  'deleteTag',
+  'listAccessRequests',
+  'handleAccessRequest',
+  'grantAccess',
+  'listSpaceSecrets',
+  'setSpaceSecret',
+  'deleteSpaceSecret',
+  'listSpaceVariables',
+  'setSpaceVariable',
+  'deleteSpaceVariable',
+  'getSpaceLogsSnapshot',
+  'getSpaceRuntime',
+  'listSpaceHardware',
+  'restartSpace',
+  'pauseSpace',
+  'requestSpaceHardware',
+  'setSpaceSleepTime',
+  'setLike',
+  'setFollow',
+  'getUserLikes',
+  'commentOnPost',
+  'setPostReaction',
+  'setPostCommentReaction',
+  'hidePostComment',
+  'uploadCommentAsset',
+  'getProfileSettings',
+  'updateProfileSettings',
+  'getPostComments',
+  'canCreatePost',
+  'createPost',
+  'setPaperUpvote',
+  'setCollectionUpvote',
+  'setDiscussionCommentReaction',
+  'commentOnPaper',
+  'setPaperCommentReaction',
+  'mergePullRequest',
+  'setDiscussionStatus',
+  'setDiscussionTitle',
+  'getBillingUsage',
+  'invalidateCache'
+] as const
+export type HubCapabilityKey = (typeof HUB_CAPABILITY_KEYS)[number]
+
+/** Secret-free capability state exposed to diagnostics and renderer recovery UI. */
+export interface HubCapabilityStatus {
+  readonly key: HubCapabilityKey
+  readonly sourceClass: HubCapabilitySourceClass
+  readonly domain: HubCapabilityDomain
+  readonly status: HubCapabilityDegradation
+  readonly lastCheckedAt: string
+}
+
+export const HUB_CAPABILITY_ERROR_MARKER = 'HUB_CAPABILITY_ERROR'
+
 /** Native menu and renderer shortcut help consume this same navigation map. */
 export const NAVIGATION_SHORTCUTS = [
   { key: '1', route: '/models', menuKey: 'menu.models', labelKey: 'models' },
@@ -139,8 +310,40 @@ export interface UserProfile {
   orgs: OrgSummary[]
 }
 
+/** Renderer-safe account inventory entry. Credential bytes never cross IPC. */
+export interface AccountSummary {
+  readonly id: string
+  readonly endpoint: string
+  readonly user: UserProfile
+  readonly tokenDisplayName?: string
+  readonly tokenRole?: string
+  readonly hubSession: boolean
+  readonly active: boolean
+  /** Present only after a definitive 401; the profile needs reauthentication. */
+  readonly invalid?: true
+}
+
+/** Account-bound work counts used to explain why profile removal is blocked. */
+export interface AccountUsageCounts {
+  readonly downloads: number
+  readonly clones: number
+  readonly uploads: number
+  readonly total: number
+}
+
+export type AccountActionFailure =
+  | { readonly ok: false; readonly error: 'not-found'; readonly accountId: string }
+  | {
+      readonly ok: false
+      readonly error: 'account-in-use'
+      readonly accountId: string
+      readonly counts: AccountUsageCounts
+    }
+
 export type AuthState =
   | { status: 'signedOut' }
+  /** The encrypted credential source was quarantined; only its backup basename crosses IPC. */
+  | { status: 'credential-corrupt'; backupFile: string }
   /**
    * Access-token session. `scopes` is unused (token permissions are decided by
    * the Hub token itself; the UI lets attempts through and the API is the
@@ -148,6 +351,7 @@ export type AuthState =
    */
   | {
       status: 'signedIn'
+      accountId: string
       user: UserProfile
       scopes?: string[]
       method?: 'oauth' | 'token'
@@ -167,6 +371,27 @@ export type AuthState =
 /** Result of a manual-token sign-in attempt; failures never throw across IPC. */
 export type TokenSignInResult =
   { ok: true; state: AuthState } | { ok: false; error: 'invalid' | 'forbidden' | 'network' }
+
+export type AccountSwitchResult =
+  | { readonly ok: true; readonly state: AuthState }
+  | {
+      readonly ok: false
+      readonly error: 'not-found' | 'invalid' | 'forbidden' | 'network'
+      readonly accountId?: string
+    }
+  | {
+      readonly ok: false
+      readonly error: 'endpoint-mismatch'
+      readonly accountId: string
+      readonly settings: 'network'
+    }
+
+export type AccountRemoveResult =
+  | { readonly ok: true; readonly accounts: AccountSummary[]; readonly state: AuthState }
+  | AccountActionFailure
+
+/** Successful sign-out retains its historic AuthState response shape. */
+export type SignOutResult = AuthState | AccountActionFailure
 
 /**
  * Result of connecting a Hub web session (cookie) via the login window.
@@ -223,11 +448,21 @@ export interface DownloadTask {
   id: string
   repoId: string
   kind: RepoKind
+  /** Immutable account identity used for authenticated work; absent for public downloads. */
+  accountId?: string
+  /** Safe display label captured with the account identity; never a credential. */
+  accountLabel?: string
   /** User-requested branch, tag, or commit. */
   revision: string
   /** Immutable 40-hex commit resolved before the task was queued. */
   resolvedCommit?: string
-  errorCode?: 'legacy-task' | 'environment-mismatch' | 'commit-mismatch' | 'network' | 'integrity'
+  errorCode?:
+    | 'legacy-task'
+    | 'environment-mismatch'
+    | 'commit-mismatch'
+    | 'network'
+    | 'integrity'
+    | 'account-unavailable'
   /** False when continuing the task could mix endpoint/cache environments. */
   resumable: boolean
   status: DownloadStatus
@@ -259,6 +494,81 @@ export interface DownloadRequest {
   proxy?: DownloadProxyOverride
 }
 
+/**
+ * One file row in a download plan. All fields are resolved and immutable for
+ * the plan's lifetime. The plan owner (main process) computes these from the
+ * Hub file tree, cache scan, and live task inventory.
+ */
+export interface DownloadPlanFileRow {
+  readonly path: string
+  readonly size: number
+  /** sha256 expected for LFS files (from the HF etag). */
+  readonly sha256?: string
+  /** True when the blob is already fully cached on disk. */
+  readonly alreadyCached: boolean
+  /** True when a queued or running task already covers this file. */
+  readonly coveredByLiveTask: boolean
+}
+
+/**
+ * Immutable download plan returned by `downloads:plan`. The plan is owned by
+ * the main process and expires after 15 minutes. It captures every resolved
+ * detail so the renderer can preview before committing.
+ */
+export interface DownloadPlan {
+  readonly planId: string
+  readonly repoId: string
+  readonly kind: RepoKind
+  /** User-requested branch, tag, or commit. */
+  readonly revision: string
+  /** Immutable 40-hex commit resolved at plan creation. */
+  readonly resolvedCommit: string
+  /** Frozen endpoint at plan creation. */
+  readonly endpoint: string
+  /** Frozen proxy snapshot at plan creation. */
+  readonly proxy: ProxySnapshot
+  /** Account identity if authenticated at plan creation. */
+  readonly accountId?: string
+  readonly accountLabel?: string
+  /** All safe file rows from the resolved commit tree. */
+  readonly files: readonly DownloadPlanFileRow[]
+  /** Total bytes of all files in the plan (before selection). */
+  readonly totalBytes: number
+  /** Total file count in the plan (before selection). */
+  readonly totalFiles: number
+  /** ISO timestamp when the plan expires. */
+  readonly expiresAt: string
+  /**
+   * Deterministic digest of the plan content (SHA-256 hex of canonical JSON).
+   * Used by startPlanned to detect tampering.
+   */
+  readonly digest: string
+}
+
+/**
+ * Request payload for `downloads:plan`. Same shape as DownloadRequest but
+ * returns a preview instead of starting a download.
+ */
+export interface DownloadPlanRequest {
+  repoId: string
+  kind: RepoKind
+  revision?: string
+  /** File paths to scope the plan; omit to plan the whole snapshot. */
+  files?: string[]
+  /** Optional per-plan proxy override. */
+  proxy?: DownloadProxyOverride
+}
+
+/**
+ * Request payload for `downloads:startPlanned`. Only the plan ID and a subset
+ * of paths already present in the plan are accepted.
+ */
+export interface DownloadPlanStartRequest {
+  planId: string
+  /** Subset of file paths from the plan to actually download. */
+  paths: string[]
+}
+
 export interface CachedRevision {
   commitHash: string
   sizeOnDisk: number
@@ -286,6 +596,217 @@ export interface CacheReport {
   scannedAt: string
   /** Total bytes of leftover download partials across all repos. */
   partialSize?: number
+}
+
+/**
+ * Closed union of cache integrity issues detected during offline verification.
+ * Every variant is a read-only observation — the verifier never mutates state.
+ */
+export type CacheVerificationIssue =
+  | 'invalid-blob-name'
+  | 'hash-mismatch'
+  | 'broken-snapshot-link'
+  | 'snapshot-escape'
+  | 'missing-blob'
+  | 'unmatched-snapshot-copy'
+  | 'unreadable'
+
+export interface CacheVerificationEntry {
+  issue: CacheVerificationIssue
+  /** Relative display path from the cache root (always uses forward slashes). */
+  path: string
+  detail?: string
+}
+
+export interface CacheVerificationRepo {
+  /** Logical repo id, e.g. "org/name". */
+  id: string
+  kind: RepoKind
+  /** True when every blob and snapshot entry passed verification with zero issues. */
+  ok: boolean
+  /** Number of blobs whose content hash matched their filename. */
+  verifiedBlobs: number
+  /** Total bytes of verified blob content. */
+  verifiedBytes: number
+  /** Integrity issues found in this repo. */
+  issues: CacheVerificationEntry[]
+  /** Number of `.incomplete*` partial files skipped (not hashed). */
+  partialFiles: number
+  /** Total bytes of partial files. */
+  partialBytes: number
+}
+
+export interface CacheVerificationReport {
+  root: string
+  /** True when every repo passed with zero issues. */
+  ok: boolean
+  repos: CacheVerificationRepo[]
+  totalVerifiedBlobs: number
+  totalVerifiedBytes: number
+  totalIssues: number
+  totalPartialFiles: number
+  totalPartialBytes: number
+  /** True when the issue limit was reached and the report was truncated. */
+  truncated: boolean
+  scannedAt: string
+}
+
+export interface CacheVerificationProgress {
+  phase: 'scanning' | 'verifying' | 'done'
+  currentRepo?: string
+  completedRepos: number
+  totalRepos: number
+  verifiedBlobs: number
+  issuesFound: number
+}
+
+// ---------------------------------------------------------------------------
+// Cache action plans (plan Todo 15)
+//
+// A plan is created and stored by the MAIN process. The renderer-visible
+// payload is sanitized: only logical repo identity and relative display paths
+// ever cross IPC — absolute paths and expected content hashes live in a
+// main-memory registry keyed by the unguessable plan ID and are never sent to
+// the renderer.
+// ---------------------------------------------------------------------------
+
+/** Closed union of main-owned cache maintenance actions. */
+export type CacheActionKind = 'prune' | 'repair'
+
+/** One prune candidate: a detached snapshot, an orphan blob, or a stale partial. */
+export interface CachePruneEntry {
+  kind: 'detached-snapshot' | 'orphan-blob' | 'stale-partial'
+  /** Relative display path from the cache root (always forward slashes). */
+  path: string
+  /** 40-hex commit (detached snapshot) or blob/partial file name. */
+  name: string
+  /** Estimated reclaimable bytes. */
+  estimatedBytes: number
+}
+
+/**
+ * One sanitized repair target. `path` is relative to the cache root and
+ * `repoPath` is relative to the snapshot directory; the absolute blob path and
+ * the expected content hash stay in the main-memory registry.
+ */
+export interface CacheRepairEntry {
+  /** Todo 14 verification issue that mapped to this entry. */
+  issue: CacheVerificationIssue
+  /** Relative display path from the cache root (always forward slashes). */
+  path: string
+  /** Repo-relative file path inside the snapshot (forward slashes). */
+  repoPath: string
+  /** Estimated download bytes (size of the corrupt entry at plan time). */
+  estimatedBytes: number
+}
+
+interface CacheActionPlanBase {
+  /** Unguessable random UUID v4 minted in main. */
+  planId: string
+  kind: RepoKind
+  /** Logical repo id, e.g. "org/name". Never a path. */
+  repoId: string
+  /** ISO timestamp of the source scan/verification the plan was built from. */
+  scannedAt: string
+  createdAt: string
+  /** ISO timestamp; a plan is rejected once expired (15-minute TTL). */
+  expiresAt: string
+  /**
+   * Account identity needed for the network refetch; absent for offline prune
+   * and anonymous repair. Only the id crosses IPC — never a credential.
+   */
+  accountId?: string
+  /** Safe display label captured with the account identity. */
+  accountLabel?: string
+  /** Commits protected by live/resumable downloads at plan time (exclusion proof). */
+  protectedCommits: readonly string[]
+  /** Task ids whose partials/commits are protected at plan time (exclusion proof). */
+  protectedTaskIds: readonly string[]
+  /**
+   * Deterministic SHA-256 hex of the plan content (canonical JSON). Computed
+   * in main over the full plan INCLUDING the registry-only absolute paths and
+   * expected hashes; re-verified before the first mutation on apply.
+   */
+  digest: string
+}
+
+/** Offline cleanup: detached snapshots, orphaned blobs, and stale partials. */
+export interface CachePrunePlan extends CacheActionPlanBase {
+  action: 'prune'
+  entries: readonly CachePruneEntry[]
+  /** Total estimated reclaimable bytes. */
+  estimatedBytes: number
+}
+
+/**
+ * Network repair of mapped Todo 14 issues. Every entry belongs to ONE
+ * resolved commit; the refetch uses the frozen endpoint/proxy captured here.
+ */
+export interface CacheRepairPlan extends CacheActionPlanBase {
+  action: 'repair'
+  /** Immutable 40-hex commit every entry is mapped to. */
+  resolvedCommit: string
+  /** Frozen endpoint at plan creation (stale rejection on change). */
+  endpoint: string
+  /** Frozen proxy snapshot at plan creation (stale rejection on change). */
+  proxy: ProxySnapshot
+  entries: readonly CacheRepairEntry[]
+  /** Total estimated download bytes. */
+  estimatedBytes: number
+}
+
+/** Closed prune | repair union of expiring main-owned cache plans. */
+export type CacheActionPlan = CachePrunePlan | CacheRepairPlan
+
+/** Issue identity: "<issue>:<relative display path>" from the verification report. */
+export function cacheIssueIdOf(issue: CacheVerificationIssue, path: string): string {
+  return `${issue}:${path}`
+}
+
+export interface CacheActionPlanRequest {
+  action: CacheActionKind
+  kind: RepoKind
+  repoId: string
+  /**
+   * Repair only: issue identities selected from the latest verification
+   * report; every id must match an issue main re-detects itself. Omit to plan
+   * every mappable issue. Ignored by prune.
+   */
+  issueIds?: readonly string[]
+  /** Prune only: user-selected 40-hex revisions to retain (never pruned). */
+  retainCommits?: readonly string[]
+}
+
+/** Closed failure reasons for one-shot plan application. */
+export const CACHE_APPLY_FAILURE_REASONS = [
+  'plan-not-found',
+  'plan-expired',
+  'plan-digest-mismatch',
+  'plan-stale-filesystem',
+  'plan-stale-protected',
+  'plan-stale-account',
+  'plan-stale-environment',
+  'unsupported-issue',
+  'network',
+  'integrity',
+  'account-unavailable',
+  'internal'
+] as const
+export type CacheApplyFailureReason = (typeof CACHE_APPLY_FAILURE_REASONS)[number]
+
+/**
+ * Result of applying one cache action plan. Failures NEVER mutate: `bytes`
+ * and `changed` stay 0 and the original cache bytes remain intact.
+ */
+export interface CacheActionResult {
+  ok: boolean
+  action: CacheActionKind
+  planId: string
+  /** Reclaimed bytes (prune) or re-downloaded bytes (repair); 0 on failure. */
+  bytes: number
+  /** Entries removed (prune) or atomically replaced (repair); 0 on failure. */
+  changed: number
+  failure?: { reason: CacheApplyFailureReason; message: string }
 }
 
 /** A fully-resolved git commit SHA — the only revisions cached with no ref file. */
@@ -341,6 +862,8 @@ export interface Follow {
   target: string
   createdAt: string
   lastCheckedAt?: string
+  accountId?: string
+  legacyOrigin?: 'legacy-local' | 'v1-migrated'
 }
 
 export type InboxItemKind = 'repo-update' | 'new-repo' | 'paper'
@@ -354,6 +877,8 @@ export interface InboxItem {
   route: string
   createdAt: string
   readAt?: string
+  accountId?: string
+  legacyOrigin?: 'legacy-local' | 'v1-migrated'
 }
 
 export interface DiscussionSummary {
@@ -701,6 +1226,97 @@ export type RepoOpenTarget = 'app' | 'browser'
 
 export type HistoryLimit = 50 | 100 | 200 | 500
 
+export const LLM_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const
+export type LlmProvider = (typeof LLM_PROVIDERS)[number]
+
+/** Persisted provider config. API keys are never stored here. */
+export type LlmProviderConfig = {
+  readonly modelId: string
+  /** null = use the provider's runtime default from DEFAULT_LLM_BASE_URLS. */
+  readonly baseUrl: string | null
+}
+
+export type LlmSettings = {
+  readonly activeProvider: LlmProvider
+  readonly providers: {
+    readonly openai: LlmProviderConfig
+    readonly anthropic: LlmProviderConfig
+    readonly gemini: LlmProviderConfig
+  }
+}
+
+export const DEFAULT_LLM_SETTINGS = {
+  activeProvider: 'openai',
+  providers: {
+    openai: { modelId: '', baseUrl: null },
+    anthropic: { modelId: '', baseUrl: null },
+    gemini: { modelId: '', baseUrl: null }
+  }
+} as const satisfies LlmSettings
+
+/** Runtime endpoints used when a provider's persisted baseUrl is null. */
+export const DEFAULT_LLM_BASE_URLS = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com',
+  gemini: 'https://generativelanguage.googleapis.com'
+} as const satisfies Record<LlmProvider, string>
+
+export type LlmConfiguredStatus = {
+  readonly openai: boolean
+  readonly anthropic: boolean
+  readonly gemini: boolean
+}
+
+export type LlmStatus = {
+  readonly configured: LlmConfiguredStatus
+}
+
+export type LlmTestConnectionRequest = {
+  readonly provider: LlmProvider
+  readonly modelId: string
+  readonly baseUrl: string | null
+  readonly apiKey?: string
+}
+
+export type LlmTestConnectionResult =
+  | { readonly ok: true; readonly latencyMs: number }
+  | { readonly ok: false; readonly error: LlmErrorCode }
+
+export type LlmTranslateRequest = {
+  readonly requestId: string
+  readonly markdown: string
+  readonly targetLocale: Locale
+}
+
+export type LlmTranslationResult =
+  | {
+      readonly status: 'translated'
+      readonly sourceLanguage: string
+      readonly markdown: string
+    }
+  | { readonly status: 'same-language'; readonly sourceLanguage: string }
+
+export type LlmTranslateResult =
+  LlmTranslationResult | { readonly status: 'error'; readonly error: LlmErrorCode }
+
+export const LLM_ERROR_CODES = [
+  'not-configured',
+  'invalid-config',
+  'auth',
+  'forbidden',
+  'model-not-found',
+  'rate-limited',
+  'timeout',
+  'canceled',
+  'provider-unavailable',
+  'malformed-response',
+  'empty-response',
+  'refused',
+  'input-too-long',
+  'unknown'
+] as const
+export type LlmErrorCode = (typeof LLM_ERROR_CODES)[number]
+
 export interface AppSettings {
   locale: 'system' | Locale
   theme: ThemeSetting
@@ -739,6 +1355,8 @@ export interface AppSettings {
   repoOpenTarget: RepoOpenTarget
   /** Max local history rows retained. */
   historyLimit: HistoryLimit
+  /** Translation LLM config. API keys are stored separately, never here. */
+  llm: LlmSettings
 }
 
 /** Renderer-writable settings. Cache roots are selected and persisted by main. */
@@ -765,7 +1383,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sidebarCollapsed: false,
   browsePageSize: 30,
   repoOpenTarget: 'app',
-  historyLimit: 200
+  historyLimit: 200,
+  llm: DEFAULT_LLM_SETTINGS
 }
 
 /** Subset of process.platform values the app runs on (kept Node-types-free for the renderer). */
@@ -836,6 +1455,40 @@ export interface UploadStartRequest {
   acknowledgedWarningCodes: UploadWarningCode[]
 }
 
+/** Request to retry a persisted upload task by its DB row id. */
+export interface UploadRetryRequest {
+  taskId: string
+}
+
+/**
+ * Persisted upload task row (append-only). Never contains token, file content,
+ * ignored sensitive path samples, device/inode as restart identity, or open handles.
+ */
+export interface UploadTaskRecord {
+  id: string
+  accountId: string | null
+  accountLabel: string | null
+  repoKind: RepoKind
+  repoName: string
+  repoVisibility: 'public' | 'private'
+  rootPath: string
+  /** Deterministic SHA-256 hex over sorted (relativePath, size, contentSha256). */
+  manifestFingerprint: string
+  warningCodes: UploadWarningCode[]
+  summaryFileCount: number
+  summaryTotalBytes: number
+  status: IntegrationTaskStatus
+  phase: string
+  progress: number
+  messageKey?: string
+  params?: Record<string, string>
+  repoId?: string
+  repoUrl?: string
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
+}
+
 export interface ExportStartRequest {
   tool: ExportTool
   kind: RepoKind
@@ -843,7 +1496,15 @@ export interface ExportStartRequest {
   filePath: string
 }
 
-export type IntegrationTaskStatus = 'preparing' | 'running' | 'done' | 'error' | 'canceled'
+export type IntegrationTaskStatus =
+  | 'preparing'
+  | 'running'
+  | 'done'
+  | 'error'
+  | 'canceled'
+  | 'interrupted'
+  | 'selection-stale'
+  | 'account-unavailable'
 
 export interface IntegrationTaskBase {
   id: string
@@ -860,6 +1521,8 @@ export interface IntegrationTaskBase {
 
 export interface UploadIntegrationTask extends IntegrationTaskBase {
   kind: 'upload'
+  accountId?: string
+  accountLabel?: string
   repoId?: string
   repoKind: RepoKind
   path?: string
@@ -949,6 +1612,11 @@ export interface DatasetRows {
   columns: string[]
   /** Cell values pre-stringified and truncated for display. */
   rows: string[][]
+  /**
+   * Untruncated JSON cell values from datasets-server. Absent on SSR sample
+   * fallbacks. Nested/list/media values stay as JSON (not flattened).
+   */
+  values?: unknown[][]
   total?: number
   /**
    * True when these are the SSR sample rows from the dataset page — the
@@ -956,6 +1624,21 @@ export interface DatasetRows {
    */
   sample?: boolean
 }
+
+/** Server page size used by the dataset viewer. */
+export const DATASET_PREVIEW_PAGE_SIZE = 25
+
+/** Hard cap on `dataset:exportPage` length (preview pages are 25). */
+export const DATASET_EXPORT_MAX_LENGTH = 100
+
+export const DATASET_EXPORT_FORMATS = ['csv', 'jsonl'] as const
+export type DatasetExportFormat = (typeof DATASET_EXPORT_FORMATS)[number]
+
+/** Outcome of a main-owned current-page dataset export. Never carries a filesystem path. */
+export type DatasetExportPageResult =
+  | { readonly status: 'canceled' }
+  | { readonly status: 'saved'; readonly label: string }
+  | { readonly status: 'error'; readonly message: string }
 
 export interface CollectionSummary {
   /** "owner/title-slug-<24hex>" — the API path segment. */
@@ -1028,6 +1711,100 @@ export interface SpaceVariable {
   value?: string
   description?: string
   updatedAt?: string
+}
+
+/**
+ * Lifecycle stage reported by `GET /api/spaces/{repoId}/runtime`. The listed
+ * values are the official Space stages; the open-string fallback keeps parsing
+ * forward-compatible when the Hub adds new stages.
+ */
+export type SpaceStage =
+  | 'NO_APP_FILE'
+  | 'BUILDING'
+  | 'BUILD_ERROR'
+  | 'APP_STARTING'
+  | 'RUNNING'
+  | 'RUNNING_APP_STARTING'
+  | 'RUNNING_BUILDING'
+  | 'PAUSED'
+  | 'SLEEPING'
+  | 'RUNTIME_ERROR'
+  | 'DELETING'
+  | 'STOPPED'
+  | (string & {})
+
+/** Hardware flavors accepted by the official Space hardware endpoints. */
+export const SPACE_HARDWARE_FLAVORS = [
+  'cpu-basic',
+  'cpu-upgrade',
+  'cpu-performance',
+  'cpu-xl',
+  'sprx8',
+  'zero-a10g',
+  't4-small',
+  't4-medium',
+  'l4x1',
+  'l4x4',
+  'l40sx1',
+  'l40sx4',
+  'l40sx8',
+  'a10g-small',
+  'a10g-large',
+  'a10g-largex2',
+  'a10g-largex4',
+  'a100-large',
+  'a100x4',
+  'a100x8',
+  'h200',
+  'h200x2',
+  'h200x4',
+  'h200x8',
+  'rtx-pro-6000',
+  'rtx-pro-6000x2',
+  'rtx-pro-6000x4',
+  'rtx-pro-6000x8',
+  'inf2x6'
+] as const
+export type SpaceHardwareFlavor = (typeof SPACE_HARDWARE_FLAVORS)[number]
+
+/** The free hardware tier: the Hub manages its sleep window automatically. */
+export const SPACE_FREE_FLAVOR = 'cpu-basic'
+
+/**
+ * Live runtime state of a Space (`GET /api/spaces/{repoId}/runtime`). `stage`
+ * is the only semantic field the Hub must send; every other field is optional
+ * and unknown additive fields are ignored by the mapper. Parsed-but-unrendered
+ * storage/dev-mode fields exist for forward compatibility only — the app never
+ * manages volumes or dev mode.
+ */
+export interface SpaceRuntime {
+  stage: SpaceStage
+  /** Currently assigned hardware flavor, when the Hub reports one. */
+  hardware?: string | null
+  /** Pending hardware flavor while a hardware switch is in flight. */
+  requestedHardware?: string | null
+  /** Inactivity seconds before the Space sleeps; -1 means never sleep. */
+  gcTimeout?: number | null
+  /** Configured sleep window in seconds, when the Hub reports one. */
+  sleepTime?: number | null
+  /** Persistent storage tier, when configured (displayed nowhere). */
+  storage?: string | null
+  /** Dev-mode flag, when present (displayed nowhere; no dev-mode controls). */
+  devMode?: boolean | null
+}
+
+/**
+ * One entry of the public hardware catalog (`GET /api/spaces/hardware`). The
+ * Hub response also carries per-unit cost fields; the mapper strips them, so
+ * no price can reach the UI.
+ */
+export interface SpaceHardwareCatalogEntry {
+  name: string
+  prettyName?: string
+  cpu?: string
+  ram?: string
+  /** Human-readable accelerator summary ("A10G 24GB x1"), when present. */
+  accelerator?: string | null
 }
 
 export interface BillingUsage {
@@ -1107,6 +1884,8 @@ export interface DiagnosticCheck {
 export interface DiagnosticReport {
   /** Deterministic probe order (sorted by id). */
   checks: DiagnosticCheck[]
+  /** Local/static Hub capability status inventory, when the desktop provides it. */
+  capabilities?: HubCapabilityStatus[]
   completedAt: string
 }
 

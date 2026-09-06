@@ -45,6 +45,7 @@ export type CloneStatus = (typeof CLONE_STATUSES)[number]
 export const CLONE_ERROR_CODES = [
   'dependency',
   'auth',
+  'account-unavailable',
   'gated',
   'not-found',
   'network',
@@ -95,7 +96,20 @@ export type CloneProxySnapshot = z.infer<typeof cloneProxySnapshotSchema>
  * reject option injection, credentials, and raw URLs.
  */
 export const cloneCreateInputSchema = cloneRequestSchema
-  .extend({ proxy: downloadProxyOverride })
+  .extend({
+    proxy: downloadProxyOverride,
+    accountId: z.uuid().optional(),
+    accountLabel: z.string().max(256).optional()
+  })
+  .superRefine((input, context) => {
+    if (input.auth === 'app-token' && input.accountId === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['accountId'],
+        message: 'app-token clones require an account'
+      })
+    }
+  })
   .strict()
 export type CloneCreateInput = z.infer<typeof cloneCreateInputSchema>
 
@@ -128,6 +142,8 @@ export const cloneRecordSchema = z
     transport: cloneTransportSchema,
     destination: cloneDestinationSchema,
     auth: cloneAuthModeSchema,
+    accountId: z.uuid().optional(),
+    accountLabel: z.string().max(256).optional(),
     proxy: cloneProxySnapshotSchema,
     status: z.enum(CLONE_STATUSES),
     progress: cloneProgressSchema.optional(),
