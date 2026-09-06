@@ -27,7 +27,10 @@ const PROD_DEPENDENCIES = [
   'ignore',
   'zod',
   '@huggingface/hub',
-  '@huggingface/inference'
+  '@huggingface/inference',
+  'openai',
+  '@anthropic-ai/sdk',
+  '@radix-ui/react-context-menu'
 ]
 
 /** Expected license for each production dependency (from installed metadata). */
@@ -37,7 +40,10 @@ const EXPECTED_LICENSES = {
   ignore: 'MIT',
   zod: 'MIT',
   '@huggingface/hub': 'MIT',
-  '@huggingface/inference': 'MIT'
+  '@huggingface/inference': 'MIT',
+  openai: 'Apache-2.0',
+  '@anthropic-ai/sdk': 'MIT',
+  '@radix-ui/react-context-menu': 'MIT'
 }
 
 /**

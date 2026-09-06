@@ -30,6 +30,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { verifySbom } from '../.github/scripts/release-tools/verify-sbom.mjs'
 
 const PLAIN_SEMVER = /^\d+\.\d+\.\d+$/
 const WINDOWS_ZIP = /^HubFetch-([0-9]+\.[0-9]+\.[0-9]+)-windows-x64\.zip$/i
@@ -84,6 +85,13 @@ const artifactsDirResolved = resolve(artifactsDir)
 const zipPath = join(artifactsDirResolved, zipName)
 if (!existsSync(zipPath)) {
   console.error(`ZIP not found: ${zipPath}`)
+  process.exit(1)
+}
+
+const sbomName = `HubFetch-${version}.cdx.json`
+const sbomPath = join(artifactsDirResolved, sbomName)
+if (!existsSync(sbomPath)) {
+  console.error(`SBOM not found: ${sbomPath}`)
   process.exit(1)
 }
 
@@ -191,6 +199,8 @@ const desktopManifestHash = hashOfRelative('apps/desktop/package.json')
 
 const nativeHashes = readNativeHashesFromZip(zipPath)
 const inventory = zipInventory(zipPath)
+const sbomVerification = verifySbom(sbomPath, version, root)
+const sbomSha256 = sha256Of(sbomPath)
 
 // Live-read binding from Todo 37 (LIVE_REPO_SHA), when provided.
 let liveRead = null
@@ -262,6 +272,11 @@ const manifest = {
     memberDigest: inventory.memberDigest,
     sha256Line
   },
+  sbom: {
+    name: sbomName,
+    sha256: sbomSha256,
+    warningInventory: sbomVerification.warningInventory
+  },
   members: inventory.members,
   test: {
     screenshotDigest: options['screenshot-digest'] ?? null
@@ -283,7 +298,8 @@ writeFileSync(
 
 process.stdout.write(
   `[release-manifest] ${finalize ? 'FINALIZED (approved=true)' : 'staged (approved=false)'}: ` +
-    `${zipName} sha256=${zipSha256} source=${sourceSha.slice(0, 7)} members=${inventory.memberCount} ` +
+    `${zipName} sha256=${zipSha256} sbom=${sbomSha256.slice(0, 12)} ` +
+    `source=${sourceSha.slice(0, 7)} members=${inventory.memberCount} ` +
     `native=${nativeHashes['hubfetch_job.node'] ? nativeHashes['hubfetch_job.node'].slice(0, 12) : 'MISSING'}/` +
     `${nativeHashes['HubFetchAskPass.exe'] ? nativeHashes['HubFetchAskPass.exe'].slice(0, 12) : 'MISSING'}\n`
 )

@@ -9,7 +9,7 @@
 // A companion fixture test adds a stale PySide6 command and an updater claim to
 // a disposable doc set and requires the scanner to report both.
 
-import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import test from 'node:test'
@@ -142,6 +142,31 @@ export function runDocsContract(root = repositoryRoot) {
   }
   return violations
 }
+
+/** Manifest paths whose version must match the current changelog heading. */
+const MANIFEST_PATHS = [
+  'package.json',
+  'packages/shared/package.json',
+  'packages/hub-api/package.json',
+  'apps/desktop/package.json'
+]
+
+test('all four workspace manifests match the changelog current-release heading', () => {
+  const root = repositoryRoot
+  const changelog = readText(join(root, 'docs/changelog.md'))
+  const m = changelog.match(/^#{2,3}\s+(\d+\.\d+\.\d+)/m)
+  assert.ok(m, 'could not find a version heading in docs/changelog.md')
+  const expected = m[1]
+  for (const rel of MANIFEST_PATHS) {
+    const content = readFileSync(join(root, rel), 'utf8')
+    const pkg = JSON.parse(content)
+    assert.equal(
+      pkg.version,
+      expected,
+      `${rel}: version ${pkg.version} does not match changelog current-release ${expected}`
+    )
+  }
+})
 
 test('required documentation set exists and guides are complete and clean', () => {
   const violations = runDocsContract()

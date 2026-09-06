@@ -10,6 +10,11 @@ allowBuilds:
   '@parcel/watcher': true
   electron-winstaller: false
   protobufjs: true
+  '@swc/core': true
+
+minimumReleaseAgeExclude:
+  - '@anthropic-ai/sdk@0.120.0'
+  - i18next-cli@1.73.0
 
 # Flat node_modules: electron-builder and native-module rebuilds need a hoisted layout.
 nodeLinker: hoisted

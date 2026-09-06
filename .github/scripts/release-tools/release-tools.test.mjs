@@ -1,6 +1,14 @@
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,6 +24,37 @@ function asset(name, contents) {
     size: Buffer.byteLength(contents),
     sha512: createHash('sha512').update(contents).digest('base64')
   }
+}
+
+function releaseVersion() {
+  return JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8')).version
+}
+
+function generatedSbomPath() {
+  const version = releaseVersion()
+  const path = join(repositoryRoot, 'artifacts/release', `HubFetch-${version}.cdx.json`)
+  if (!existsSync(path)) {
+    const result = spawnSync(process.execPath, ['scripts/generate-sbom.mjs'], {
+      cwd: repositoryRoot,
+      encoding: 'utf8'
+    })
+    assert.equal(result.status, 0, result.stderr)
+  }
+  return path
+}
+
+function stageReleaseFixture(directory, zipContents) {
+  const version = releaseVersion()
+  const zipName = `HubFetch-${version}-windows-x64.zip`
+  writeFileSync(join(directory, zipName), zipContents)
+  copyFileSync(generatedSbomPath(), join(directory, `HubFetch-${version}.cdx.json`))
+  const result = spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'preflight.mjs'), directory, version],
+    { encoding: 'utf8' }
+  )
+  assert.equal(result.status, 0, result.stderr)
+  return { version, zipName, manifestPath: join(directory, 'release-assets.json') }
 }
 
 // ============================================================================
@@ -41,7 +80,7 @@ switch (args[0]) {
 }
 `
 
-const GH_MOCK = `import { appendFileSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+const GH_MOCK = `import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const effects = process.env.EFFECTS_FILE
@@ -71,7 +110,13 @@ if (args[0] === 'release' && args[1] === 'download') {
   if (dirIndex !== -1) {
     const target = args[dirIndex + 1]
     mkdirSync(target, { recursive: true })
-    if (process.env.ASSET_SOURCE) copyFileSync(process.env.ASSET_SOURCE, join(target, 'app.zip'))
+    if (process.env.ASSET_SOURCE) {
+      const source = process.env.ASSET_SOURCE
+      const manifest = JSON.parse(readFileSync(join(source, 'release-assets.json'), 'utf8'))
+      for (const asset of manifest.assets) {
+        copyFileSync(join(source, asset.name), join(target, asset.name))
+      }
+    }
   }
   process.exit(0)
 }
@@ -120,6 +165,31 @@ test('verify-assets rejects Windows path separators in manifest names', () => {
   assert.match(result.stderr, /invalid entry/)
 })
 
+test('release SBOM command emits CycloneDX 1.7 with all workspace components', () => {
+  const version = readManifests().root.version
+  const result = spawnSync(process.execPath, ['scripts/generate-sbom.mjs'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8'
+  })
+  assert.equal(result.status, 0, result.stderr)
+
+  const path = join(repositoryRoot, 'artifacts/release', `HubFetch-${version}.cdx.json`)
+  assert.equal(existsSync(path), true)
+  const sbom = JSON.parse(readFileSync(path, 'utf8'))
+  assert.equal(sbom.bomFormat, 'CycloneDX')
+  assert.equal(sbom.specVersion, '1.7')
+  const components = [sbom.metadata.component, ...sbom.components]
+  const identities = components.map((component) =>
+    [component.group, component.name].filter(Boolean).join('/')
+  )
+  const workspaceNames = Object.values(readManifests()).map((manifest) => manifest.name)
+  assert.deepEqual(
+    workspaceNames.sort(),
+    identities.filter((value) => workspaceNames.includes(value)).sort()
+  )
+  assert.ok(sbom.dependencies.length > 0)
+})
+
 test('publish refuses a stale draft target before any remote mutation', () => {
   const fixture = mkdtempSync(join(tmpdir(), 'ohmyhf-release-draft-'))
   const assetDirectory = join(fixture, 'assets')
@@ -130,21 +200,16 @@ test('publish refuses a stale draft target before any remote mutation', () => {
     mkdirSync(directory, { recursive: true })
   }
 
-  const name = 'app.zip'
   const contents = 'verified asset'
-  writeFileSync(join(assetDirectory, name), contents)
-  const manifestPath = join(assetDirectory, 'release-assets.json')
-  writeFileSync(
-    manifestPath,
-    JSON.stringify({ schemaVersion: 1, version: '1.2.3', assets: [asset(name, contents)] })
-  )
+  const staged = stageReleaseFixture(assetDirectory, contents)
+  const manifestPath = staged.manifestPath
 
   writeMockTool(binDirectory, 'git', GIT_MOCK)
   writeMockTool(binDirectory, 'gh', GH_MOCK)
 
   const oldCommit = '0'.repeat(40)
   const commit = 'a'.repeat(40)
-  const result = runPublish('1.2.3', commit, assetDirectory, manifestPath, {
+  const result = runPublish(staged.version, commit, assetDirectory, manifestPath, {
     HUBFETCH_TOOLCHAIN_DIR: binDirectory,
     PATH: `${binDirectory}${delimiter}${process.env.PATH}`,
     EFFECTS_FILE: effectsFile,
@@ -176,24 +241,18 @@ test('a fresh draft creates and verifies its tag only after remote assets pass',
     mkdirSync(directory, { recursive: true })
   }
 
-  const name = 'app.zip'
   const contents = 'fresh verified asset'
-  const assetPath = join(assetDirectory, name)
-  writeFileSync(assetPath, contents)
-  const manifestPath = join(assetDirectory, 'release-assets.json')
-  writeFileSync(
-    manifestPath,
-    JSON.stringify({ schemaVersion: 1, version: '1.2.3', assets: [asset(name, contents)] })
-  )
+  const staged = stageReleaseFixture(assetDirectory, contents)
+  const manifestPath = staged.manifestPath
 
   writeMockTool(binDirectory, 'git', GIT_MOCK)
   writeMockTool(binDirectory, 'gh', GH_MOCK)
 
   const commit = 'b'.repeat(40)
   const createdMarker = join(fixture, 'created')
-  const result = runPublish('1.2.3', commit, assetDirectory, manifestPath, {
+  const result = runPublish(staged.version, commit, assetDirectory, manifestPath, {
     HUBFETCH_TOOLCHAIN_DIR: binDirectory,
-    ASSET_SOURCE: assetPath,
+    ASSET_SOURCE: assetDirectory,
     CREATED_MARKER: createdMarker,
     GIT_REV_LIST_SHA: commit,
     EFFECTS_FILE: effectsFile,
@@ -217,8 +276,31 @@ test('a fresh draft creates and verifies its tag only after remote assets pass',
   assert.match(effects, /gh api repos\/owner\/repo\/releases\/999\/assets/)
 })
 
+test('publish rejects an unexpected fourth public asset before remote mutation', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-release-extra-'))
+  const assetDirectory = join(fixture, 'assets')
+  const runnerTemp = join(fixture, 'runner')
+  const effectsFile = join(fixture, 'effects.log')
+  mkdirSync(assetDirectory, { recursive: true })
+  mkdirSync(runnerTemp, { recursive: true })
+  const staged = stageReleaseFixture(assetDirectory, 'unexpected asset fixture')
+  writeFileSync(join(assetDirectory, 'unexpected.txt'), 'unexpected')
+
+  const result = runPublish(staged.version, 'c'.repeat(40), assetDirectory, staged.manifestPath, {
+    EFFECTS_FILE: effectsFile,
+    GH_TOKEN: 'test-token',
+    GITHUB_REPOSITORY: 'owner/repo',
+    GITHUB_RUN_ID: '789',
+    RUNNER_TEMP: runnerTemp
+  })
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /Remote asset list mismatch/)
+  assert.equal(existsSync(effectsFile), false)
+})
+
 // ============================================================================
-// HubFetch identity contract (plan Todo 12): four 0.2.0 manifests, exact
+// HubFetch identity contract (plan Todo 12): four current-version manifests, exact
 // package names, private:true, electron-builder appId/productName/repository,
 // and no upstream identifiers outside license/provenance/test-negative fixtures
 // nor stale internal workspace imports.
@@ -259,14 +341,15 @@ function readManifests() {
 
 function identityViolations(manifests) {
   const violations = []
+  const expectedVersion = manifests.root?.version
   for (const [key, rel] of MANIFEST_PATHS) {
     const manifest = manifests[key]
     if (!manifest) {
       violations.push(`${rel}: manifest missing`)
       continue
     }
-    if (manifest.version !== '0.2.0') {
-      violations.push(`${rel}: version=${manifest.version}, expected 0.2.0`)
+    if (manifest.version !== expectedVersion) {
+      violations.push(`${rel}: version=${manifest.version}, expected ${expectedVersion}`)
     }
     if (manifest.name !== EXPECTED_NAMES[key]) {
       violations.push(`${rel}: name=${manifest.name}, expected ${EXPECTED_NAMES[key]}`)
@@ -284,7 +367,7 @@ function identityViolations(manifests) {
   return violations
 }
 
-test('identity contract: four manifests are 0.2.0 with exact HubFetch names and private:true', () => {
+test('identity contract: four manifests share the current version and exact HubFetch names', () => {
   const violations = identityViolations(readManifests())
   assert.deepEqual(violations, [], violations.join('\n'))
 })
@@ -590,28 +673,146 @@ test('packaging contract: package scripts are Windows-only with a package:win co
   assert.ok(!desktopScripts['package:win'].includes('--linux'))
 })
 
-test('preflight accepts exactly one Windows x64 zip and writes SHA-256 plus inventory', () => {
+test('preflight accepts ZIP plus SBOM and writes SHA-256 plus inventory', () => {
   const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-ok-'))
-  const zipName = 'HubFetch-1.2.3-windows-x64.zip'
   const zipContents = 'fake-zip-bytes'
-  writeFileSync(join(fixture, zipName), zipContents)
-
-  const result = spawnSync(
-    process.execPath,
-    [join(toolsDirectory, 'preflight.mjs'), fixture, '1.2.3'],
-    { encoding: 'utf8' }
-  )
-  assert.equal(result.status, 0, result.stderr)
+  const staged = stageReleaseFixture(fixture, zipContents)
+  const zipName = staged.zipName
 
   const manifest = JSON.parse(readFileSync(join(fixture, 'release-assets.json'), 'utf8'))
-  assert.equal(manifest.version, '1.2.3')
+  assert.equal(manifest.version, staged.version)
   assert.deepEqual(
     manifest.assets.map((entry) => entry.name),
-    [zipName, `${zipName}.sha256`]
+    [zipName, `${zipName}.sha256`, `HubFetch-${staged.version}.cdx.json`]
   )
   const hashFile = readFileSync(join(fixture, `${zipName}.sha256`), 'utf8')
   const expectedHex = createHash('sha256').update(zipContents).digest('hex')
   assert.ok(hashFile.startsWith(`${expectedHex}  ${zipName}`), hashFile)
+  assert.equal(manifest.sbom.warningInventory.length, 0)
+})
+
+test('SBOM verifier fails closed for malformed spec, missing edge, and local path', () => {
+  const source = JSON.parse(readFileSync(generatedSbomPath(), 'utf8'))
+  const version = releaseVersion()
+  for (const [label, mutate] of [
+    [
+      'spec',
+      (sbom) => {
+        sbom.specVersion = '1.6'
+      }
+    ],
+    [
+      'dependency',
+      (sbom) => {
+        const desktopRef = sbom.components.find(
+          (component) => component.name === 'hubfetch-desktop'
+        )['bom-ref']
+        sbom.dependencies.find((entry) => entry.ref === desktopRef).dependsOn.pop()
+      }
+    ],
+    [
+      'path',
+      (sbom) => {
+        sbom.metadata.properties = [{ name: 'fixture', value: 'E:\\private' }]
+      }
+    ]
+  ]) {
+    const fixture = mkdtempSync(join(tmpdir(), `hubfetch-sbom-${label}-`))
+    const path = join(fixture, 'mutated.cdx.json')
+    const mutated = JSON.parse(JSON.stringify(source))
+    mutate(mutated)
+    writeFileSync(path, `${JSON.stringify(mutated)}\n`)
+    const result = spawnSync(
+      process.execPath,
+      [join(toolsDirectory, 'verify-sbom.mjs'), path, version],
+      { encoding: 'utf8' }
+    )
+    assert.notEqual(result.status, 0, `${label} mutation must fail`)
+  }
+})
+
+test('SBOM verifier records missing transitive licenses as sorted warnings', () => {
+  const source = JSON.parse(readFileSync(generatedSbomPath(), 'utf8'))
+  const component = source.components.find((entry) => entry.name === 'chownr')
+  assert.ok(component)
+  delete component.licenses
+  const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-sbom-warning-'))
+  const path = join(fixture, 'warning.cdx.json')
+  writeFileSync(path, `${JSON.stringify(source)}\n`)
+  const result = spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'verify-sbom.mjs'), path, releaseVersion(), '--json'],
+    { encoding: 'utf8' }
+  )
+  assert.equal(result.status, 0, result.stderr)
+  const output = JSON.parse(result.stdout)
+  assert.deepEqual(
+    output.warningInventory.map((entry) => entry.ref),
+    [component['bom-ref']]
+  )
+})
+
+test('SBOM verifier hard-fails forbidden or missing workspace licenses', () => {
+  const source = JSON.parse(readFileSync(generatedSbomPath(), 'utf8'))
+  const version = releaseVersion()
+  const workspaceComponent = source.metadata.component
+  for (const [label, mutate] of [
+    [
+      'unlicensed',
+      (sbom) => {
+        sbom.metadata.component.licenses = [{ license: { id: 'UNLICENSED' } }]
+      }
+    ],
+    [
+      'see-license',
+      (sbom) => {
+        sbom.metadata.component.licenses = [{ license: { name: 'SEE LICENSE IN MISSING' } }]
+      }
+    ],
+    [
+      'missing-workspace',
+      (sbom) => {
+        delete sbom.metadata.component.licenses
+      }
+    ]
+  ]) {
+    const fixture = mkdtempSync(join(tmpdir(), `hubfetch-sbom-${label}-`))
+    const path = join(fixture, 'mutated.cdx.json')
+    const mutated = JSON.parse(JSON.stringify(source))
+    mutate(mutated)
+    writeFileSync(path, `${JSON.stringify(mutated)}\n`)
+    const result = spawnSync(
+      process.execPath,
+      [join(toolsDirectory, 'verify-sbom.mjs'), path, version],
+      { encoding: 'utf8' }
+    )
+    assert.notEqual(result.status, 0, `${label} must fail for ${workspaceComponent.name}`)
+  }
+})
+
+test('preflight rejects a missing or malformed SBOM before writing outputs', () => {
+  const missing = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-no-sbom-'))
+  writeFileSync(join(missing, `HubFetch-${releaseVersion()}-windows-x64.zip`), 'bytes')
+  const missingResult = spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'preflight.mjs'), missing, releaseVersion()],
+    { encoding: 'utf8' }
+  )
+  assert.notEqual(missingResult.status, 0)
+  assert.equal(existsSync(join(missing, 'release-assets.json')), false)
+
+  const malformed = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-bad-sbom-'))
+  const staged = stageReleaseFixture(malformed, 'bytes')
+  const sbomPath = join(malformed, `HubFetch-${staged.version}.cdx.json`)
+  const sbom = JSON.parse(readFileSync(sbomPath, 'utf8'))
+  sbom.metadata.properties = [{ name: 'fixture', value: 'E:\\private' }]
+  writeFileSync(sbomPath, `${JSON.stringify(sbom)}\n`)
+  const malformedResult = spawnSync(
+    process.execPath,
+    [join(toolsDirectory, 'preflight.mjs'), malformed, staged.version],
+    { encoding: 'utf8' }
+  )
+  assert.notEqual(malformedResult.status, 0)
 })
 
 test('preflight rejects installers, updater metadata, and other platforms', () => {
@@ -622,11 +823,11 @@ test('preflight rejects installers, updater metadata, and other platforms', () =
     ['linux appimage', 'HubFetch-1.2.3.AppImage']
   ]) {
     const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-bad-'))
-    writeFileSync(join(fixture, 'HubFetch-1.2.3-windows-x64.zip'), 'bytes')
+    stageReleaseFixture(fixture, 'bytes')
     writeFileSync(join(fixture, extra), 'bytes')
     const result = spawnSync(
       process.execPath,
-      [join(toolsDirectory, 'preflight.mjs'), fixture, '1.2.3'],
+      [join(toolsDirectory, 'preflight.mjs'), fixture, releaseVersion()],
       { encoding: 'utf8' }
     )
     assert.notEqual(result.status, 0, `${label} must be rejected`)
@@ -636,12 +837,12 @@ test('preflight rejects installers, updater metadata, and other platforms', () =
 
 test('preflight rejects a mismatched version or a non-zip artifact set', () => {
   const fixture = mkdtempSync(join(tmpdir(), 'hubfetch-preflight-ver-'))
-  writeFileSync(join(fixture, 'HubFetch-1.2.3-windows-x64.zip'), 'bytes')
+  writeFileSync(join(fixture, `HubFetch-${releaseVersion()}-windows-x64.zip`), 'bytes')
   const wrongVersion = spawnSync(
     process.execPath,
     [join(toolsDirectory, 'preflight.mjs'), fixture, '1.2.4'],
     { encoding: 'utf8' }
   )
   assert.notEqual(wrongVersion.status, 0)
-  assert.match(wrongVersion.stderr, /is for v1\.2\.3/)
+  assert.match(wrongVersion.stderr, new RegExp(`is for v${releaseVersion()}`))
 })

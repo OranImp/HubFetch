@@ -76,7 +76,7 @@ jobs:
       publishable: true
 
   preflight:
-    name: Verify the Windows x64 ZIP, SHA-256, and artifact inventory
+    name: Verify the Windows x64 ZIP, SHA-256, CycloneDX SBOM, and artifact inventory
     needs: [detect, build]
     if: needs.detect.outputs.release == 'true'
     runs-on: windows-latest
@@ -94,7 +94,7 @@ jobs:
           path: dist/release
           merge-multiple: true
 
-      - name: Validate the ZIP, write SHA-256, and build the asset inventory
+      - name: Validate the ZIP and SBOM, write SHA-256, and build the asset inventory
         run: node .github/scripts/release-tools/preflight.mjs dist/release "${{ needs.detect.outputs.version }}"
 
       - name: Enforce package policy (same script as the local release build)

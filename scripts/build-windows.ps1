@@ -24,7 +24,7 @@
 #      includes native clean rebuild + native tests.
 #   4. Package the unsigned Windows x64 ZIP (electron-builder --win --x64), with
 #      bounded retries for the known flaky pnpm node-modules collector.
-#   5. Copy the ZIP to artifacts/, run check-package-policy.mjs, stage the
+#   5. Copy the ZIP and SBOM to artifacts/release/, run check-package-policy.mjs, stage the
 #      manifest (approved=false), then run smoke-portable.ps1.
 #   6. Only after smoke succeeds, finalize the manifest (approved=true).
 
@@ -48,7 +48,10 @@ try {
   $SourceSha = if ($env:T41_SOURCE_SHA) { $env:T41_SOURCE_SHA } else { (git rev-parse HEAD).Trim() }
   $ZipName = "HubFetch-$Version-windows-x64.zip"
   $ArtifactsDir = Join-Path $Root 'artifacts'
+  $ReleaseArtifactsDir = Join-Path $ArtifactsDir 'release'
   New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
+  if (Test-Path $ReleaseArtifactsDir) { Remove-Item -Recurse -Force $ReleaseArtifactsDir }
+  New-Item -ItemType Directory -Force -Path $ReleaseArtifactsDir | Out-Null
   $LiveRead = if ($env:T41_LIVE_READ) { $env:T41_LIVE_READ } else {
     Join-Path $Root '.omo\evidence\task-37-adopt-ohmyhf-main\live-read.json'
   }
@@ -178,6 +181,9 @@ try {
   Invoke-Checked -Name 'pnpm install --frozen-lockfile' -Command @('pnpm', 'install', '--frozen-lockfile') `
     -Log (Join-Path $ArtifactsDir 'install.log')
 
+  Invoke-Checked -Name 'CycloneDX release SBOM' -Command @('pnpm', 'release:sbom') `
+    -Log (Join-Path $ArtifactsDir 'sbom.log')
+
   # ---- 3. Notices + full quality gate chain (includes native rebuild + tests) ----
   Invoke-Checked -Name 'notices policy test' -Command @('pnpm', 'test:docs') -Log (Join-Path $ArtifactsDir 'docs.log')
 
@@ -226,7 +232,7 @@ try {
   if (-not (Test-Path $builtZip)) { Fail "expected built ZIP not found: $builtZip" }
 
   # ---- 5. Copy to artifacts + policy check + stage manifest + smoke ----
-  $targetZip = Join-Path $ArtifactsDir $ZipName
+  $targetZip = Join-Path $ReleaseArtifactsDir $ZipName
   Copy-Item -Force $builtZip $targetZip
 
   # Deterministic re-zip: normalize ZIP entry timestamps so the artifact in
@@ -245,7 +251,7 @@ try {
 
   # Stage manifest (approved=false) before smoke.
   $manifestStage = Start-Process -FilePath 'node' `
-    -ArgumentList @('scripts\release-manifest.mjs', $ArtifactsDir, $ZipName, $SourceSha, $Version, '--live-read', $LiveRead) `
+    -ArgumentList @('scripts\release-manifest.mjs', $ReleaseArtifactsDir, $ZipName, $SourceSha, $Version, '--live-read', $LiveRead) `
     -WorkingDirectory $Root -NoNewWindow -Wait -PassThru `
     -RedirectStandardOutput (Join-Path $ArtifactsDir 'manifest-stage.log') `
     -RedirectStandardError (Join-Path $ArtifactsDir 'manifest-stage.log.err')
@@ -259,7 +265,7 @@ try {
 
   # ---- 6. Finalize manifest (approved=true) only after smoke succeeded ----
   $manifestFinal = Start-Process -FilePath 'node' `
-    -ArgumentList @('scripts\release-manifest.mjs', $ArtifactsDir, $ZipName, $SourceSha, $Version, '--live-read', $LiveRead, '--finalize') `
+    -ArgumentList @('scripts\release-manifest.mjs', $ReleaseArtifactsDir, $ZipName, $SourceSha, $Version, '--live-read', $LiveRead, '--finalize') `
     -WorkingDirectory $Root -NoNewWindow -Wait -PassThru `
     -RedirectStandardOutput (Join-Path $ArtifactsDir 'manifest-final.log') `
     -RedirectStandardError (Join-Path $ArtifactsDir 'manifest-final.log.err')

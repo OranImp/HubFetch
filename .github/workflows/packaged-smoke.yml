@@ -64,7 +64,12 @@ jobs:
           set -o pipefail
           pnpm --filter hubfetch-desktop exec \
             playwright test --config=playwright.packaged.config.ts \
-            2>&1 | tee ".ci-logs/smoke-windows.log"
+             2>&1 | tee ".ci-logs/smoke-windows.log"
+
+      - name: Generate and stage the CycloneDX release SBOM
+        run: |
+          pnpm release:sbom
+          cp artifacts/release/*.cdx.json apps/desktop/release/
 
       - name: Upload the Windows x64 release ZIP
         if: inputs.publishable
@@ -75,6 +80,7 @@ jobs:
           retention-days: 7
           path: |
             apps/desktop/release/*.zip
+            apps/desktop/release/*.cdx.json
 
       - name: Upload packaged smoke diagnostics
         if: always()

@@ -33,6 +33,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate and verify the release SBOM
+        run: |
+          pnpm release:sbom
+          node .github/scripts/release-tools/verify-sbom.mjs artifacts/release/HubFetch-$(node -p "require('./package.json').version").cdx.json
+
       - name: Audit production dependencies (high and critical)
         run: |
           set -o pipefail
@@ -49,6 +54,9 @@ jobs:
           set -o pipefail
           pnpm lint 2>&1 | tee .ci-logs/lint.log
 
+      - name: Check i18n catalogs
+        run: pnpm i18n:check
+
       - name: Typecheck
         run: |
           set -o pipefail
@@ -62,6 +70,9 @@ jobs:
 
       - name: Test docs policy (link, contract, notices, command-reference)
         run: pnpm test:docs
+
+      - name: Test visual-baseline tooling
+        run: pnpm test:visual-tools
 
       - name: Unit tests with coverage
         run: |
@@ -81,6 +92,12 @@ jobs:
           set -o pipefail
           pnpm --filter hubfetch-desktop test:e2e \
             2>&1 | tee .ci-logs/e2e.log
+
+      - name: Visual regression
+        run: |
+          set -o pipefail
+          pnpm --filter hubfetch-desktop test:visual \
+            2>&1 | tee .ci-logs/visual.log
 
       - name: Upload verification diagnostics
         if: always()

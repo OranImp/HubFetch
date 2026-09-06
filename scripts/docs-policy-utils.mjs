@@ -75,6 +75,7 @@ export const BANNED_CLAIMS = [
   'Linux build',
   'multi-platform',
   'cross-platform',
+  'huggingface-cli',
   'one-task-at-a-time global FIFO',
   'global FIFO',
   'Windows Credential Manager'

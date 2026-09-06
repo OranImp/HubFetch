@@ -1,0 +1,7 @@
+# Gitleaks configuration for HubFetch.
+#
+# Default allowlist is empty so all rules apply. If a gitleaks update or test
+# fixture token triggers a false-positive finding, add narrow path+rule entries
+# here — never blanket directory or extension exclusions.
+#
+# Reference: https://github.com/gitleaks/gitleaks#configuration
