@@ -3,19 +3,35 @@
     "disclaimer": "This application is not affiliated with, endorsed by, or sponsored by Hugging Face, Inc. \"Hugging Face\" is a trademark of Hugging Face, Inc., used here only to refer to the service this application connects to.",
     "github": "Source code on GitHub",
     "license": "Licensed under Apache-2.0",
+    "notificationRegistration": "System notifications: {{status}}",
+    "notificationStatus": {
+      "disabled": "disabled in settings",
+      "failed": "unavailable — using in-app notifications",
+      "registered": "ready",
+      "unsupported": "not supported in this build"
+    },
     "privacy": "Privacy: everything stays on your machine. No telemetry, no analytics. Your token is encrypted with your OS keychain and stored locally.",
     "title": "About",
     "unofficialTitle": "UNOFFICIAL",
-    "version": "Version {{version}}",
-    "notificationRegistration": "System notifications: {{status}}",
-    "notificationStatus": {
-      "registered": "ready",
-      "unsupported": "not supported in this build",
-      "failed": "unavailable — using in-app notifications",
-      "disabled": "disabled in settings"
-    }
+    "version": "Version {{version}}"
   },
   "account": {
+    "accounts": {
+      "active": "Active",
+      "addAccount": "Add account",
+      "cancel": "Cancel",
+      "confirmRemove": "Remove account",
+      "endpointMismatch": "Different endpoint",
+      "endpointMismatchHint": "This account was saved for a different Hub URL. Open Network settings to switch to that endpoint, then you can use this account.",
+      "inUse": "{{downloads}} downloads · {{clones}} clones · {{uploads}} uploads",
+      "invalid": "Needs sign-in",
+      "manage": "Manage accounts",
+      "openNetwork": "Open Network settings",
+      "remove": "Remove",
+      "switch": "Switch",
+      "switching": "Switching…",
+      "title": "Saved accounts"
+    },
     "billing": {
       "empty": "No usage recorded for the current period.",
       "gated": "Billing usage requires the read-billing permission. Re-authorize to grant it.",
@@ -95,6 +111,22 @@
     "uiScaleDecrease": "Decrease interface scale",
     "uiScaleIncrease": "Increase interface scale"
   },
+  "cloneTools": {
+    "copied": "Copied",
+    "copyConfigure": "Copy git xet install",
+    "copyFailed": "Could not copy",
+    "copyWinget": "Copy winget command",
+    "description": "Git, Git-Xet, and Git Credential Manager are required or recommended for cloning. HubFetch opens the official download page; finish setup there, then recheck. Restart the app if Recheck still reports missing.",
+    "gcm": "Git Credential Manager",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "install": "Open download page",
+    "recheck": "Recheck",
+    "recommended": "Recommended",
+    "required": "Required for clone",
+    "restartHint": "If Recheck still reports missing, restart HubFetch so it can see PATH changes.",
+    "title": "Clone tools"
+  },
   "desktop": {
     "closeHintMac": "Closing the window hides the app to the menu bar tray. Quit from the tray menu or Dock to exit fully.",
     "closeHintOther": "Closing the window hides the app to the system tray. Quit from the tray menu to exit fully.",
@@ -122,47 +154,31 @@
     "interface": "Interface",
     "system": "System"
   },
-  "cloneTools": {
-    "title": "Clone tools",
-    "description": "Git, Git-Xet, and Git Credential Manager are required or recommended for cloning. HubFetch opens the official download page; finish setup there, then recheck. Restart the app if Recheck still reports missing.",
-    "recheck": "Recheck",
-    "install": "Open download page",
-    "copyWinget": "Copy winget command",
-    "copyConfigure": "Copy git xet install",
-    "copied": "Copied",
-    "copyFailed": "Could not copy",
-    "restartHint": "If Recheck still reports missing, restart HubFetch so it can see PATH changes.",
-    "git": "Git",
-    "gitXet": "Git-Xet",
-    "gcm": "Git Credential Manager",
-    "required": "Required for clone",
-    "recommended": "Recommended"
-  },
   "network": {
     "apply": "Apply",
     "description": "Override the Hub API base URL and optionally route traffic through an HTTP(S) proxy. Leave blank to use defaults.",
     "downloadWarning": "In-flight downloads may keep the previous endpoint or proxy until they are paused and resumed.",
     "hubEndpoint": "Hub endpoint",
     "invalidUrl": "Enter a valid http:// or https:// URL, or leave blank.",
+    "proxy": {
+      "hintDirect": "Bypass all proxies and connect directly.",
+      "hintManual": "Use a fixed HTTP(S) proxy server.",
+      "hintSystem": "Follow the operating system's proxy settings.",
+      "invalid": "Enter a valid http:// or https:// URL with a host and port and no path, query, or credentials.",
+      "manualLabel": "HTTP(S) proxy URL",
+      "modeDirect": "Direct",
+      "modeLabel": "Proxy mode",
+      "modeManual": "Manual",
+      "modeSystem": "System",
+      "resetProxy": "Proxy reset to default.",
+      "testOkLatency": "Connected in {{ms}} ms."
+    },
     "reset": "Reset to default",
     "resetEndpoint": "Hub endpoint reset to default.",
     "saved": "Network settings saved.",
     "test": "Test connection",
     "testFail": "Connection failed: {{error}}",
-    "title": "Network",
-    "proxy": {
-      "modeLabel": "Proxy mode",
-      "modeSystem": "System",
-      "modeDirect": "Direct",
-      "modeManual": "Manual",
-      "hintSystem": "Follow the operating system's proxy settings.",
-      "hintDirect": "Bypass all proxies and connect directly.",
-      "hintManual": "Use a fixed HTTP(S) proxy server.",
-      "manualLabel": "HTTP(S) proxy URL",
-      "invalid": "Enter a valid http:// or https:// URL with a host and port and no path, query, or credentials.",
-      "testOkLatency": "Connected in {{ms}} ms.",
-      "resetProxy": "Proxy reset to default."
-    }
+    "title": "Network"
   },
   "notifications": {
     "enabled": "System notifications",
@@ -213,6 +229,7 @@
   "profile": {
     "avatar": "Avatar",
     "avatarHint": "PNG, JPEG or WebP, up to 10 MB.",
+    "avatarTooLarge": "That image is too large — avatars are limited to 10 MB.",
     "avatarUpload": "Upload image",
     "bluesky": "Bluesky username",
     "details": "AI & ML interests",
@@ -226,19 +243,65 @@
     "needsSession": "Editing your public profile needs a Hub web session — connect one under Account.",
     "openAccount": "Go to Account",
     "primaryOrg": "Primary organization",
+    "primaryOrgGroupAvailable": "Available",
+    "primaryOrgGroupUnavailable": "Unavailable (paid plan required)",
     "primaryOrgHint": "Only Team / Enterprise / Plus organizations can be set as primary. The menu groups available vs unavailable options.",
     "primaryOrgNone": "None",
     "primaryOrgNonePaid": "None of your organizations are on a paid plan, so a primary organization can’t be set yet.",
-    "primaryOrgGroupAvailable": "Available",
-    "primaryOrgGroupUnavailable": "Unavailable (paid plan required)",
     "primaryOrgOptionAvailable": "{{name}} ({{plan}})",
     "primaryOrgOptionUnavailable": "{{name}} — unavailable",
     "primaryOrgSummary": "{{available}} available · {{unavailable}} unavailable",
     "save": "Save changes",
     "saved": "Profile saved",
     "title": "Public profile",
-    "twitter": "Twitter username",
-    "avatarTooLarge": "That image is too large — avatars are limited to 10 MB."
+    "twitter": "Twitter username"
   },
-  "title": "Settings"
+  "title": "Settings",
+  "translation": {
+    "apiKey": "API key",
+    "apiKeyHint": "Leave blank to keep the saved key. A new value replaces it.",
+    "apply": "Apply",
+    "baseUrl": "Base URL",
+    "configured": "Configured",
+    "deleteBody": "Removes the saved key for the selected provider only. Other providers are unchanged.",
+    "deleteConfirm": "Delete key",
+    "deleteKey": "Delete key",
+    "deleteTitle": "Delete this API key?",
+    "description": "Configure OpenAI, Anthropic, or Gemini to translate posts into the current software language. Keys stay encrypted on this machine and are never shown after you save them.",
+    "errors": {
+      "auth": "The API key was rejected.",
+      "canceled": "The request was canceled.",
+      "empty-response": "The provider returned an empty probe response.",
+      "forbidden": "This key is not allowed to use that model.",
+      "input-too-long": "The request was too long.",
+      "invalid-config": "The model or endpoint is not valid.",
+      "malformed-response": "The provider returned a response that could not be used.",
+      "model-not-found": "That model was not found.",
+      "not-configured": "No API key is saved for this provider.",
+      "provider-unavailable": "The provider is unavailable.",
+      "rate-limited": "The provider rate-limited this request. Try again later.",
+      "refused": "The provider refused the request.",
+      "timeout": "The request timed out.",
+      "unknown": "The connection test failed."
+    },
+    "invalidModel": "Enter a model ID.",
+    "invalidUrl": "Enter a valid http:// or https:// URL with no user, query, or fragment, or leave blank.",
+    "keyDeleted": "API key deleted.",
+    "keySaved": "API key saved.",
+    "model": "Model",
+    "noKey": "Save an API key, or type one here, before testing the connection.",
+    "notConfigured": "Not configured",
+    "providers": {
+      "anthropic": "Anthropic",
+      "gemini": "Gemini",
+      "openai": "OpenAI"
+    },
+    "reset": "Reset to default",
+    "saved": "Translation settings saved.",
+    "saveKey": "Save key",
+    "test": "Test connection",
+    "testHint": "Sends a small request, may incur minimal provider usage.",
+    "testOkLatency": "Connected in {{ms}} ms.",
+    "title": "Translation"
+  }
 }

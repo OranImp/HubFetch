@@ -6,6 +6,12 @@
   "confirm": "確認",
   "copied": "コピーしました",
   "copy": "コピー",
+  "datasetPreview": {
+    "profileDistinct": "個別値",
+    "profileNull": "欠損値",
+    "profileNumeric": "数値列",
+    "profileString": "文字列列"
+  },
   "delete": "削除",
   "dismiss": "閉じる",
   "error": {

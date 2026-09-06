@@ -9,13 +9,13 @@
     "heading": "Comments",
     "loadError": "Couldn't load comments"
   },
+  "detailError": "Couldn't load this paper",
   "empty": "No papers loaded yet.",
   "listError": "Couldn't load Daily Papers",
-  "detailError": "Couldn't load this paper",
-  "retryMore": "Retry loading more",
   "published": "Published {{time}}",
   "readOnArxiv": "Read on arXiv",
   "readOnHub": "Open on the Hub",
+  "retryMore": "Retry loading more",
   "title": "Daily Papers",
   "upvote": {
     "add": "Upvote",

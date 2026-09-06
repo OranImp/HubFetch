@@ -6,6 +6,12 @@
   "confirm": "Confirmar",
   "copied": "Copiado",
   "copy": "Copiar",
+  "datasetPreview": {
+    "profileDistinct": "Valores distintos",
+    "profileNull": "Valores ausentes",
+    "profileNumeric": "Colunas numéricas",
+    "profileString": "Colunas de texto"
+  },
   "delete": "Excluir",
   "dismiss": "Dispensar",
   "error": {

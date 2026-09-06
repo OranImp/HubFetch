@@ -6,7 +6,14 @@
  * the raw error via console.error — describeError is for the human.
  */
 import type { TFunction } from 'i18next'
-import { HUB_SESSION_REQUIRED_CODE } from '@hubfetch/shared'
+import {
+  HUB_CAPABILITY_DEGRADATIONS,
+  HUB_CAPABILITY_ERROR_MARKER,
+  HUB_CAPABILITY_KEYS,
+  HUB_SESSION_REQUIRED_CODE,
+  type HubCapabilityErrorCode,
+  type HubCapabilityKey
+} from '@hubfetch/shared'
 
 export type ErrorKind =
   'auth' | 'gated' | 'notFound' | 'rateLimit' | 'server' | 'network' | 'unknown'
@@ -16,10 +23,29 @@ export interface ClassifiedError {
   status?: number
 }
 
+export interface CapabilityErrorContext {
+  readonly key: HubCapabilityKey
+  readonly code: HubCapabilityErrorCode
+}
+
 const HTTP_STATUS_RE = /\bfailed: (\d{3})\b/
 
 const NETWORK_RE =
   /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network|timed? ?out|abort/i
+
+const CAPABILITY_MARKER_RE = new RegExp(
+  `\\[${HUB_CAPABILITY_ERROR_MARKER} key=([A-Za-z][A-Za-z0-9]*) code=([a-z-]+)\\]`
+)
+
+export function capabilityContextFromError(err: unknown): CapabilityErrorContext | undefined {
+  const message = err instanceof Error ? err.message : String(err)
+  const match = CAPABILITY_MARKER_RE.exec(message)
+  if (!match) return undefined
+  const key = HUB_CAPABILITY_KEYS.find((candidate) => candidate === match[1])
+  const code = HUB_CAPABILITY_DEGRADATIONS.find((candidate) => candidate === match[2])
+  if (!key || !code || code === 'available') return undefined
+  return { key, code }
+}
 
 export function classifyError(err: unknown): ClassifiedError {
   const message = err instanceof Error ? err.message : String(err)
@@ -38,6 +64,8 @@ export function classifyError(err: unknown): ClassifiedError {
 
 /** Translated, plain-language message for an error (keys in the `errors` namespace). */
 export function describeError(t: TFunction, err: unknown): string {
+  const capability = capabilityContextFromError(err)
+  if (capability) return t(`errors:capability.${capability.code}`)
   return t(`errors:${classifyError(err).kind}`)
 }
 

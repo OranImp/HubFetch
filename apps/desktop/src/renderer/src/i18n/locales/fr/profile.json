@@ -32,6 +32,31 @@
     "error": {
       "title": "Impossible de charger cette publication"
     },
+    "translate": {
+      "action": "Traduire en {{language}}",
+      "original": "Original",
+      "translated": "Traduction",
+      "view": "Vue de traduction",
+      "sameLanguage": "Déjà en {{language}}",
+      "openSettings": "Ouvrir les paramètres de traduction",
+      "translating": "Traduction…",
+      "error": {
+        "not-configured": "La traduction n’est pas configurée. Ajoutez un fournisseur dans les paramètres de traduction.",
+        "invalid-config": "Les paramètres de traduction sont invalides. Vérifiez le modèle et le point de terminaison, puis réessayez.",
+        "auth": "Le fournisseur de traduction a rejeté cette clé. Vérifiez la clé API dans les paramètres de traduction.",
+        "forbidden": "Le fournisseur de traduction a refusé la requête. Vérifiez les autorisations du compte.",
+        "model-not-found": "Le modèle de traduction configuré est introuvable. Vérifiez l’identifiant du modèle.",
+        "rate-limited": "Le fournisseur de traduction limite les requêtes. Attendez un moment, puis réessayez.",
+        "timeout": "La requête de traduction a expiré. Vérifiez le réseau ou le proxy, puis réessayez.",
+        "canceled": "La traduction a été annulée.",
+        "provider-unavailable": "Le fournisseur de traduction est indisponible. Réessayez dans un instant.",
+        "malformed-response": "La réponse de traduction n’a pas pu être lue. Réessayez, ou changez de fournisseur.",
+        "empty-response": "Le fournisseur de traduction n’a renvoyé aucun texte. Réessayez la requête.",
+        "refused": "Le fournisseur de traduction a refusé cette publication. Essayez une autre publication ou un autre fournisseur.",
+        "input-too-long": "Cette publication est trop longue pour être traduite. Raccourcissez-la ou fractionnez le contenu.",
+        "unknown": "La traduction a échoué. Réessayez, ou vérifiez les paramètres de traduction."
+      }
+    },
     "hide": {
       "action": "Masquer",
       "confirm": "Masquer le commentaire",

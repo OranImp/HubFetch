@@ -18,8 +18,8 @@
   "benchmarksTodo": "基准评分（来自 model-index 元数据）已在开发计划中。",
   "empty": "搜索并添加要对比的模型。",
   "hint": "并排对比 2–4 个模型。",
+  "invalidId": "请输入有效的模型 id，例如 gpt2 或 meta-llama/Llama-3-8B。",
   "max": "最多可对比 4 个模型。",
   "remove": "移除",
-  "title": "模型对比",
-  "invalidId": "请输入有效的模型 id，例如 gpt2 或 meta-llama/Llama-3-8B。"
+  "title": "模型对比"
 }

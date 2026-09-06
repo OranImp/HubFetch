@@ -6,6 +6,12 @@
   "confirm": "Confirm",
   "copied": "Copied",
   "copy": "Copy",
+  "datasetPreview": {
+    "profileDistinct": "Distinct values",
+    "profileNull": "Missing values",
+    "profileNumeric": "Numeric columns",
+    "profileString": "String columns"
+  },
   "delete": "Delete",
   "dismiss": "Dismiss",
   "error": {
@@ -35,12 +41,12 @@
     "zh-TW": "繁體中文"
   },
   "loading": "Loading…",
-  "progress": {
-    "indeterminate": "In progress"
-  },
   "open": "Open",
   "openOnHub": "Open on the Hub",
   "private": "Private",
+  "progress": {
+    "indeterminate": "In progress"
+  },
   "remove": "Remove",
   "retry": "Retry",
   "running": "Running",

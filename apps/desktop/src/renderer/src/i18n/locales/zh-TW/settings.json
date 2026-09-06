@@ -16,6 +16,22 @@
     }
   },
   "account": {
+    "accounts": {
+      "active": "目前",
+      "addAccount": "新增帳戶",
+      "cancel": "取消",
+      "confirmRemove": "移除帳戶",
+      "endpointMismatch": "端點不同",
+      "endpointMismatchHint": "此帳戶儲存在另一個 Hub 網址下。請先在網路設定中切換到該端點，然後即可使用此帳戶。",
+      "inUse": "{{downloads}} 個下載 · {{clones}} 個複製 · {{uploads}} 個上傳",
+      "invalid": "需要重新登入",
+      "manage": "管理帳戶",
+      "openNetwork": "開啟網路設定",
+      "remove": "移除",
+      "switch": "切換",
+      "switching": "正在切換…",
+      "title": "已儲存的帳戶"
+    },
     "billing": {
       "empty": "本期尚無使用量紀錄。",
       "gated": "帳單使用量需要 read-billing 權限，請重新授權以取得此權限。",
@@ -162,6 +178,53 @@
       "invalid": "請輸入有效的 http:// 或 https:// 位址，須包含主機與連接埠，且不含路徑、查詢參數或憑據。",
       "testOkLatency": "連線成功，耗時 {{ms}} 毫秒。",
       "resetProxy": "代理已重設為預設值。"
+    }
+  },
+  "translation": {
+    "title": "翻譯",
+    "description": "設定 OpenAI、Anthropic 或 Gemini，將貼文翻譯為目前軟體語言。金鑰會在本機加密保存，儲存後不會再顯示。",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "gemini": "Gemini"
+    },
+    "configured": "已設定",
+    "notConfigured": "未設定",
+    "baseUrl": "介面位址",
+    "model": "模型",
+    "apiKey": "API 金鑰",
+    "apiKeyHint": "留空則保留已儲存的金鑰。填寫新值會取代它。",
+    "saveKey": "儲存金鑰",
+    "deleteKey": "刪除金鑰",
+    "deleteTitle": "刪除此 API 金鑰？",
+    "deleteBody": "僅刪除目前所選供應商已儲存的金鑰，其他供應商不受影響。",
+    "deleteConfirm": "刪除金鑰",
+    "reset": "重設為預設",
+    "apply": "套用",
+    "test": "測試連線",
+    "testHint": "會傳送一次很小的請求，可能產生極少的供應商用量。",
+    "testOkLatency": "連線成功，耗時 {{ms}} 毫秒。",
+    "noKey": "請先儲存 API 金鑰，或在此輸入金鑰後再測試連線。",
+    "saved": "翻譯設定已儲存。",
+    "keySaved": "API 金鑰已儲存。",
+    "keyDeleted": "API 金鑰已刪除。",
+    "invalidUrl": "請輸入不含使用者資訊、查詢參數或片段的有效 http:// 或 https:// 位址，或留空。",
+    "invalidModel": "請輸入模型 ID。",
+    "errors": {
+      "not-configured": "此供應商尚未儲存 API 金鑰。",
+      "invalid-config": "模型或介面位址無效。",
+      "auth": "API 金鑰被拒絕。",
+      "forbidden": "此金鑰無權使用該模型。",
+      "model-not-found": "找不到該模型。",
+      "rate-limited": "供應商限制了此請求的頻率，請稍後再試。",
+      "timeout": "請求逾時。",
+      "canceled": "請求已取消。",
+      "provider-unavailable": "供應商目前無法使用。",
+      "malformed-response": "供應商回傳了無法使用的回應。",
+      "empty-response": "供應商回傳了空的探測回應。",
+      "refused": "供應商拒絕了該請求。",
+      "input-too-long": "請求內容過長。",
+      "unknown": "連線測試失敗。"
     }
   },
   "notifications": {

@@ -12,6 +12,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { SettingsDialog } from '@/components/settings/SettingsDialog'
 import { useIpcEvent } from '@/hooks/use-ipc-event'
 import { invoke } from '@/lib/ipc'
+import { applyAuthStateChange, refetchAccountPartition } from '@/lib/query'
 import { isEditableTarget } from '@/lib/utils'
 import { useAppStore } from '@/stores/app'
 
@@ -54,8 +55,14 @@ export function AppShell(): React.JSX.Element {
     'evt:auth',
     useCallback(
       (auth) => {
+        const previous = useAppStore.getState().auth
+        const switched = applyAuthStateChange(queryClient, previous, auth)
         setAuth(auth)
-        // Signed-in state changes visibility of private/gated repos everywhere.
+        if (switched) {
+          refetchAccountPartition(queryClient)
+          return
+        }
+        // Same-account refresh (whoami, hub session) still invalidates everywhere.
         void queryClient.invalidateQueries()
       },
       [setAuth, queryClient]
@@ -74,7 +81,11 @@ export function AppShell(): React.JSX.Element {
   )
   useIpcEvent(
     'evt:inbox',
-    useCallback((items) => queryClient.setQueryData(['inbox'], items), [queryClient])
+    useCallback(
+      ({ accountId, items }) =>
+        queryClient.setQueryData(['inbox', accountId ?? 'legacy-local'], items),
+      [queryClient]
+    )
   )
 
   useEffect(() => {

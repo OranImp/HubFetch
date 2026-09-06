@@ -1,7 +1,7 @@
 {
   "clear": "Clear history",
-  "clearFilters": "Clear filters",
   "cleared": "Browse history cleared",
+  "clearFilters": "Clear filters",
   "confirm": {
     "body": "This permanently removes all {{count}} history entries stored on this device.",
     "confirm": "Clear history",
@@ -20,11 +20,11 @@
   "filter": {
     "all": "All types"
   },
-  "filterLabel": "Filter by repository type",
   "filteredEmpty": {
     "body": "Try another repository ID or type.",
     "title": "No matching history"
   },
+  "filterLabel": "Filter by repository type",
   "searchLabel": "Search browsing history by repository ID",
   "searchPlaceholder": "Search repository ID…",
   "showing": "Showing {{shown}} of {{total}}",

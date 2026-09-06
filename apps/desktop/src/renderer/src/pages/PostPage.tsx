@@ -11,8 +11,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useToasts } from '@/components/ui/toaster'
-import { MarkdownView } from '@/components/browse/MarkdownView'
 import { CommentComposer } from '@/components/community/CommentComposer'
+import {
+  TranslatablePostBody,
+  translationLocale
+} from '@/components/community/TranslatablePostBody'
 import { PostAttachments } from '@/components/community/PostAttachments'
 import { PostComments } from '@/components/community/PostComments'
 import { ReactionBar } from '@/components/community/ReactionBar'
@@ -183,7 +186,13 @@ export function PostPage(): React.JSX.Element {
               </Tooltip>
             </header>
 
-            <MarkdownView markdown={data.content} kind="model" repoId={`${author}/${slug}`} />
+            <TranslatablePostBody
+              markdown={data.content}
+              postId={`${author}/${slug}`}
+              targetLocale={translationLocale(locale)}
+              kind="model"
+              repoId={`${author}/${slug}`}
+            />
 
             {data.attachments.length > 0 && <PostAttachments attachments={data.attachments} />}
 

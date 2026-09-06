@@ -1,5 +1,18 @@
 {
   "actions": "建議操作",
+  "capabilityStatus": {
+    "available": "可用",
+    "forbidden": "遭拒絕",
+    "network": "網路錯誤",
+    "rate-limited": "受到限流",
+    "session-required": "需要工作階段",
+    "unauthorized": "未授權",
+    "upstream-changed": "上游已變更"
+  },
+  "hubCapabilities": {
+    "probe": "探測",
+    "title": "Hub 能力相容性"
+  },
   "cancel": "取消",
   "category": {
     "app": "應用",

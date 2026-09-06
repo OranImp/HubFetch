@@ -53,13 +53,17 @@ export function NotificationBell(): React.JSX.Element {
   const settings = useAppStore((s) => s.settings)
   const appInfo = useAppStore((s) => s.appInfo)
   const auth = useAppStore((s) => s.auth)
+  const accountId = auth.status === 'signedIn' ? auth.accountId : 'legacy-local'
   const locale = resolveLocale(settings, appInfo)
   const endpointKey = normalizeHubEndpoint(settings.hubEndpoint)
   const signedIn = auth.status === 'signedIn'
   const [open, setOpen] = useState(false)
 
   // Local inbox — shares the Sidebar's cache and stays live via evt:inbox.
-  const inbox = useQuery({ queryKey: ['inbox'], queryFn: () => invoke('inbox:list', undefined) })
+  const inbox = useQuery({
+    queryKey: ['inbox', accountId],
+    queryFn: () => invoke('inbox:list', undefined)
+  })
 
   // Hub notifications (page 0). No live event, so refetch whenever the panel
   // opens. Auth gaps are a capability issue, not a transient failure — don't
@@ -74,7 +78,7 @@ export function NotificationBell(): React.JSX.Element {
 
   const markLocal = useMutation({
     mutationFn: (ids: string[]) => invoke('inbox:markRead', { ids }),
-    onSuccess: (items) => queryClient.setQueryData(['inbox'], items)
+    onSuccess: (items) => queryClient.setQueryData(['inbox', accountId], items)
   })
   const markHub = useMutation({
     mutationFn: (discussionIds: string[]) =>

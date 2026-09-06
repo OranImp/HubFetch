@@ -20,9 +20,9 @@
     "emptyBody": "Activity from the Hub will show up here.",
     "emptyFollowing": "You're not following anyone yet",
     "emptyFollowingBody": "Follow users and organizations from the Inbox to see their latest models and datasets here.",
+    "error": "Couldn't load the feed",
     "manageFollows": "Manage follows",
-    "updated": "<author>{{author}}</author> updated <repo>{{repo}}</repo>",
-    "error": "Couldn't load the feed"
+    "updated": "<author>{{author}}</author> updated <repo>{{repo}}</repo>"
   },
   "kind": {
     "post": "Post"

@@ -26,6 +26,8 @@
     "confirm": "キャンセルして削除",
     "title": "実行中のダウンロードを削除しますか?"
   },
+  "count": "{{count}}件のタスク",
+  "count_one": "{{count}}件のタスク",
   "count_other": "{{count}}件のタスク",
   "empty": {
     "body": "気に入ったモデルを見つけてダウンロードをクリックすると、標準のHFキャッシュにファイルが保存され、transformersやllama.cppなどですぐに使えます。",
@@ -61,7 +63,22 @@
     "manualLabel": "HTTP(S) プロキシ URL",
     "invalid": "有効な http:// または https:// の URL を入力してください。ホストとポートを含み、パス、クエリ、認証情報は含めないでください。",
     "start": "ダウンロードを開始",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "account": "アカウントが必要",
+    "cached": "キャッシュ済み",
+    "covered": "対象",
+    "files": "ファイル",
+    "noFiles": "ファイルが見つかりません",
+    "proxyDirect": "直接接続",
+    "proxyManual": "手動",
+    "proxySystem": "システム",
+    "resolving": "解決中…",
+    "retry": "再試行",
+    "searchPlaceholder": "ファイルを検索…",
+    "selectAll": "すべて選択",
+    "selectNone": "すべて解除",
+    "selected": "{{count}}件選択中",
+    "totalSize": "合計サイズ：{{size}}"
   },
   "proxyModes": {
     "system": "システム",

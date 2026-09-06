@@ -1,8 +1,34 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "用於修復的帳戶無法使用。",
+      "integrity": "下載的檔案校驗失敗，快取未被更動。",
+      "internal": "清理失敗，快取未被更動。",
+      "network": "無法連線到 Hub。請在連線後再試。",
+      "plan-digest-mismatch": "此預覽已被拒絕。請重新產生計畫。",
+      "plan-expired": "此預覽已過期。請重新產生計畫。",
+      "plan-not-found": "此預覽已失效。請重新產生計畫。",
+      "plan-stale-account": "登入帳戶已變更。請重新產生計畫。",
+      "plan-stale-environment": "網路設定已變更。請重新產生計畫。",
+      "plan-stale-filesystem": "磁碟上的檔案已變化。請重新產生計畫。",
+      "plan-stale-protected": "有下載開始保護這些檔案。請重新產生計畫。",
+      "unsupported-issue": "這些問題無法自動修復。"
+    },
+    "pruneSuccess": "清理完成，釋放 {{size}}。",
+    "repairSuccess": "修復完成，重新下載 {{size}}。"
+  },
+  "cancelVerify": "取消校驗",
+  "cancelVerifyTooltip": "停止完整性檢查",
+  "cleanPartials": "清理",
   "confirmDelete": {
     "body": "這會釋放 {{size}} 的磁碟空間。與其他修訂版本共用的檔案將會保留，此操作無法復原。",
     "title": "刪除 {{count}} 個修訂版本？",
     "title_other": "刪除 {{count}} 個修訂版本？"
+  },
+  "counts": {
+    "corrupt": "{{count}} 個損毀",
+    "unreadable": "{{count}} 個無法讀取",
+    "verified": "{{count}} 個已校驗"
   },
   "deleted": "已刪除，釋放了 {{size}}。",
   "deleteRevision": "刪除修訂版本",
@@ -13,17 +39,70 @@
   },
   "files": "{{count}} 個檔案",
   "files_other": "{{count}} 個檔案",
+  "issues": {
+    "broken-snapshot-link": "快照連結損毀",
+    "hash-mismatch": "雜湊不相符",
+    "invalid-blob-name": "無效的 blob 名稱",
+    "missing-blob": "缺少 blob",
+    "snapshot-escape": "快照路徑越界",
+    "unmatched-snapshot-copy": "未相符的快照副本",
+    "unreadable": "無法讀取"
+  },
+  "lastVerified": "上次檢查 {{time}}",
   "location": "快取位置",
+  "neverVerified": "尚未校驗",
   "noRefs": "無參照",
+  "partialData": "{{size}} 未完成的下載資料",
+  "pinned": "已釘選",
+  "plan": {
+    "accountAnonymous": "公開 Hub 下載 — 此計畫未綁定帳戶。",
+    "accountRequired": "使用帳戶 {{label}}",
+    "apply": "套用計畫",
+    "download": "大約將下載 {{size}}",
+    "empty": "沒有可清理的項目",
+    "kind": {
+      "detached-snapshot": "游離快照",
+      "orphan-blob": "孤立 blob",
+      "stale-partial": "殘留的不完整檔案"
+    },
+    "protected": "進行中或已暫停的下載保護 {{commits}} 個修訂版本和 {{tasks}} 個不完整檔案。",
+    "protectedNone": "此計畫中沒有被進行中下載保護的檔案。",
+    "pruneBody": "這些項目可以刪除。受保護的進行中下載會保留。",
+    "pruneTitle": "清理計畫",
+    "reclaim": "大約將釋放 {{size}}",
+    "repairBody": "將依提交 {{commit}} 重新下載這些檔案。",
+    "repairTitle": "修復計畫",
+    "replan": "重新產生計畫",
+    "stale": "快取已在此預覽之後發生變化。請重新產生計畫後再繼續。"
+  },
+  "progress": {
+    "done": "檢查完成",
+    "scanning": "正在列出儲存庫…",
+    "verifying": "正在檢查 {{current}}（{{completed}}/{{total}}）"
+  },
+  "prune": "計畫清理",
+  "pruneTooltip": "預覽游離修訂、孤立 blob 和殘留的不完整檔案",
+  "repair": "修復",
+  "repairDisabled": {
+    "accountUnavailable": "目前登入的帳戶無法使用。請開啟帳戶設定。",
+    "noIssues": "沒有可修復的內容 — 請先執行校驗，或快取已經完好。",
+    "signedOut": "登入後才能從 Hub 修復檔案。",
+    "unsupported": "這些問題無法自動修復。"
+  },
+  "repairTooltip": "從 Hub 重新下載已對應的損毀檔案",
   "reposCount": "{{count}} 個已快取的儲存庫",
   "reposCount_other": "{{count}} 個已快取的儲存庫",
   "revisions": "{{count}} 個修訂版本",
   "revisions_other": "{{count}} 個修訂版本",
   "scan": "重新掃描",
   "scanning": "掃描中…",
+  "scopeNote": "完整性檢查只比對本機 blob 與其檔名，不會檢查 Hub 是否有更新。",
   "title": "本機快取",
   "totalOnDisk": "磁碟佔用 {{size}}",
-  "pinned": "已釘選",
-  "partialData": "{{size}} 未完成的下載資料",
-  "cleanPartials": "清理"
+  "truncated": "問題清單已截斷；清理後請再執行一次。",
+  "verify": "校驗完整性",
+  "verifyCanceled": "已取消校驗",
+  "verifyCleanBody": "Blob 雜湊與檔名相符。這不會檢查 Hub 是否有較新的檔案。",
+  "verifyError": "校驗失敗",
+  "verifyTooltip": "檢查本機 blob 雜湊。不會連線 Hub。"
 }

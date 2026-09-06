@@ -1,19 +1,27 @@
 {
   "auth": "This requires signing in. Add your Hugging Face token in Settings, then try again.",
+  "boundary": {
+    "body": "Reload the app to restore the view. If the problem continues, copy the redacted details for a bug report.",
+    "title": "This view stopped unexpectedly"
+  },
+  "capability": {
+    "forbidden": "The Hub denied this capability. Open the safe Hub page to check access or region restrictions.",
+    "network": "This Hub capability could not reach the service. Check your connection or proxy, then retry.",
+    "rate-limited": "This Hub capability is rate-limited. Wait a moment, then retry.",
+    "session-required": "This capability needs a Hub web session. Connect one in Settings, then retry.",
+    "unauthorized": "This capability needs an authorized Hub token. Check the account settings, then retry.",
+    "upstream-changed": "This Hub capability changed upstream. Open the Hub page or retry later."
+  },
+  "copyDetails": "Copy details",
+  "details": "Technical details (redacted)",
   "gated": "This repository is gated. Request access on the Hub — once it's granted, try again.",
   "network": "Could not reach the Hugging Face API. Check your connection and proxy settings, then try again.",
   "notFound": "Not found on the Hub — it may have been moved, renamed, or made private.",
-  "rateLimit": "The Hugging Face API is rate-limiting requests. The app backs off and retries automatically — please wait a moment before trying again.",
-  "unknown": "Something went wrong. Please try again.",
-  "server": "The Hugging Face API returned a server error. Please try again in a moment.",
   "query": {
     "title": "Couldn't load this content"
   },
-  "boundary": {
-    "title": "This view stopped unexpectedly",
-    "body": "Reload the app to restore the view. If the problem continues, copy the redacted details for a bug report."
-  },
-  "details": "Technical details (redacted)",
-  "copyDetails": "Copy details",
-  "reload": "Reload app"
+  "rateLimit": "The Hugging Face API is rate-limiting requests. The app backs off and retries automatically — please wait a moment before trying again.",
+  "reload": "Reload app",
+  "server": "The Hugging Face API returned a server error. Please try again in a moment.",
+  "unknown": "Something went wrong. Please try again."
 }

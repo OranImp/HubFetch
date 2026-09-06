@@ -1,5 +1,13 @@
 {
   "auth": "Hierfür ist eine Anmeldung erforderlich. Fügen Sie Ihr Hugging-Face-Token in den Einstellungen hinzu und versuchen Sie es erneut.",
+  "capability": {
+    "forbidden": "Der Hub hat diese Funktion abgelehnt. Öffnen Sie die sichere Hub-Seite und prüfen Sie Zugriff oder Regionsbeschränkungen.",
+    "network": "Diese Hub-Funktion konnte den Dienst nicht erreichen. Prüfen Sie Verbindung oder Proxy und versuchen Sie es erneut.",
+    "rate-limited": "Diese Hub-Funktion wird begrenzt. Warten Sie einen Moment und versuchen Sie es erneut.",
+    "session-required": "Diese Funktion benötigt eine Hub-Websitzung. Verbinden Sie sie in den Einstellungen und versuchen Sie es erneut.",
+    "unauthorized": "Diese Funktion benötigt ein autorisiertes Hub-Token. Prüfen Sie die Kontoeinstellungen.",
+    "upstream-changed": "Die Hub-Kompatibilität dieser Funktion hat sich geändert. Öffnen Sie die Hub-Seite oder versuchen Sie es später erneut."
+  },
   "gated": "Dieses Repository ist zugriffsbeschränkt. Fordern Sie Zugriff im Hub an — sobald er gewährt wurde, versuchen Sie es erneut.",
   "network": "Die Hugging Face API konnte nicht erreicht werden. Prüfen Sie Ihre Verbindungs- und Proxy-Einstellungen und versuchen Sie es erneut.",
   "notFound": "Im Hub nicht gefunden — es wurde möglicherweise verschoben, umbenannt oder auf privat gesetzt.",

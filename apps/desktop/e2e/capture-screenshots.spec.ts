@@ -1,8 +1,13 @@
 /**
- * Capture marketing/docs screenshots into docs/screenshots/.
+ * Marketing/docs screenshot capture into docs/screenshots/.
+ *
+ * This is NOT the visual-regression baseline. Deterministic Playwright
+ * `toHaveScreenshot` snapshots live in `visual-regression.spec.ts` and run
+ * via `playwright.screenshots.config.ts`. Keep this file gated: it hits live
+ * Hub data and is for README/docs assets only.
  *
  * Usage (from apps/desktop, after `electron-vite build`):
- *   ELECTRON_RUN_AS_NODE= pnpm exec playwright test e2e/capture-screenshots.spec.ts
+ *   CAPTURE_SCREENSHOTS=1 pnpm exec playwright test e2e/capture-screenshots.spec.ts --config playwright.screenshots.config.ts
  */
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'

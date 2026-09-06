@@ -1,5 +1,18 @@
 {
   "actions": "推奨アクション",
+  "capabilityStatus": {
+    "available": "利用可能",
+    "forbidden": "拒否",
+    "network": "ネットワーク",
+    "rate-limited": "レート制限",
+    "session-required": "セッションが必要",
+    "unauthorized": "未認証",
+    "upstream-changed": "上流が変更されました"
+  },
+  "hubCapabilities": {
+    "probe": "プローブ",
+    "title": "Hub 機能の互換性"
+  },
   "cancel": "キャンセル",
   "category": {
     "app": "アプリ",

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowDownToLine, ChevronRight, File, FileSearch, Folder, Share, X } from 'lucide-react'
 import type {
+  DownloadPlan,
   DownloadProxyOverride,
   ExportIntegrationTask,
   ExportTool,
@@ -30,30 +31,14 @@ import { useToasts } from '@/components/ui/toaster'
 import { useCommandActions } from '@/hooks/use-command-actions'
 import { useAppStore } from '@/stores/app'
 import { FilePreview } from '@/components/browse/FilePreview'
+import { exportToolsFor } from '@/lib/export-tools'
+
+export { exportToolsFor }
 
 const TOOL_LABELS: Record<ExportTool, string> = {
   ollama: 'Ollama',
   lmstudio: 'LM Studio',
   comfyui: 'ComfyUI'
-}
-
-/**
- * File types each target ingests (mirrors main/integrations/export.ts):
- * Ollama builds from a single GGUF, LM Studio's models dir loads GGUF, and
- * ComfyUI's models/* folders take the usual weight formats.
- */
-const TOOL_EXTENSIONS: Record<ExportTool, string[]> = {
-  ollama: ['.gguf'],
-  lmstudio: ['.gguf'],
-  comfyui: ['.safetensors', '.ckpt', '.pt', '.pth', '.bin', '.gguf']
-}
-
-/** Export tools that can ingest the given file, by extension. */
-export function exportToolsFor(name: string): ExportTool[] {
-  const lower = name.toLowerCase()
-  return (Object.keys(TOOL_EXTENSIONS) as ExportTool[]).filter((tool) =>
-    TOOL_EXTENSIONS[tool].some((ext) => lower.endsWith(ext))
-  )
 }
 
 export function FileTreeView({
@@ -96,19 +81,49 @@ export function FileTreeView({
       (task.status === 'preparing' || task.status === 'running')
   )
 
-  const download = useMutation({
-    mutationFn: (args: { files: string[]; proxy: DownloadProxyOverride | null }) =>
-      invoke('downloads:start', {
-        request:
-          args.proxy === null
-            ? { repoId, kind, files: args.files }
-            : { repoId, kind, files: args.files, proxy: args.proxy }
+  // Plan-based download flow: plan first, then confirm to start.
+  const [plan, setPlan] = useState<DownloadPlan | null>(null)
+  const [planError, setPlanError] = useState<string | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
+  const [planFiles, setPlanFiles] = useState<string[] | null>(null)
+
+  const resolvePlan = useCallback(async (files: string[]): Promise<void> => {
+    setPlanFiles(files)
+    setPlanLoading(true)
+    setPlanError(null)
+    try {
+      const result = await invoke('downloads:plan', {
+        request: files.length > 0 ? { repoId, kind, files } : { repoId, kind }
+      })
+      setPlan(result)
+      setCreateOpen(true)
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : String(err))
+      setCreateOpen(true)
+    } finally {
+      setPlanLoading(false)
+    }
+  }, [kind, repoId])
+
+  const startPlanned = useMutation({
+    mutationFn: (paths: string[]) =>
+      invoke('downloads:startPlanned', {
+        request: { planId: plan?.planId ?? '', paths }
       }),
-    onSuccess: () => push(t('detail:downloadStarted'), 'success'),
-    onError: (err) => push(t('detail:downloadFailed', { error: err.message }), 'error')
+    onSuccess: () => {
+      push(t('detail:downloadStarted'), 'success')
+      setCreateOpen(false)
+      setPlan(null)
+      setPlanError(null)
+      setPlanFiles(null)
+    },
+    onError: (err) => {
+      push(t('detail:downloadFailed', { error: err.message }), 'error')
+    }
   })
+
   // Dialog target files; null = dialog closed.
-  const [createTarget, setCreateTarget] = useState<string[] | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const exportRun = useMutation({
     mutationFn: (args: { tool: ExportTool; filePath: string }) =>
       invoke('export:start', {
@@ -130,9 +145,9 @@ export function FileTreeView({
           file: selected.path.split('/').at(-1) ?? selected.path
         }),
         icon: ArrowDownToLine,
-        disabled: download.isPending,
+        disabled: planLoading || startPlanned.isPending,
         run: async () => {
-          await download.mutateAsync({ files: [selected.path], proxy: null })
+          await resolvePlan([selected.path])
         }
       }
     ]
@@ -150,7 +165,7 @@ export function FileTreeView({
       })
     }
     return commands
-  }, [activeExport, download, exportRun, kind, repoId, selected, t, targets.data])
+  }, [activeExport, planLoading, startPlanned.isPending, resolvePlan, exportRun, kind, repoId, selected, t, targets.data])
   useCommandActions('file-tree', fileCommands)
 
   const crumbs = path ? path.split('/') : []
@@ -342,8 +357,8 @@ export function FileTreeView({
                       size="icon"
                       className="size-6 text-ink-faint"
                       aria-label={t('detail:files.download')}
-                      loading={download.isPending}
-                      onClick={() => setCreateTarget([entry.path])}
+                      loading={planLoading || startPlanned.isPending}
+                      onClick={() => void resolvePlan([entry.path])}
                     >
                       <ArrowDownToLine className="size-3.5" aria-hidden />
                     </Button>
@@ -372,8 +387,8 @@ export function FileTreeView({
             kind={kind}
             repoId={repoId}
             entry={selected}
-            onDownload={() => setCreateTarget([selected.path])}
-            downloading={download.isPending}
+            onDownload={() => void resolvePlan([selected.path])}
+            downloading={planLoading || startPlanned.isPending}
           />
         </div>
       ) : !targets.isError ? (
@@ -387,15 +402,21 @@ export function FileTreeView({
       ) : null}
 
       <DownloadCreateDialog
-        open={createTarget !== null}
-        onOpenChange={(open) => setCreateTarget(open ? createTarget : null)}
-        settingsProxy={settings.proxy}
-        pending={download.isPending}
-        onConfirm={(proxy) =>
-          download
-            .mutateAsync({ files: createTarget ?? [], proxy })
-            .then(() => setCreateTarget(null))
-        }
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open)
+          if (!open) {
+            setPlan(null)
+            setPlanError(null)
+            setPlanFiles(null)
+          }
+        }}
+        plan={plan}
+        loading={planLoading}
+        error={planError ?? undefined}
+        onRetry={() => planFiles && void resolvePlan(planFiles)}
+        pending={startPlanned.isPending}
+        onConfirm={(paths) => { void startPlanned.mutateAsync(paths) }}
       />
     </div>
   )

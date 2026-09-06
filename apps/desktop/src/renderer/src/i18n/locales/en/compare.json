@@ -18,8 +18,8 @@
   "benchmarksTodo": "Benchmark scores (from model-index metadata) are on the roadmap.",
   "empty": "Search and add models to compare.",
   "hint": "Compare 2–4 models side by side.",
+  "invalidId": "Enter a valid model id, e.g. gpt2 or meta-llama/Llama-3-8B.",
   "max": "You can compare up to 4 models.",
   "remove": "Remove",
-  "title": "Compare models",
-  "invalidId": "Enter a valid model id, e.g. gpt2 or meta-llama/Llama-3-8B."
+  "title": "Compare models"
 }

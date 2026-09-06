@@ -26,6 +26,7 @@
     "confirm": "Annuler et retirer",
     "title": "Retirer le téléchargement en cours ?"
   },
+  "count": "{{count}} tâches",
   "count_one": "{{count}} tâche",
   "count_other": "{{count}} tâches",
   "empty": {
@@ -62,7 +63,22 @@
     "manualLabel": "URL du proxy HTTP(S)",
     "invalid": "Saisissez une URL http:// ou https:// valide avec un hôte et un port, sans chemin, requête ni identifiants.",
     "start": "Démarrer le téléchargement",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "account": "Compte requis",
+    "cached": "En cache",
+    "covered": "Couvert",
+    "files": "Fichiers",
+    "noFiles": "Aucun fichier trouvé",
+    "proxyDirect": "Direct",
+    "proxyManual": "Manuel",
+    "proxySystem": "Système",
+    "resolving": "Résolution…",
+    "retry": "Réessayer",
+    "searchPlaceholder": "Rechercher des fichiers…",
+    "selectAll": "Tout sélectionner",
+    "selectNone": "Tout désélectionner",
+    "selected": "{{count}} sélectionnés",
+    "totalSize": "Taille totale : {{size}}"
   },
   "proxyModes": {
     "system": "Système",

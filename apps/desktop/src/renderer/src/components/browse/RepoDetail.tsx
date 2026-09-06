@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDownToLine, ExternalLink, Heart, Star } from 'lucide-react'
 import {
   hubRepoUrl,
   normalizeHubEndpoint,
+  type DownloadPlan,
   type DownloadProxyOverride,
   type RepoKind,
   type RepoSummary
@@ -29,6 +30,7 @@ import { DiscussionsPanel } from '@/components/browse/DiscussionsPanel'
 import { GatedAccessBar } from '@/components/browse/GatedAccessBar'
 import { FileTreeView } from '@/components/browse/FileTreeView'
 import { InfoPanel } from '@/components/browse/InfoPanel'
+import { LocalReadinessSection } from '@/components/browse/LocalReadinessSection'
 import { MarkdownView } from '@/components/browse/MarkdownView'
 import { PlaygroundPanel } from '@/components/browse/PlaygroundPanel'
 import { SpaceRunner } from '@/components/browse/SpaceRunner'
@@ -143,27 +145,57 @@ export function RepoDetail({
     }
   })
 
-  const download = useMutation({
-    mutationFn: (args: { proxy: DownloadProxyOverride | null }) =>
-      invoke('downloads:start', {
-        request: args.proxy === null ? { repoId, kind } : { repoId, kind, proxy: args.proxy }
+  // Plan-based download flow: plan first, then confirm to start.
+  const [plan, setPlan] = useState<DownloadPlan | null>(null)
+  const [planError, setPlanError] = useState<string | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
+
+  const resolvePlan = useCallback(async (): Promise<void> => {
+    setPlanLoading(true)
+    setPlanError(null)
+    try {
+      const result = await invoke('downloads:plan', {
+        request: { repoId, kind }
+      })
+      setPlan(result)
+      setCreateOpen(true)
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : String(err))
+      setCreateOpen(true)
+    } finally {
+      setPlanLoading(false)
+    }
+  }, [kind, repoId])
+
+  const startPlanned = useMutation({
+    mutationFn: (paths: string[]) =>
+      invoke('downloads:startPlanned', {
+        request: { planId: plan?.planId ?? '', paths }
       }),
-    onSuccess: () => push(t('detail:downloadStarted'), 'success'),
-    onError: (err) => push(t('detail:downloadFailed', { error: err.message }), 'error')
+    onSuccess: () => {
+      push(t('detail:downloadStarted'), 'success')
+      setCreateOpen(false)
+      setPlan(null)
+      setPlanError(null)
+    },
+    onError: (err) => {
+      push(t('detail:downloadFailed', { error: err.message }), 'error')
+    }
   })
+
   const repoCommands = useMemo(
     () => [
       {
         id: `download-repo:${kind}:${repoId}`,
         label: t('downloads:commands.downloadCurrentRepository', { repo: repoId }),
         icon: ArrowDownToLine,
-        disabled: download.isPending,
+        disabled: planLoading || startPlanned.isPending,
         run: async () => {
-          await download.mutateAsync({ proxy: null })
+          await resolvePlan()
         }
       }
     ],
-    [download, kind, repoId, t]
+    [kind, repoId, t, planLoading, startPlanned.isPending, resolvePlan]
   )
   useCommandActions('repo-detail', repoCommands)
 
@@ -295,8 +327,8 @@ export function RepoDetail({
           <Button
             variant="cta"
             size="md"
-            loading={download.isPending}
-            onClick={() => setCreateOpen(true)}
+            loading={planLoading || startPlanned.isPending}
+            onClick={() => void resolvePlan()}
           >
             <ArrowDownToLine className="size-3.5" aria-hidden />
             {t('detail:actions.download')}
@@ -328,6 +360,14 @@ export function RepoDetail({
           {isOwner && <TabsTrigger value="manage">{t('detail:tabs.manage')}</TabsTrigger>}
         </TabsList>
         <TabsContent value="card" className="min-h-0 flex-1 overflow-y-auto p-4">
+          {isModel && (
+            <LocalReadinessSection
+              kind={kind}
+              repoId={repoId}
+              siblings={detailData?.siblings}
+              loading={queriesEnabled && detail.isPending}
+            />
+          )}
           {readmeError ? (
             <div className="flex flex-col items-start gap-2">
               <p className="text-[13px] text-ink-muted">{t('common:error.generic')}</p>
@@ -403,10 +443,19 @@ export function RepoDetail({
 
       <DownloadCreateDialog
         open={createOpen}
-        onOpenChange={setCreateOpen}
-        settingsProxy={settings.proxy}
-        pending={download.isPending}
-        onConfirm={(proxy) => download.mutateAsync({ proxy }).then(() => setCreateOpen(false))}
+        onOpenChange={(open) => {
+          setCreateOpen(open)
+          if (!open) {
+            setPlan(null)
+            setPlanError(null)
+          }
+        }}
+        plan={plan}
+        loading={planLoading}
+        error={planError ?? undefined}
+        onRetry={() => void resolvePlan()}
+        pending={startPlanned.isPending}
+        onConfirm={(paths) => { void startPlanned.mutateAsync(paths) }}
       />
     </div>
   )

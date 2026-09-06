@@ -32,6 +32,31 @@
     "error": {
       "title": "無法載入此貼文"
     },
+    "translate": {
+      "action": "翻譯為{{language}}",
+      "original": "原文",
+      "translated": "譯文",
+      "view": "譯文檢視",
+      "sameLanguage": "這篇貼文已是{{language}}",
+      "openSettings": "開啟翻譯設定",
+      "translating": "正在翻譯…",
+      "error": {
+        "not-configured": "尚未設定翻譯。請在翻譯設定中新增服務提供者。",
+        "invalid-config": "翻譯設定無效。請檢查模型與端點後再試。",
+        "auth": "翻譯服務拒絕此金鑰。請在翻譯設定中核對 API 金鑰。",
+        "forbidden": "翻譯服務拒絕此請求。請檢查帳戶權限。",
+        "model-not-found": "找不到已設定的翻譯模型。請檢查模型 ID。",
+        "rate-limited": "翻譯服務正在限流。請稍候再重試。",
+        "timeout": "翻譯請求逾時。請檢查網路或代理後再重試。",
+        "canceled": "翻譯已取消。",
+        "provider-unavailable": "翻譯服務暫時無法使用。請稍後再試。",
+        "malformed-response": "無法讀取翻譯結果。請重試，或改用其他提供者。",
+        "empty-response": "翻譯服務未傳回文字。請重試此請求。",
+        "refused": "翻譯服務拒絕翻譯這篇貼文。請改選其他貼文或提供者。",
+        "input-too-long": "這篇貼文過長，無法翻譯。請縮短內容或拆分後再試。",
+        "unknown": "翻譯失敗。請重試，或檢查翻譯設定。"
+      }
+    },
     "hide": {
       "action": "隱藏",
       "confirm": "隱藏留言",

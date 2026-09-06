@@ -4,13 +4,18 @@
     "placeholder": "写下评论（支持 Markdown）…",
     "posted": "评论已发布"
   },
+  "comments": {
+    "empty": "暂无评论。",
+    "heading": "评论",
+    "loadError": "无法加载评论"
+  },
+  "detailError": "无法加载此论文",
   "empty": "暂无论文。",
   "listError": "无法加载每日论文",
-  "detailError": "无法加载此论文",
-  "retryMore": "重试加载更多",
   "published": "发布于 {{time}}",
   "readOnArxiv": "在 arXiv 阅读",
   "readOnHub": "在 Hub 打开",
+  "retryMore": "重试加载更多",
   "title": "每日论文",
   "upvote": {
     "add": "赞同",
@@ -19,10 +24,5 @@
     "remove": "取消赞同",
     "sessionExpired": "Hub 网页会话已过期。请在 设置 → 账户 中重新连接后再在应用内赞同。"
   },
-  "upvotes": "赞同",
-  "comments": {
-    "heading": "评论",
-    "empty": "暂无评论。",
-    "loadError": "无法加载评论"
-  }
+  "upvotes": "赞同"
 }

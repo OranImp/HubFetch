@@ -16,6 +16,22 @@
     }
   },
   "account": {
+    "accounts": {
+      "active": "Activa",
+      "addAccount": "Añadir cuenta",
+      "cancel": "Cancelar",
+      "confirmRemove": "Quitar cuenta",
+      "endpointMismatch": "Otro extremo",
+      "endpointMismatchHint": "Esta cuenta se guardó para otra URL del Hub. Abra Ajustes de red, cambie a ese extremo y después podrá usar esta cuenta.",
+      "inUse": "{{downloads}} descargas · {{clones}} clones · {{uploads}} cargas",
+      "invalid": "Hay que iniciar sesión",
+      "manage": "Gestionar cuentas",
+      "openNetwork": "Abrir Ajustes de red",
+      "remove": "Quitar",
+      "switch": "Cambiar",
+      "switching": "Cambiando…",
+      "title": "Cuentas guardadas"
+    },
     "billing": {
       "empty": "No se registró uso en el periodo actual.",
       "gated": "El uso de facturación requiere el permiso read-billing. Vuelva a autorizar para concederlo.",
@@ -162,6 +178,53 @@
       "invalid": "Introduce una URL http:// o https:// válida con host y puerto, sin ruta, consulta ni credenciales.",
       "testOkLatency": "Conectado en {{ms}} ms.",
       "resetProxy": "Proxy restablecido al valor predeterminado."
+    }
+  },
+  "translation": {
+    "title": "Traducción",
+    "description": "Configure OpenAI, Anthropic o Gemini para traducir publicaciones al idioma actual del software. Las claves permanecen cifradas en este equipo y no se vuelven a mostrar después de guardarlas.",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "gemini": "Gemini"
+    },
+    "configured": "Configurado",
+    "notConfigured": "Sin configurar",
+    "baseUrl": "URL base",
+    "model": "Modelo",
+    "apiKey": "Clave de API",
+    "apiKeyHint": "Déjelo en blanco para conservar la clave guardada. Un valor nuevo la reemplaza.",
+    "saveKey": "Guardar clave",
+    "deleteKey": "Eliminar clave",
+    "deleteTitle": "¿Eliminar esta clave de API?",
+    "deleteBody": "Quita solo la clave guardada del proveedor seleccionado. Los demás proveedores no cambian.",
+    "deleteConfirm": "Eliminar clave",
+    "reset": "Restablecer al valor predeterminado",
+    "apply": "Aplicar",
+    "test": "Probar conexión",
+    "testHint": "Envía una solicitud pequeña y puede generar un uso mínimo del proveedor.",
+    "testOkLatency": "Conectado en {{ms}} ms.",
+    "noKey": "Guarde una clave de API, o escriba una aquí, antes de probar la conexión.",
+    "saved": "Ajustes de traducción guardados.",
+    "keySaved": "Clave de API guardada.",
+    "keyDeleted": "Clave de API eliminada.",
+    "invalidUrl": "Introduzca una URL http:// o https:// válida sin usuario, consulta ni fragmento, o déjela en blanco.",
+    "invalidModel": "Introduzca un ID de modelo.",
+    "errors": {
+      "not-configured": "No hay ninguna clave de API guardada para este proveedor.",
+      "invalid-config": "El modelo o el punto de conexión no es válido.",
+      "auth": "La clave de API fue rechazada.",
+      "forbidden": "Esta clave no puede usar ese modelo.",
+      "model-not-found": "No se encontró ese modelo.",
+      "rate-limited": "El proveedor limitó esta solicitud. Inténtelo de nuevo más tarde.",
+      "timeout": "La solicitud agotó el tiempo de espera.",
+      "canceled": "La solicitud se canceló.",
+      "provider-unavailable": "El proveedor no está disponible.",
+      "malformed-response": "El proveedor devolvió una respuesta que no se puede usar.",
+      "empty-response": "El proveedor devolvió una respuesta de prueba vacía.",
+      "refused": "El proveedor rechazó la solicitud.",
+      "input-too-long": "La solicitud era demasiado larga.",
+      "unknown": "La prueba de conexión falló."
     }
   },
   "notifications": {

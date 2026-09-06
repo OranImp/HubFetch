@@ -17,7 +17,10 @@ import { cn, formatCount, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { MarkdownView } from '@/components/browse/MarkdownView'
+import {
+  TranslatablePostBody,
+  translationLocale
+} from '@/components/community/TranslatablePostBody'
 import { PostAttachments } from '@/components/community/PostAttachments'
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
 import { UserLink } from '@/components/profile/UserLink'
@@ -109,11 +112,19 @@ export function PostCard({
           clamped && '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)]'
         )}
         onClick={(e) => {
-          // Links inside markdown open externally; don't also navigate the card.
-          if ((e.target as HTMLElement).closest('a')) e.stopPropagation()
+          // Links, translation chrome, and menus must not navigate the card.
+          if ((e.target as HTMLElement).closest('a, button, [role="radio"], [role="menuitem"]')) {
+            e.stopPropagation()
+          }
         }}
+        onContextMenu={(e) => e.stopPropagation()}
       >
-        <MarkdownView markdown={post.content} />
+        <TranslatablePostBody
+          markdown={post.content}
+          postId={`${post.author}/${post.slug}`}
+          targetLocale={translationLocale(locale)}
+          compact
+        />
       </div>
       {post.attachments.length > 0 && (
         <PostAttachments attachments={post.attachments.slice(0, 2)} compact />

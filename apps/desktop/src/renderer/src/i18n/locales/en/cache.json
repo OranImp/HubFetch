@@ -1,9 +1,35 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "The account for this repair is unavailable.",
+      "integrity": "The downloaded file did not match. Nothing was changed.",
+      "internal": "Cleanup failed. Nothing was changed.",
+      "network": "The Hub could not be reached. Try again when you are online.",
+      "plan-digest-mismatch": "This preview was rejected. Rebuild the plan.",
+      "plan-expired": "This preview expired. Rebuild the plan.",
+      "plan-not-found": "This preview is gone. Rebuild the plan.",
+      "plan-stale-account": "The signed-in account changed. Rebuild the plan.",
+      "plan-stale-environment": "Network settings changed. Rebuild the plan.",
+      "plan-stale-filesystem": "Files changed on disk. Rebuild the plan.",
+      "plan-stale-protected": "A download started protecting files. Rebuild the plan.",
+      "unsupported-issue": "These issues cannot be repaired automatically."
+    },
+    "pruneSuccess": "Cleanup finished. {{size}} freed.",
+    "repairSuccess": "Repair finished. {{size}} re-downloaded."
+  },
+  "cancelVerify": "Cancel verification",
+  "cancelVerifyTooltip": "Stop the integrity check",
+  "cleanPartials": "Clean up",
   "confirmDelete": {
     "body": "This frees {{size}} on disk. Files shared with other revisions are kept. This cannot be undone.",
     "title": "Delete {{count}} revision(s)?",
     "title_one": "Delete {{count}} revision?",
     "title_other": "Delete {{count}} revisions?"
+  },
+  "counts": {
+    "corrupt": "{{count}} corrupt",
+    "unreadable": "{{count}} unreadable",
+    "verified": "{{count}} verified"
   },
   "deleted": "Deleted. {{size}} freed.",
   "deleteRevision": "Delete revision",
@@ -15,8 +41,57 @@
   "files": "{{count}} files",
   "files_one": "{{count}} file",
   "files_other": "{{count}} files",
+  "issues": {
+    "broken-snapshot-link": "Broken snapshot link",
+    "hash-mismatch": "Hash mismatch",
+    "invalid-blob-name": "Invalid blob name",
+    "missing-blob": "Missing blob",
+    "snapshot-escape": "Snapshot path escape",
+    "unmatched-snapshot-copy": "Unmatched snapshot copy",
+    "unreadable": "Unreadable"
+  },
+  "lastVerified": "Last checked {{time}}",
   "location": "Cache location",
+  "neverVerified": "Not verified yet",
   "noRefs": "no refs",
+  "partialData": "{{size}} of incomplete download data",
+  "pinned": "pinned",
+  "plan": {
+    "accountAnonymous": "Public Hub download — no account was captured for this plan.",
+    "accountRequired": "Uses account {{label}}",
+    "apply": "Apply plan",
+    "download": "About {{size}} will be downloaded",
+    "empty": "No cleanup candidates",
+    "kind": {
+      "detached-snapshot": "Detached snapshot",
+      "orphan-blob": "Orphan blob",
+      "stale-partial": "Leftover partial"
+    },
+    "protected": "Live or paused downloads protect {{commits}} revision(s) and {{tasks}} partial(s).",
+    "protectedNone": "No in-progress downloads are protecting files in this plan.",
+    "pruneBody": "These items can be removed. Protected in-progress downloads stay.",
+    "pruneTitle": "Cleanup plan",
+    "reclaim": "About {{size}} will be freed",
+    "repairBody": "These files will be re-downloaded for commit {{commit}}.",
+    "repairTitle": "Repair plan",
+    "replan": "Rebuild plan",
+    "stale": "The cache changed since this preview. Rebuild the plan to continue."
+  },
+  "progress": {
+    "done": "Check complete",
+    "scanning": "Listing repositories…",
+    "verifying": "Checking {{current}} ({{completed}}/{{total}})"
+  },
+  "prune": "Plan cleanup",
+  "pruneTooltip": "Preview detached revisions, orphan blobs, and leftover partials",
+  "repair": "Repair",
+  "repairDisabled": {
+    "accountUnavailable": "The signed-in account is unavailable. Open Account settings.",
+    "noIssues": "Nothing to repair — run Verify first, or the cache is already clean.",
+    "signedOut": "Sign in to repair files from the Hub.",
+    "unsupported": "These issues cannot be repaired automatically."
+  },
+  "repairTooltip": "Re-download mapped corrupt files from the Hub",
   "reposCount": "{{count}} cached repositories",
   "reposCount_one": "{{count}} cached repository",
   "reposCount_other": "{{count}} cached repositories",
@@ -25,9 +100,13 @@
   "revisions_other": "{{count}} revisions",
   "scan": "Rescan",
   "scanning": "Scanning…",
+  "scopeNote": "Integrity checks compare local blobs to their names. They do not check Hub freshness.",
   "title": "Local cache",
   "totalOnDisk": "{{size}} on disk",
-  "pinned": "pinned",
-  "partialData": "{{size}} of incomplete download data",
-  "cleanPartials": "Clean up"
+  "truncated": "Issue list truncated; run again after cleanup.",
+  "verify": "Verify integrity",
+  "verifyCanceled": "Verification canceled",
+  "verifyCleanBody": "Blob hashes matched their filenames. This does not check whether the Hub has newer files.",
+  "verifyError": "Verification failed",
+  "verifyTooltip": "Check local blob hashes. This does not contact the Hub."
 }

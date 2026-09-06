@@ -46,7 +46,32 @@
     },
     "reply": "Reply",
     "replyInThread": "Reply in thread",
-    "replyPlaceholder": "Reply to {{user}}… Markdown is supported."
+    "replyPlaceholder": "Reply to {{user}}… Markdown is supported.",
+    "translate": {
+      "action": "Translate to {{language}}",
+      "error": {
+        "auth": "The translation provider rejected this key. Check the API key in Translation Settings.",
+        "canceled": "Translation was canceled.",
+        "empty-response": "The translation provider returned no text. Retry the request.",
+        "forbidden": "This translation provider denied the request. Check your account permissions.",
+        "input-too-long": "This post is too long to translate. Shorten it or split the content.",
+        "invalid-config": "The translation settings are invalid. Check the model and endpoint, then try again.",
+        "malformed-response": "The translation response could not be read. Retry, or try another provider.",
+        "model-not-found": "The configured translation model was not found. Check the model ID.",
+        "not-configured": "Translation is not configured. Add a provider in Translation Settings.",
+        "provider-unavailable": "The translation provider is unavailable. Try again in a moment.",
+        "rate-limited": "The translation provider is rate-limiting requests. Wait a moment, then retry.",
+        "refused": "The translation provider refused this post. Try a different post or provider.",
+        "timeout": "The translation request timed out. Check your network or proxy, then retry.",
+        "unknown": "Translation failed. Retry, or check Translation Settings."
+      },
+      "openSettings": "Open Translation Settings",
+      "original": "Original",
+      "sameLanguage": "Already in {{language}}",
+      "translated": "Translated",
+      "translating": "Translating…",
+      "view": "Translation view"
+    }
   },
   "reactions": {
     "error": "Couldn't update the reaction: {{error}}"
@@ -63,14 +88,14 @@
   "unfollow": "Unfollow",
   "unwatch": "Unwatch",
   "unwatchOpenHub": "The Hub ignores Unwatch from apps — use Unwatch on their Hub page.",
+  "unwatchSuccess": "Stopped watching this account.",
   "viewProfile": "View profile",
   "watch": "Watch",
   "watchError": "Couldn't update watch: {{error}}",
   "watchOnHub": "Open on the Hub",
+  "watchOpenHub": "The Hub ignores Watch from apps — use Watch repositories on their Hub page.",
   "watchReconnect": "Open settings",
   "watchSessionExpired": "The Hub ignored this watch change — your Hub web session may have expired. Reconnect it in Settings → Account.",
   "watchSuccess": "Watching — you'll get Hub notifications for this account.",
-  "unwatchSuccess": "Stopped watching this account.",
-  "watchOpenHub": "The Hub ignores Watch from apps — use Watch repositories on their Hub page.",
   "watchSyncNotApplied": "Followed locally. The Hub ignores watch requests from apps — to also get Hub notifications for this account, use the Watch button on its Hub page."
 }

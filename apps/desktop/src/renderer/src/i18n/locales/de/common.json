@@ -6,6 +6,12 @@
   "confirm": "Bestätigen",
   "copied": "Kopiert",
   "copy": "Kopieren",
+  "datasetPreview": {
+    "profileDistinct": "Unterschiedliche Werte",
+    "profileNull": "Fehlende Werte",
+    "profileNumeric": "Numerische Spalten",
+    "profileString": "Text-Spalten"
+  },
   "delete": "Löschen",
   "dismiss": "Verwerfen",
   "error": {

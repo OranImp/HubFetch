@@ -1,9 +1,35 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "A conta desta reparação não está disponível.",
+      "integrity": "O arquivo baixado não conferiu. Nada foi alterado.",
+      "internal": "A limpeza falhou. Nada foi alterado.",
+      "network": "Não foi possível alcançar o Hub. Tente de novo quando estiver online.",
+      "plan-digest-mismatch": "Esta prévia foi rejeitada. Gere o plano novamente.",
+      "plan-expired": "Esta prévia expirou. Gere o plano novamente.",
+      "plan-not-found": "Esta prévia desapareceu. Gere o plano novamente.",
+      "plan-stale-account": "A conta conectada mudou. Gere o plano novamente.",
+      "plan-stale-environment": "As configurações de rede mudaram. Gere o plano novamente.",
+      "plan-stale-filesystem": "Os arquivos no disco mudaram. Gere o plano novamente.",
+      "plan-stale-protected": "Um download começou a proteger arquivos. Gere o plano novamente.",
+      "unsupported-issue": "Esses problemas não podem ser reparados automaticamente."
+    },
+    "pruneSuccess": "Limpeza concluída. {{size}} liberados.",
+    "repairSuccess": "Reparação concluída. {{size}} baixados de novo."
+  },
+  "cancelVerify": "Cancelar verificação",
+  "cancelVerifyTooltip": "Interromper a checagem de integridade",
+  "cleanPartials": "Limpar",
   "confirmDelete": {
     "body": "Isso libera {{size}} em disco. Arquivos compartilhados com outras revisões são mantidos. Essa ação não pode ser desfeita.",
     "title": "Excluir {{count}} revisão(ões)?",
     "title_one": "Excluir {{count}} revisão?",
     "title_other": "Excluir {{count}} revisões?"
+  },
+  "counts": {
+    "corrupt": "{{count}} corrompidos",
+    "unreadable": "{{count}} ilegíveis",
+    "verified": "{{count}} verificados"
   },
   "deleted": "Excluído. {{size}} liberados.",
   "deleteRevision": "Excluir revisão",
@@ -15,8 +41,57 @@
   "files": "{{count}} arquivos",
   "files_one": "{{count}} arquivo",
   "files_other": "{{count}} arquivos",
+  "issues": {
+    "broken-snapshot-link": "Link de snapshot quebrado",
+    "hash-mismatch": "Hash não confere",
+    "invalid-blob-name": "Nome de blob inválido",
+    "missing-blob": "Blob ausente",
+    "snapshot-escape": "Caminho de snapshot fora do limite",
+    "unmatched-snapshot-copy": "Cópia de snapshot sem correspondência",
+    "unreadable": "Ilegível"
+  },
+  "lastVerified": "Última checagem {{time}}",
   "location": "Local do cache",
+  "neverVerified": "Ainda não verificado",
   "noRefs": "sem referências",
+  "partialData": "{{size}} de dados de download incompletos",
+  "pinned": "fixado",
+  "plan": {
+    "accountAnonymous": "Download público do Hub — nenhuma conta foi capturada neste plano.",
+    "accountRequired": "Usa a conta {{label}}",
+    "apply": "Aplicar plano",
+    "download": "Cerca de {{size}} serão baixados",
+    "empty": "Não há candidatos de limpeza",
+    "kind": {
+      "detached-snapshot": "Snapshot desvinculado",
+      "orphan-blob": "Blob órfão",
+      "stale-partial": "Parcial restante"
+    },
+    "protected": "Downloads ativos ou pausados protegem {{commits}} revisão(ões) e {{tasks}} parcial(is).",
+    "protectedNone": "Nenhum download em andamento protege arquivos neste plano.",
+    "pruneBody": "Estes itens podem ser removidos. Downloads protegidos em andamento permanecem.",
+    "pruneTitle": "Plano de limpeza",
+    "reclaim": "Cerca de {{size}} serão liberados",
+    "repairBody": "Estes arquivos serão baixados de novo para o commit {{commit}}.",
+    "repairTitle": "Plano de reparação",
+    "replan": "Gerar o plano novamente",
+    "stale": "O cache mudou desde esta prévia. Gere o plano novamente para continuar."
+  },
+  "progress": {
+    "done": "Checagem concluída",
+    "scanning": "Listando repositórios…",
+    "verifying": "Verificando {{current}} ({{completed}}/{{total}})"
+  },
+  "prune": "Planejar limpeza",
+  "pruneTooltip": "Pré-visualizar revisões desvinculadas, blobs órfãos e parciais restantes",
+  "repair": "Reparar",
+  "repairDisabled": {
+    "accountUnavailable": "A conta conectada não está disponível. Abra as configurações da conta.",
+    "noIssues": "Nada para reparar — execute Verificar primeiro, ou o cache já está íntegro.",
+    "signedOut": "Entre para reparar arquivos a partir do Hub.",
+    "unsupported": "Esses problemas não podem ser reparados automaticamente."
+  },
+  "repairTooltip": "Baixar de novo do Hub os arquivos corrompidos mapeados",
   "reposCount": "{{count}} repositórios em cache",
   "reposCount_one": "{{count}} repositório em cache",
   "reposCount_other": "{{count}} repositórios em cache",
@@ -25,9 +100,13 @@
   "revisions_other": "{{count}} revisões",
   "scan": "Reanalisar",
   "scanning": "Analisando…",
+  "scopeNote": "As checagens de integridade comparam blobs locais aos nomes. Elas não verificam se o Hub tem arquivos mais novos.",
   "title": "Cache local",
   "totalOnDisk": "{{size}} em disco",
-  "pinned": "fixado",
-  "partialData": "{{size}} de dados de download incompletos",
-  "cleanPartials": "Limpar"
+  "truncated": "Lista de problemas truncada; execute de novo após a limpeza.",
+  "verify": "Verificar integridade",
+  "verifyCanceled": "Verificação cancelada",
+  "verifyCleanBody": "Os hashes dos blobs coincidiram com os nomes. Isso não verifica se o Hub tem arquivos mais novos.",
+  "verifyError": "A verificação falhou",
+  "verifyTooltip": "Checar hashes dos blobs locais. Não contata o Hub."
 }

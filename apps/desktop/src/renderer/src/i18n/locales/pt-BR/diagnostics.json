@@ -1,5 +1,18 @@
 {
   "actions": "Ação recomendada",
+  "capabilityStatus": {
+    "available": "Disponível",
+    "forbidden": "Proibido",
+    "network": "Rede",
+    "rate-limited": "Limitado",
+    "session-required": "Sessão necessária",
+    "unauthorized": "Não autorizado",
+    "upstream-changed": "Upstream alterado"
+  },
+  "hubCapabilities": {
+    "probe": "Testar",
+    "title": "Compatibilidade das capacidades do Hub"
+  },
   "cancel": "Cancelar",
   "category": {
     "app": "Aplicativo",

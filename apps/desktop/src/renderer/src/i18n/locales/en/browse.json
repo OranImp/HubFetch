@@ -20,7 +20,6 @@
     "title": "No results"
   },
   "endOfResults": "End of results",
-  "error": {},
   "filter": {
     "all": "All",
     "clear": "Clear filters",
@@ -59,6 +58,7 @@
     "lt1b": "< 1B"
   },
   "paramsBadge": "{{value}} params",
+  "searchingMore": "Searching more results…",
   "searchPlaceholder": {
     "dataset": "Search datasets…",
     "model": "Search models…",
@@ -72,6 +72,5 @@
     "trending": "Trending",
     "updated": "Recently updated"
   },
-  "updated": "Updated {{time}}",
-  "searchingMore": "Searching more results…"
+  "updated": "Updated {{time}}"
 }

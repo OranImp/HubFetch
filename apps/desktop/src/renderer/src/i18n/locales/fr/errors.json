@@ -1,5 +1,13 @@
 {
   "auth": "Cette action nécessite une connexion. Ajoutez votre jeton Hugging Face dans les Paramètres, puis réessayez.",
+  "capability": {
+    "forbidden": "Hub a refusé cette capacité. Ouvrez la page Hub sûre pour vérifier les droits ou les restrictions régionales.",
+    "network": "Cette capacité Hub n’a pas pu atteindre le service. Vérifiez la connexion ou le proxy, puis réessayez.",
+    "rate-limited": "Cette capacité Hub est limitée. Attendez un instant, puis réessayez.",
+    "session-required": "Cette capacité nécessite une session web Hub. Connectez-en une dans les réglages, puis réessayez.",
+    "unauthorized": "Cette capacité nécessite un jeton Hub autorisé. Vérifiez les réglages du compte.",
+    "upstream-changed": "Le contrat de compatibilité Hub a changé. Ouvrez Hub ou réessayez plus tard."
+  },
   "gated": "Ce dépôt est à accès contrôlé. Demandez l'accès sur le Hub — une fois qu'il est accordé, réessayez.",
   "network": "Impossible de joindre l'API Hugging Face. Vérifiez votre connexion et vos paramètres de proxy, puis réessayez.",
   "notFound": "Introuvable sur le Hub — il a peut-être été déplacé, renommé ou rendu privé.",

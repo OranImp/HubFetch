@@ -4,6 +4,7 @@
     "copied": "Exportado a {{path}}.",
     "failed": "Error al exportar: {{error}}",
     "invalidPath": "Ruta de archivo no válida: {{file}}",
+    "lmstudioMissing": "No se encontró LM Studio. Instálelo desde lmstudio.ai e inténtelo de nuevo.",
     "notInCache": "{{file}} aún no está en la caché local; descárguelo primero.",
     "ollamaDone": "Se creó el modelo de Ollama {{name}}.",
     "ollamaFailed": "Error al importar en Ollama: {{error}}",

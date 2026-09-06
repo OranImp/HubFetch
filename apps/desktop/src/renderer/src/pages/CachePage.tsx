@@ -1,28 +1,41 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Boxes, Database, HardDrive, LayoutGrid, RefreshCw, ShieldCheck, X } from 'lucide-react'
 import {
-  Boxes,
-  ChevronRight,
-  Database,
-  FolderOpen,
-  HardDrive,
-  LayoutGrid,
-  RefreshCw,
-  Trash2
-} from 'lucide-react'
-import { COMMIT_SHA_RE, staleRevisionsOf } from '@hubfetch/shared'
-import type { CachedRepo, RepoKind } from '@hubfetch/shared'
+  cacheIssueIdOf,
+  COMMIT_SHA_RE,
+  staleRevisionsOf,
+  type CacheActionKind,
+  type CacheActionPlan,
+  type CacheActionPlanRequest,
+  type CacheApplyFailureReason,
+  type CachedRepo,
+  type CacheVerificationProgress,
+  type CacheVerificationReport,
+  type RepoKind
+} from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
 import { invoke } from '@/lib/ipc'
-import { cn, formatBytes, formatRelativeTime } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
+import { formatBytes } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToasts } from '@/components/ui/toaster'
+import { useIpcEvent } from '@/hooks/use-ipc-event'
 import { resolveLocale, useAppStore } from '@/stores/app'
+import { CacheActionPlanDialog } from './cache/CacheActionPlanDialog'
+import { CacheIconAction } from './cache/CacheIconAction'
+import { CacheRepoCard } from './cache/CacheRepoCard'
+import { CacheVerificationPanel } from './cache/CacheVerificationPanel'
+import {
+  applySuccessKey,
+  isVerifyAbort,
+  repairableEntriesOf,
+  repairBlockReason,
+  repoVerificationOf
+} from './cache/cache-page-model'
 
 const KIND_ICON: Record<RepoKind, React.ComponentType<{ className?: string }>> = {
   model: Boxes,
@@ -36,15 +49,27 @@ interface PendingDelete {
   size: number
 }
 
+interface PlanTarget {
+  request: CacheActionPlanRequest
+}
+
 export function CachePage(): React.JSX.Element {
   const { t } = useTranslation(['cache', 'common', 'errors'])
   const settings = useAppStore((s) => s.settings)
   const appInfo = useAppStore((s) => s.appInfo)
+  const auth = useAppStore((s) => s.auth)
   const locale = resolveLocale(settings, appInfo)
   const queryClient = useQueryClient()
   const push = useToasts((s) => s.push)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [pending, setPending] = useState<PendingDelete | null>(null)
+  const [verifyReport, setVerifyReport] = useState<CacheVerificationReport | null>(null)
+  const [verifyProgress, setVerifyProgress] = useState<CacheVerificationProgress | null>(null)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [verifyCanceled, setVerifyCanceled] = useState(false)
+  const [plan, setPlan] = useState<CacheActionPlan | null>(null)
+  const [planTarget, setPlanTarget] = useState<PlanTarget | null>(null)
+  const [planFailure, setPlanFailure] = useState<CacheApplyFailureReason | null>(null)
 
   const report = useQuery({
     queryKey: ['cache'],
@@ -57,8 +82,6 @@ export function CachePage(): React.JSX.Element {
     queryFn: () => invoke('downloads:list', undefined)
   })
 
-  // Commits this app downloaded deliberately by SHA: the standard layout gives
-  // them no ref file, but they are pinned, not stale.
   const pinnedByRepo = useMemo(() => {
     const map = new Map<string, Set<string>>()
     for (const task of downloads.data ?? []) {
@@ -70,6 +93,49 @@ export function CachePage(): React.JSX.Element {
     }
     return map
   }, [downloads.data])
+
+  useIpcEvent(
+    'evt:cacheVerification',
+    useCallback((progress: CacheVerificationProgress) => {
+      setVerifyProgress(progress)
+    }, [])
+  )
+
+  const invalidateLibrary = (): void => {
+    void queryClient.invalidateQueries({ queryKey: ['cache'] })
+    void queryClient.invalidateQueries({ queryKey: ['downloads'] })
+  }
+
+  const verify = useMutation({
+    mutationFn: () => invoke('cache:verify', undefined),
+    onMutate: () => {
+      setVerifyError(null)
+      setVerifyCanceled(false)
+      setVerifyProgress({
+        phase: 'scanning',
+        completedRepos: 0,
+        totalRepos: 0,
+        verifiedBlobs: 0,
+        issuesFound: 0
+      })
+    },
+    onSuccess: (next) => {
+      setVerifyReport(next)
+      setVerifyProgress(null)
+    },
+    onError: (err) => {
+      setVerifyProgress(null)
+      if (isVerifyAbort(err)) {
+        setVerifyCanceled(true)
+        return
+      }
+      setVerifyError(t('cache:verifyError'))
+    }
+  })
+
+  const cancelVerify = useMutation({
+    mutationFn: () => invoke('cache:verifyCancel', undefined)
+  })
 
   const deleteRevisions = useMutation({
     mutationFn: (args: PendingDelete) =>
@@ -99,6 +165,40 @@ export function CachePage(): React.JSX.Element {
     onError: (err) => push(describeError(t, err), 'error')
   })
 
+  const planAction = useMutation({
+    mutationFn: (target: PlanTarget) => invoke('cache:planAction', { request: target.request }),
+    onSuccess: (next) => {
+      setPlan(next)
+      setPlanFailure(null)
+    },
+    onError: (err) => push(describeError(t, err), 'error')
+  })
+
+  const applyAction = useMutation({
+    mutationFn: (planId: string) => invoke('cache:applyAction', { request: { planId } }),
+    onSuccess: (result) => {
+      if (!result.ok) {
+        setPlanFailure(result.failure?.reason ?? 'internal')
+        return
+      }
+      const action: CacheActionKind = result.action
+      push(t(`cache:${applySuccessKey(action)}`, { size: formatBytes(result.bytes) }), 'success')
+      setPlan(null)
+      setPlanTarget(null)
+      setPlanFailure(null)
+      invalidateLibrary()
+      verify.mutate()
+    },
+    onError: (err) => push(describeError(t, err), 'error')
+  })
+
+  const openPlan = (request: CacheActionPlanRequest): void => {
+    const target = { request }
+    setPlanTarget(target)
+    setPlanFailure(null)
+    planAction.mutate(target)
+  }
+
   const toggle = (id: string): void => {
     setExpanded((prev) => {
       const next = new Set(prev)
@@ -118,6 +218,8 @@ export function CachePage(): React.JSX.Element {
     }
   }
 
+  const verifying = verify.isPending
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto flex max-w-3xl flex-col gap-3 p-5">
@@ -134,20 +236,55 @@ export function CachePage(): React.JSX.Element {
               </p>
             )}
             {report.data && (
-              <p className="truncate font-mono text-[11.5px] text-ink-faint">{report.data.root}</p>
+              <p
+                data-visual-mask="path"
+                className="truncate font-mono text-[11.5px] text-ink-faint"
+              >
+                {report.data.root}
+              </p>
             )}
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="shrink-0"
-            loading={report.isFetching}
-            onClick={() => void report.refetch()}
-          >
-            <RefreshCw className="size-3.5" aria-hidden />
-            {report.isFetching ? t('cache:scanning') : t('cache:scan')}
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <CacheIconAction
+              label={t('cache:verify')}
+              hint={t('cache:verifyTooltip')}
+              disabled={verifying}
+              testId="cache-verify"
+              onClick={() => verify.mutate()}
+            >
+              <ShieldCheck className="size-4" aria-hidden />
+            </CacheIconAction>
+            <CacheIconAction
+              label={t('cache:cancelVerify')}
+              hint={t('cache:cancelVerifyTooltip')}
+              disabled={!verifying}
+              testId="cache-verify-cancel"
+              onClick={() => cancelVerify.mutate()}
+            >
+              <X className="size-4" aria-hidden />
+            </CacheIconAction>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="shrink-0"
+              loading={report.isFetching}
+              onClick={() => void report.refetch()}
+            >
+              <RefreshCw className="size-3.5" aria-hidden />
+              {report.isFetching ? t('cache:scanning') : t('cache:scan')}
+            </Button>
+          </div>
         </header>
+
+        <CacheVerificationPanel
+          progress={verifyProgress}
+          report={verifyReport}
+          error={verifyError}
+          canceled={verifyCanceled}
+          locale={locale}
+          verifying={verifying}
+          onRetry={() => verify.mutate()}
+        />
 
         {report.isLoading && (
           <div className="flex flex-col gap-2">
@@ -158,12 +295,15 @@ export function CachePage(): React.JSX.Element {
         )}
 
         {report.error !== null && (
-          <div className="flex flex-col items-center gap-3 p-8 text-center">
+          <div
+            role="alert"
+            data-testid="cache-scan-error"
+            className="flex flex-col items-center gap-3 p-8 text-center"
+          >
             <p className="max-w-72 text-[13px] text-ink-muted">{describeError(t, report.error)}</p>
             <Button size="sm" onClick={() => void report.refetch()}>
               {t('common:retry')}
             </Button>
-            {/* Cache users debug real paths and errnos — keep the raw error visible. */}
             <p className="max-w-full font-mono text-[11.5px] break-all text-ink-faint">
               {report.error.message}
             </p>
@@ -181,131 +321,54 @@ export function CachePage(): React.JSX.Element {
         {report.error === null &&
           report.data?.repos.map((repo) => {
             const repoKey = `${repo.kind}:${repo.id}`
-            const isOpen = expanded.has(repoKey)
+            const verification = repoVerificationOf(verifyReport, repo.kind, repo.id)
             const stale = staleOf(repo)
-            const Icon = KIND_ICON[repo.kind]
             return (
-              <div key={repoKey} className="rounded-lg border">
-                <div
-                  className={cn(
-                    'flex items-center gap-2 rounded-t-lg px-3 py-2.5 transition-colors duration-150 hover:bg-panel',
-                    !isOpen && 'rounded-b-lg'
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggle(repoKey)}
-                    aria-expanded={isOpen}
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  >
-                    <ChevronRight
-                      className={cn(
-                        'size-4 shrink-0 text-decor transition-transform duration-150',
-                        isOpen && 'rotate-90'
-                      )}
-                      aria-hidden
-                    />
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-panel">
-                      <Icon className="size-3.5 text-ink-muted" aria-hidden />
-                    </span>
-                    <span className="min-w-0 truncate font-mono text-[13px] font-medium tracking-tight text-ink-strong">
-                      {repo.id}
-                    </span>
-                    <Badge variant="outline" className="nums">
-                      {t('cache:revisions', { count: repo.revisions.length })}
-                    </Badge>
-                  </button>
-                  <span className="nums min-w-16 text-right font-mono text-[12px] text-ink-faint">
-                    {formatBytes(repo.sizeOnDisk)}
-                  </span>
-                  {stale && (
-                    <Button variant="ghost" size="sm" onClick={() => setPending(stale)}>
-                      <Trash2 className="size-3.5" aria-hidden />
-                      {t('cache:deleteStale')}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t('common:showInFolder')}
-                    onClick={() =>
-                      void invoke('cache:revealRepo', { kind: repo.kind, repoId: repo.id })
-                    }
-                  >
-                    <FolderOpen className="size-4" aria-hidden />
-                  </Button>
-                </div>
-                {isOpen && (
-                  <div className="border-t px-3 py-1.5">
-                    {/* 1px inset guide aligned under the chevron column — a tree rail, not an accent. */}
-                    <div className="ml-2 border-l border-border-card pl-3.5">
-                      {repo.revisions.map((rev) => (
-                        <div key={rev.commitHash} className="flex h-9 items-center gap-2.5">
-                          <span className="nums w-24 shrink-0 font-mono text-[12px] text-ink-muted">
-                            {rev.commitHash.slice(0, 10)}
-                          </span>
-                          {rev.refs.length > 0 ? (
-                            rev.refs.map((ref) => (
-                              <Badge
-                                key={ref}
-                                variant="outline"
-                                className="border-select/25 bg-select/10 text-select"
-                              >
-                                {ref}
-                              </Badge>
-                            ))
-                          ) : pinnedByRepo.get(`${repo.kind}:${repo.id}`)?.has(rev.commitHash) ? (
-                            <Badge
-                              variant="outline"
-                              className="border-select/25 bg-select/10 text-select"
-                            >
-                              {t('cache:pinned')}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">{t('cache:noRefs')}</Badge>
-                          )}
-                          <span className="nums text-[11.5px] text-ink-faint">
-                            {t('cache:files', { count: rev.fileCount })}
-                          </span>
-                          <span className="nums text-[11.5px] text-ink-faint">
-                            {formatRelativeTime(rev.lastModified, locale)}
-                          </span>
-                          <span className="nums ml-auto font-mono text-[12px] text-ink-faint">
-                            {formatBytes(rev.sizeOnDisk)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={t('cache:deleteRevision')}
-                            onClick={() =>
-                              setPending({
-                                repo,
-                                commitHashes: [rev.commitHash],
-                                size: rev.sizeOnDisk
-                              })
-                            }
-                          >
-                            <Trash2 className="size-3.5" aria-hidden />
-                          </Button>
-                        </div>
-                      ))}
-                      {(repo.partialSize ?? 0) > 0 && (
-                        <div className="nums flex h-9 items-center justify-between gap-2 text-[11.5px] text-ink-faint">
-                          {t('cache:partialData', { size: formatBytes(repo.partialSize ?? 0) })}
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            disabled={cleanPartials.isPending}
-                            onClick={() => cleanPartials.mutate(repo)}
-                          >
-                            {t('cache:cleanPartials')}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <CacheRepoCard
+                key={repoKey}
+                repo={repo}
+                icon={KIND_ICON[repo.kind]}
+                isOpen={expanded.has(repoKey)}
+                pinnedCommits={pinnedByRepo.get(repoKey)}
+                locale={locale}
+                verification={verification}
+                repairBlock={repairBlockReason(auth, verification?.issues)}
+                stale={stale}
+                cleanPending={cleanPartials.isPending}
+                onToggle={() => toggle(repoKey)}
+                onDeleteStale={() => stale && setPending(stale)}
+                onDeleteRevision={(commitHash, size) =>
+                  setPending({ repo, commitHashes: [commitHash], size })
+                }
+                onReveal={() =>
+                  void invoke('cache:revealRepo', { kind: repo.kind, repoId: repo.id })
+                }
+                onCleanPartials={() => cleanPartials.mutate(repo)}
+                onPrune={() =>
+                  openPlan({
+                    action: 'prune',
+                    kind: repo.kind,
+                    repoId: repo.id,
+                    retainCommits: repo.revisions
+                      .filter(
+                        (rev) =>
+                          rev.refs.length > 0 ||
+                          pinnedByRepo.get(repoKey)?.has(rev.commitHash) === true
+                      )
+                      .map((rev) => rev.commitHash)
+                  })
+                }
+                onRepair={() =>
+                  openPlan({
+                    action: 'repair',
+                    kind: repo.kind,
+                    repoId: repo.id,
+                    issueIds: repairableEntriesOf(verification?.issues ?? []).map((issue) =>
+                      cacheIssueIdOf(issue.issue, issue.path)
+                    )
+                  })
+                }
+              />
             )
           })}
       </div>
@@ -318,7 +381,6 @@ export function CachePage(): React.JSX.Element {
           <DialogDescription className="mt-2 text-[13px] text-ink-muted">
             {t('cache:confirmDelete.body', { size: formatBytes(pending?.size ?? 0) })}
           </DialogDescription>
-          {/* Show exactly which snapshots go — ref-less does not always mean disposable. */}
           <p className="mt-2 font-mono text-[11.5px] break-all text-ink-faint">
             {pending?.commitHashes.map((h) => h.slice(0, 10)).join(' · ')}
           </p>
@@ -337,6 +399,19 @@ export function CachePage(): React.JSX.Element {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CacheActionPlanDialog
+        plan={plan}
+        applying={applyAction.isPending}
+        failureReason={planFailure}
+        onClose={() => {
+          setPlan(null)
+          setPlanTarget(null)
+          setPlanFailure(null)
+        }}
+        onApply={() => plan && applyAction.mutate(plan.planId)}
+        onReplan={() => planTarget && planAction.mutate(planTarget)}
+      />
     </div>
   )
 }

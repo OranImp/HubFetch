@@ -1,15 +1,13 @@
 import { createContext, useContext, useId, useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import {
   ArrowDownToLine,
   Bell,
   ExternalLink,
   Globe,
   Info,
-  KeyRound,
-  LogOut,
+  Languages,
   Minus,
   Monitor,
   PanelTop,
@@ -30,17 +28,15 @@ import type {
   RepoSort,
   UiDensity
 } from '@hubfetch/shared'
-import { hubSettingsUrl, normalizeHubEndpoint, SUPPORTED_LOCALES } from '@hubfetch/shared'
+import { SUPPORTED_LOCALES } from '@hubfetch/shared'
 import { invoke, openExternal } from '@/lib/ipc'
 import { ACCENT_SWATCH } from '@/lib/appearance'
 import { changeLanguage } from '@/i18n'
-import { cn, formatBytes, formatDate } from '@/lib/utils'
+import { cn, formatBytes } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { PlanBadge } from '@/components/profile/PlanBadge'
-import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
+import { useToasts } from '@/components/ui/toaster'
 import {
   Select,
   SelectContent,
@@ -48,15 +44,14 @@ import {
   SelectTrigger as BaseSelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Switch as BaseSwitch } from '@/components/ui/switch'
-import { useToasts } from '@/components/ui/toaster'
 import type { SettingsSection } from '@/stores/app'
 import { resolveLocale, useAppStore } from '@/stores/app'
-import { isAuthError } from '@/lib/errors'
+import { AccountSection } from '@/components/settings/AccountSection'
 import { PrivacySection } from '@/components/settings/PrivacySection'
 import { ProfileSection } from '@/components/settings/ProfileSection'
 import { NetworkSection } from '@/components/settings/NetworkSection'
+import { TranslationSection } from '@/components/settings/TranslationSection'
 import { CloneToolsSection } from '@/components/settings/CloneToolsSection'
 import { DesktopSection } from '@/components/settings/DesktopSection'
 
@@ -132,6 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: 'settings:groups.connection',
     items: [
       { id: 'network', labelKey: 'settings:network.title', icon: Wifi },
+      { id: 'translation', labelKey: 'settings:translation.title', icon: Languages },
       { id: 'cloneTools', labelKey: 'settings:cloneTools.title', icon: Wrench }
     ]
   },
@@ -193,365 +189,6 @@ function Row({
       <RowA11yContext.Provider value={{ labelId, descriptionId }}>
         {children}
       </RowA11yContext.Provider>
-    </div>
-  )
-}
-
-function AccountSection(): React.JSX.Element {
-  const { t } = useTranslation(['settings', 'auth', 'profile'])
-  const auth = useAppStore((s) => s.auth)
-  const setAuth = useAppStore((s) => s.setAuth)
-  const closeSettings = useAppStore((s) => s.closeSettings)
-  const navigate = useNavigate()
-
-  const signOut = useMutation({
-    mutationFn: () => invoke('auth:signOut', undefined),
-    onSuccess: setAuth
-  })
-
-  return (
-    <SectionShell title={t('settings:account.title')}>
-      {auth.status === 'signedIn' ? (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <ProfileAvatar
-              name={auth.user.name}
-              url={auth.user.avatarUrl}
-              className="size-9 text-[12px]"
-              isPro={auth.user.isPro === true}
-              frame="compact"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate text-[13.5px] font-medium text-ink-strong">
-                  {auth.user.fullname ?? auth.user.name}
-                </span>
-                {auth.user.isPro && <PlanBadge kind="pro" />}
-              </div>
-              <div className="truncate text-[12px] text-ink-muted">@{auth.user.name}</div>
-              {auth.user.orgs.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {auth.user.orgs.map((org) => (
-                    <span key={org.name} className="inline-flex items-center gap-1">
-                      <Badge variant="outline">{org.name}</Badge>
-                      {org.plan && <PlanBadge kind={org.plan} />}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                closeSettings()
-                navigate(`/users/${auth.user.name}`)
-              }}
-            >
-              {t('profile:viewProfile')}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => signOut.mutate()}>
-              <LogOut className="size-3.5" aria-hidden />
-              {t('auth:signOut')}
-            </Button>
-          </div>
-          <TokenAccountBlock
-            displayName={auth.tokenDisplayName}
-            role={auth.tokenRole}
-            hubSession={auth.hubSession === true}
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <p className="text-[12px] text-ink-faint">{t('auth:hint')}</p>
-          <TokenSignInForm />
-        </div>
-      )}
-    </SectionShell>
-  )
-}
-
-/**
- * Paste-a-token sign-in. The token is a secret: password field, no
- * autocomplete, never echoed anywhere. Failures surface inline (invalid vs
- * network) — a failed paste never disturbs the current session.
- */
-function TokenSignInForm({ onDone }: { onDone?: () => void }): React.JSX.Element {
-  const { t } = useTranslation(['auth'])
-  const setAuth = useAppStore((s) => s.setAuth)
-  const endpoint = useAppStore((s) => s.settings.hubEndpoint)
-  const [token, setToken] = useState('')
-  const [error, setError] = useState<'invalid' | 'forbidden' | 'network' | null>(null)
-
-  const submit = useMutation({
-    mutationFn: (value: string) => invoke('auth:signInWithToken', { token: value }),
-    onSuccess: (result) => {
-      if (result.ok) {
-        setAuth(result.state)
-        setToken('')
-        onDone?.()
-      } else {
-        setError(result.error)
-      }
-    },
-    onError: () => setError('network')
-  })
-
-  return (
-    <form
-      className="flex max-w-96 flex-col gap-2"
-      onSubmit={(event) => {
-        event.preventDefault()
-        const value = token.trim()
-        if (value === '' || submit.isPending) return
-        setError(null)
-        submit.mutate(value)
-      }}
-    >
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-medium text-ink-strong">
-          {t('auth:tokenSignIn.label')}
-        </span>
-        <Input
-          type="password"
-          value={token}
-          placeholder={t('auth:tokenSignIn.placeholder')}
-          autoComplete="off"
-          spellCheck={false}
-          aria-invalid={error !== null}
-          onChange={(event) => {
-            setToken(event.target.value)
-            setError(null)
-          }}
-        />
-        {error !== null && (
-          <span className="text-[12px] text-error">{t(`auth:tokenSignIn.${error}`)}</span>
-        )}
-      </label>
-      <p className="max-w-[65ch] text-[12px] text-ink-faint">{t('auth:tokenSignIn.hint')}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="submit"
-          variant="cta"
-          size="sm"
-          loading={submit.isPending}
-          disabled={token.trim() === ''}
-        >
-          <KeyRound className="size-3.5" aria-hidden />
-          {t('auth:tokenSignIn.submit')}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => openExternal(hubSettingsUrl('tokens', endpoint))}
-        >
-          <ExternalLink className="size-3.5" aria-hidden />
-          {t('auth:tokenSignIn.createLink')}
-        </Button>
-      </div>
-    </form>
-  )
-}
-
-const TOKEN_ROLE_KEYS: Record<string, string> = {
-  read: 'settings:account.hub.roleLabels.read',
-  write: 'settings:account.hub.roleLabels.write',
-  fineGrained: 'settings:account.hub.roleLabels.fineGrained'
-}
-
-/**
- * Signed in with a User Access Token: the token's own permissions decide what
- * works, and the API is the referee.
- */
-function TokenAccountBlock({
-  displayName,
-  role,
-  hubSession
-}: {
-  displayName?: string
-  role?: string
-  hubSession: boolean
-}): React.JSX.Element {
-  const { t } = useTranslation(['settings', 'auth'])
-  const endpoint = useAppStore((s) => s.settings.hubEndpoint)
-
-  return (
-    <div className="flex flex-col gap-3 border-t pt-4">
-      <h3 className="text-[13px] font-semibold text-ink-strong">
-        {t('settings:account.hub.title')}
-      </h3>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Badge variant="neutral">{t('settings:account.hub.tokenSession')}</Badge>
-        {displayName !== undefined && displayName !== '' && (
-          <Badge variant="outline" className="font-mono text-[11px]">
-            {displayName}
-          </Badge>
-        )}
-        {role !== undefined && role !== '' && (
-          <Badge variant="outline">
-            {TOKEN_ROLE_KEYS[role] !== undefined ? t(TOKEN_ROLE_KEYS[role]) : role}
-          </Badge>
-        )}
-      </div>
-      <p className="max-w-[65ch] text-[12px] text-ink-faint">
-        {t('settings:account.hub.tokenHint')}
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => openExternal(hubSettingsUrl('tokens', endpoint))}
-        >
-          <ExternalLink className="size-3.5" aria-hidden />
-          {t('auth:tokenSignIn.createLink')}
-        </Button>
-      </div>
-      <HubSessionBlock connected={hubSession} />
-      <BillingUsageCard />
-    </div>
-  )
-}
-
-/**
- * Supplemental Hub web session: a real login window captures the Hub cookie,
- * unlocking the social writes tokens can't do (like, post reactions/comments,
- * watch, discussion reactions). The cookie never reaches this process — only
- * the connected flag does.
- */
-function HubSessionBlock({ connected }: { connected: boolean }): React.JSX.Element {
-  const { t } = useTranslation(['auth'])
-  const setAuth = useAppStore((s) => s.setAuth)
-  const [error, setError] = useState<
-    'mismatch' | 'timeout' | 'invalid' | 'forbidden' | 'network' | null
-  >(null)
-
-  const connect = useMutation({
-    mutationFn: () => invoke('auth:connectHubSession', undefined),
-    onSuccess: (result) => {
-      if (result.ok) {
-        setAuth(result.state)
-      } else if (result.error !== 'canceled') {
-        // Closing the login window is a deliberate cancel — no error banner.
-        setError(result.error)
-      }
-    },
-    onError: () => setError('network')
-  })
-
-  const disconnect = useMutation({
-    mutationFn: () => invoke('auth:disconnectHubSession', undefined),
-    onSuccess: setAuth
-  })
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border-card bg-card-gradient p-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <h4 className="text-[12.5px] font-medium text-ink-strong">{t('auth:hubSession.title')}</h4>
-        {connected && <Badge variant="success">{t('auth:hubSession.connected')}</Badge>}
-      </div>
-      <p className="max-w-[65ch] text-[12px] text-ink-faint">{t('auth:hubSession.hint')}</p>
-      {error !== null && <p className="text-[12px] text-error">{t(`auth:hubSession.${error}`)}</p>}
-      <div className="flex flex-wrap items-center gap-2">
-        {connected ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            loading={disconnect.isPending}
-            onClick={() => disconnect.mutate()}
-          >
-            {t('auth:hubSession.disconnect')}
-          </Button>
-        ) : (
-          <Button
-            variant="cta"
-            size="sm"
-            loading={connect.isPending}
-            onClick={() => {
-              setError(null)
-              connect.mutate()
-            }}
-          >
-            <Globe className="size-3.5" aria-hidden />
-            {t('auth:hubSession.connect')}
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function BillingUsageCard(): React.JSX.Element {
-  const { t } = useTranslation(['settings', 'common'])
-  const settings = useAppStore((s) => s.settings)
-  const appInfo = useAppStore((s) => s.appInfo)
-  const locale = resolveLocale(settings, appInfo)
-  const endpointKey = normalizeHubEndpoint(settings.hubEndpoint)
-
-  const usage = useQuery({
-    queryKey: ['hub-billing-usage', endpointKey],
-    queryFn: () => invoke('hub:billingUsage', undefined),
-    // A 401/403 is a capability gap, not a transient failure — do not retry it.
-    retry: (failureCount, error) => failureCount < 2 && !isAuthError(error.message)
-  })
-
-  // The Hub bills in USD; rows carry integer cents.
-  const formatAmount = (cents: number): string =>
-    new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(cents / 100)
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border-card bg-card-gradient p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-[12.5px] font-medium text-ink-strong">
-          {t('settings:account.billing.title')}
-        </h4>
-        {usage.data?.periodStart !== undefined && usage.data.periodEnd !== undefined && (
-          <span className="nums text-[11.5px] text-ink-faint">
-            {t('settings:account.billing.period', {
-              start: formatDate(usage.data.periodStart, locale),
-              end: formatDate(usage.data.periodEnd, locale)
-            })}
-          </span>
-        )}
-      </div>
-      {usage.isPending && <Skeleton className="h-14" />}
-      {usage.isError &&
-        (isAuthError(usage.error.message) ? (
-          <p className="text-[12px] text-ink-faint">{t('settings:account.billing.unauthorized')}</p>
-        ) : (
-          <div className="flex items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-[12px] text-ink-muted">{usage.error.message}</p>
-            <Button variant="ghost" size="sm" onClick={() => void usage.refetch()}>
-              {t('common:retry')}
-            </Button>
-          </div>
-        ))}
-      {usage.data !== undefined && usage.data.rows.length === 0 && (
-        <p className="text-[12px] text-ink-faint">{t('settings:account.billing.empty')}</p>
-      )}
-      {usage.data !== undefined && usage.data.rows.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {usage.data.rows.map((row, index) => (
-            <div
-              key={`${row.label}-${index}`}
-              className="flex items-center justify-between gap-4 text-[12.5px]"
-            >
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-ink">{row.label}</span>
-                {row.detail !== undefined && row.detail !== '' && (
-                  <span className="truncate text-[11.5px] text-ink-faint">{row.detail}</span>
-                )}
-              </div>
-              {row.amountCents !== undefined && (
-                <span className="nums shrink-0 text-ink-muted">
-                  {formatAmount(row.amountCents)}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -980,6 +617,7 @@ const SECTION_CONTENT: Record<SettingsSection, () => React.JSX.Element> = {
   downloads: DownloadsSection,
   notifications: NotificationsSection,
   network: NetworkSection,
+  translation: TranslationSection,
   cloneTools: CloneToolsSection,
   desktop: DesktopSection,
   privacy: PrivacySection,

@@ -6,6 +6,12 @@
   "confirm": "确认",
   "copied": "已复制",
   "copy": "复制",
+  "datasetPreview": {
+    "profileDistinct": "不同值",
+    "profileNull": "缺失值",
+    "profileNumeric": "数值列",
+    "profileString": "字符串列"
+  },
   "delete": "删除",
   "dismiss": "关闭",
   "error": {
@@ -35,12 +41,12 @@
     "zh-TW": "繁體中文"
   },
   "loading": "加载中…",
-  "progress": {
-    "indeterminate": "正在进行"
-  },
   "open": "打开",
   "openOnHub": "在 Hub 打开",
   "private": "私有",
+  "progress": {
+    "indeterminate": "正在进行"
+  },
   "remove": "移除",
   "retry": "重试",
   "running": "运行中",

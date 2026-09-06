@@ -16,14 +16,14 @@
   "history": "Open browse history",
   "inbox": "Open inbox",
   "listNav": "Move list selection",
+  "models": "Open models",
   "palette": "Command palette / global search",
   "paletteClose": "Close",
   "paletteNavigate": "Navigate results",
   "paletteSelect": "Select",
-  "models": "Open models",
   "papers": "Open papers",
-  "spaces": "Open Spaces",
   "settings": "Open settings",
+  "spaces": "Open Spaces",
   "title": "Keyboard shortcuts",
   "toggleSidebar": "Collapse or expand the sidebar"
 }

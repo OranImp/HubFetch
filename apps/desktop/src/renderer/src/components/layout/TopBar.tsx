@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ArrowRight, PanelLeft, Search, UserCircle2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, PanelLeft, Search } from 'lucide-react'
 import logo from '@/assets/logo.png'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AccountChip } from '@/components/layout/AccountChip'
 import { NotificationBell } from '@/components/layout/NotificationBell'
-import { ProfileAvatar } from '@/components/profile/ProfileAvatar'
 import { useNavHistory } from '@/lib/nav-history'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/stores/app'
@@ -52,14 +52,12 @@ function BarButton({
  * child opts out of the drag region.
  */
 export function TopBar(): React.JSX.Element {
-  const { t } = useTranslation(['nav', 'common', 'auth'])
+  const { t } = useTranslation(['nav', 'common'])
   const navigate = useNavigate()
   const { canGoBack, canGoForward } = useNavHistory()
   const appInfo = useAppStore((s) => s.appInfo)
-  const auth = useAppStore((s) => s.auth)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const setPaletteOpen = useAppStore((s) => s.setPaletteOpen)
-  const openSettings = useAppStore((s) => s.openSettings)
 
   const isMac = appInfo?.platform === 'darwin'
   const mod = isMac ? '⌘' : 'Ctrl'
@@ -118,27 +116,9 @@ export function TopBar(): React.JSX.Element {
         </span>
       </button>
 
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-0.5 pr-2">
         <NotificationBell />
-        <button
-          type="button"
-          aria-label={t('nav:account')}
-          onClick={() => openSettings('account')}
-          className="app-no-drag flex size-8 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-panel-2 hover:text-ink"
-        >
-          {auth.status === 'signedIn' ? (
-            <ProfileAvatar
-              name={auth.user.name}
-              url={auth.user.avatarUrl}
-              isPro={auth.user.isPro === true}
-              frame="compact"
-              eager
-              className="size-5 text-[10px]"
-            />
-          ) : (
-            <UserCircle2 className="size-[18px]" aria-hidden />
-          )}
-        </button>
+        <AccountChip />
       </div>
     </header>
   )

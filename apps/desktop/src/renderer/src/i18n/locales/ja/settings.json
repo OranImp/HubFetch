@@ -16,6 +16,22 @@
     }
   },
   "account": {
+    "accounts": {
+      "active": "使用中",
+      "addAccount": "アカウントを追加",
+      "cancel": "キャンセル",
+      "confirmRemove": "アカウントを削除",
+      "endpointMismatch": "別のエンドポイント",
+      "endpointMismatchHint": "このアカウントは別のHub URLで保存されています。ネットワーク設定でそのエンドポイントに切り替えてから使用できます。",
+      "inUse": "ダウンロード {{downloads}} · クローン {{clones}} · アップロード {{uploads}}",
+      "invalid": "再サインインが必要",
+      "manage": "アカウントを管理",
+      "openNetwork": "ネットワーク設定を開く",
+      "remove": "削除",
+      "switch": "切り替え",
+      "switching": "切り替えています…",
+      "title": "保存済みアカウント"
+    },
     "billing": {
       "empty": "現在の期間の使用状況は記録されていません。",
       "gated": "課金使用状況にはread-billing権限が必要です。再認可して権限を付与してください。",
@@ -162,6 +178,53 @@
       "invalid": "有効な http:// または https:// の URL を入力してください。ホストとポートを含み、パス、クエリ、認証情報は含めないでください。",
       "testOkLatency": "{{ms}} ミリ秒で接続できました。",
       "resetProxy": "プロキシをデフォルトにリセットしました。"
+    }
+  },
+  "translation": {
+    "title": "翻訳",
+    "description": "OpenAI、Anthropic、または Gemini を設定して、投稿を現在のソフトウェア言語に翻訳します。キーはこの端末で暗号化され、保存後は表示されません。",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "gemini": "Gemini"
+    },
+    "configured": "設定済み",
+    "notConfigured": "未設定",
+    "baseUrl": "ベース URL",
+    "model": "モデル",
+    "apiKey": "API キー",
+    "apiKeyHint": "空のままにすると保存済みのキーを維持します。新しい値を入力すると置き換わります。",
+    "saveKey": "キーを保存",
+    "deleteKey": "キーを削除",
+    "deleteTitle": "この API キーを削除しますか？",
+    "deleteBody": "選択中のプロバイダーに保存されたキーだけを削除します。他のプロバイダーは変わりません。",
+    "deleteConfirm": "キーを削除",
+    "reset": "デフォルトにリセット",
+    "apply": "適用",
+    "test": "接続をテスト",
+    "testHint": "小さなリクエストを送信するため、ごくわずかなプロバイダー利用料が発生する場合があります。",
+    "testOkLatency": "{{ms}} ミリ秒で接続できました。",
+    "noKey": "接続をテストする前に、API キーを保存するか、ここに入力してください。",
+    "saved": "翻訳設定を保存しました。",
+    "keySaved": "API キーを保存しました。",
+    "keyDeleted": "API キーを削除しました。",
+    "invalidUrl": "ユーザー情報、クエリ、フラグメントを含まない有効な http:// または https:// の URL を入力するか、空欄のままにしてください。",
+    "invalidModel": "モデル ID を入力してください。",
+    "errors": {
+      "not-configured": "このプロバイダーには API キーが保存されていません。",
+      "invalid-config": "モデルまたはエンドポイントが無効です。",
+      "auth": "API キーが拒否されました。",
+      "forbidden": "このキーではそのモデルを使用できません。",
+      "model-not-found": "そのモデルは見つかりませんでした。",
+      "rate-limited": "プロバイダーがこのリクエストを制限しました。後でもう一度お試しください。",
+      "timeout": "リクエストがタイムアウトしました。",
+      "canceled": "リクエストはキャンセルされました。",
+      "provider-unavailable": "プロバイダーを利用できません。",
+      "malformed-response": "プロバイダーは使用できない応答を返しました。",
+      "empty-response": "プロバイダーは空のプローブ応答を返しました。",
+      "refused": "プロバイダーがリクエストを拒否しました。",
+      "input-too-long": "リクエストが長すぎます。",
+      "unknown": "接続テストに失敗しました。"
     }
   },
   "notifications": {

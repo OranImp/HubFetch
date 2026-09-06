@@ -40,6 +40,12 @@ const KIND_PATH: Record<RepoKind, string> = {
   space: 'spaces'
 }
 
+const KIND_LABEL_KEY: Record<RepoKind, string> = {
+  model: 'common:kind.model',
+  dataset: 'common:kind.dataset',
+  space: 'common:kind.space'
+}
+
 const KIND_ICON: Record<RepoKind, React.ComponentType<{ className?: string }>> = {
   model: Boxes,
   dataset: Database,
@@ -137,7 +143,7 @@ export function MyReposPage(): React.JSX.Element {
                 className={cn(filter === f && 'bg-panel-2 text-ink-strong')}
                 onClick={() => setFilter(f)}
               >
-                {f === 'all' ? t('admin:myRepos.filter.all') : t(`common:kind.${f}`)}
+                {f === 'all' ? t('admin:myRepos.filter.all') : t(KIND_LABEL_KEY[f])}
               </Button>
             ))}
           </div>

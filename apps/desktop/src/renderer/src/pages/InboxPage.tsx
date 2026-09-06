@@ -80,6 +80,7 @@ function TabButton({
 export function InboxPage(): React.JSX.Element {
   const { t } = useTranslation(['inbox'])
   const auth = useAppStore((s) => s.auth)
+  const accountId = auth.status === 'signedIn' ? auth.accountId : 'legacy-local'
   const settings = useAppStore((s) => s.settings)
   const endpointKey = normalizeHubEndpoint(settings.hubEndpoint)
   const signedIn = auth.status === 'signedIn'
@@ -90,7 +91,7 @@ export function InboxPage(): React.JSX.Element {
   // Same query keys the two panels use — React Query dedupes, so these tab
   // badges cost no extra requests beyond what the active panel already fetches.
   const localInbox = useQuery({
-    queryKey: ['inbox'],
+    queryKey: ['inbox', accountId],
     queryFn: () => invoke('inbox:list', undefined)
   })
   const hubNotifications = useQuery({
@@ -138,28 +139,33 @@ function LocalFollowsFeed(): React.JSX.Element {
   const appInfo = useAppStore((s) => s.appInfo)
   const locale = resolveLocale(settings, appInfo)
   const [target, setTarget] = useState('')
+  const auth = useAppStore((s) => s.auth)
+  const accountId = auth.status === 'signedIn' ? auth.accountId : 'legacy-local'
 
-  const inbox = useQuery({ queryKey: ['inbox'], queryFn: () => invoke('inbox:list', undefined) })
+  const inbox = useQuery({
+    queryKey: ['inbox', accountId],
+    queryFn: () => invoke('inbox:list', undefined)
+  })
   const follows = useQuery({
-    queryKey: ['follows'],
+    queryKey: ['follows', accountId],
     queryFn: () => invoke('follows:list', undefined)
   })
 
   const markRead = useMutation({
     mutationFn: (ids: string[]) => invoke('inbox:markRead', { ids }),
-    onSuccess: (items) => queryClient.setQueryData(['inbox'], items),
+    onSuccess: (items) => queryClient.setQueryData(['inbox', accountId], items),
     onError: (err) => push(describeError(t, err), 'error')
   })
   const clear = useMutation({
     mutationFn: () => invoke('inbox:clear', undefined),
-    onSuccess: (items) => queryClient.setQueryData(['inbox'], items),
+    onSuccess: (items) => queryClient.setQueryData(['inbox', accountId], items),
     onError: (err) => push(describeError(t, err), 'error')
   })
   const pollNow = useMutation({
     mutationFn: () => invoke('inbox:pollNow', undefined),
     onSuccess: ({ added }) => {
       push(t('inbox:checked', { count: added }), 'info')
-      void queryClient.invalidateQueries({ queryKey: ['inbox'] })
+      void queryClient.invalidateQueries({ queryKey: ['inbox', accountId] })
     },
     onError: (err) => push(describeError(t, err), 'error')
   })
@@ -172,7 +178,7 @@ function LocalFollowsFeed(): React.JSX.Element {
   const addFollow = useMutation({
     mutationFn: (args: { type: FollowTargetType; target: string }) => invoke('follows:add', args),
     onSuccess: (list, args) => {
-      queryClient.setQueryData(['follows'], list)
+      queryClient.setQueryData(['follows', accountId], list)
       if (syncable(args.type))
         syncWatch('add', [{ username: args.target, isOrg: args.type === 'org' }])
     },
@@ -182,7 +188,7 @@ function LocalFollowsFeed(): React.JSX.Element {
     mutationFn: (follow: { id: string; type: FollowTargetType; target: string }) =>
       invoke('follows:remove', { id: follow.id }),
     onSuccess: (list, follow) => {
-      queryClient.setQueryData(['follows'], list)
+      queryClient.setQueryData(['follows', accountId], list)
       if (syncable(follow.type))
         syncWatch('delete', [{ username: follow.target, isOrg: follow.type === 'org' }])
       // The papers toggle is its own undo affordance; only rows get the toast.
@@ -192,7 +198,7 @@ function LocalFollowsFeed(): React.JSX.Element {
         onClick: () => {
           void invoke('follows:add', { type: follow.type, target: follow.target })
             .then((restored) => {
-              queryClient.setQueryData(['follows'], restored)
+              queryClient.setQueryData(['follows', accountId], restored)
               if (syncable(follow.type))
                 syncWatch('add', [{ username: follow.target, isOrg: follow.type === 'org' }])
             })
@@ -208,7 +214,6 @@ function LocalFollowsFeed(): React.JSX.Element {
   // Deliberately NOT watch-synced: bulk-adding every social follow to the Hub
   // watch list would flood the user's Hub notifications; only explicit
   // per-account follow actions write through.
-  const auth = useAppStore((s) => s.auth)
   const me = auth.status === 'signedIn' ? auth.user.name : undefined
   const importFromHub = useMutation({
     mutationFn: async () => {
@@ -229,7 +234,7 @@ function LocalFollowsFeed(): React.JSX.Element {
         })
         added++
       }
-      queryClient.setQueryData(['follows'], list)
+      queryClient.setQueryData(['follows', accountId], list)
       return added
     },
     onSuccess: (added) => push(t('inbox:follows.imported', { count: added ?? 0 }), 'success'),

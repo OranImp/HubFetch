@@ -78,6 +78,13 @@ describe('describeError', () => {
     expect(describeError(t, new Error('fetch failed'))).toBe('errors:network')
     expect(describeError(t, new Error('???'))).toBe('errors:unknown')
   })
+
+  it('describes a capability error from its closed IPC marker', () => {
+    const error = new Error(
+      '[HUB_CAPABILITY_ERROR key=listWatched code=session-required] HUB_WEB_SESSION_REQUIRED'
+    )
+    expect(describeError(t, error)).toBe('errors:capability.session-required')
+  })
 })
 
 describe('isAuthError', () => {

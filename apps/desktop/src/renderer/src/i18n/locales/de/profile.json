@@ -32,6 +32,31 @@
     "error": {
       "title": "Dieser Beitrag konnte nicht geladen werden"
     },
+    "translate": {
+      "action": "Ins {{language}} übersetzen",
+      "original": "Original",
+      "translated": "Übersetzung",
+      "view": "Übersetzungsansicht",
+      "sameLanguage": "Bereits auf {{language}}",
+      "openSettings": "Übersetzungseinstellungen öffnen",
+      "translating": "Wird übersetzt…",
+      "error": {
+        "not-configured": "Übersetzung ist nicht eingerichtet. Fügen Sie in den Übersetzungseinstellungen einen Anbieter hinzu.",
+        "invalid-config": "Die Übersetzungseinstellungen sind ungültig. Prüfen Sie Modell und Endpunkt und versuchen Sie es erneut.",
+        "auth": "Der Übersetzungsanbieter hat diesen Schlüssel abgelehnt. Prüfen Sie den API-Schlüssel in den Übersetzungseinstellungen.",
+        "forbidden": "Der Übersetzungsanbieter hat die Anfrage abgelehnt. Prüfen Sie Ihre Kontorechte.",
+        "model-not-found": "Das konfigurierte Übersetzungsmodell wurde nicht gefunden. Prüfen Sie die Modell-ID.",
+        "rate-limited": "Der Übersetzungsanbieter begrenzt Anfragen. Warten Sie kurz und versuchen Sie es erneut.",
+        "timeout": "Die Übersetzungsanfrage ist abgelaufen. Prüfen Sie Netzwerk oder Proxy und versuchen Sie es erneut.",
+        "canceled": "Die Übersetzung wurde abgebrochen.",
+        "provider-unavailable": "Der Übersetzungsanbieter ist nicht erreichbar. Versuchen Sie es in einem Moment erneut.",
+        "malformed-response": "Die Übersetzungsantwort konnte nicht gelesen werden. Wiederholen Sie den Vorgang oder wählen Sie einen anderen Anbieter.",
+        "empty-response": "Der Übersetzungsanbieter hat keinen Text zurückgegeben. Wiederholen Sie die Anfrage.",
+        "refused": "Der Übersetzungsanbieter hat diesen Beitrag abgelehnt. Versuchen Sie einen anderen Beitrag oder Anbieter.",
+        "input-too-long": "Dieser Beitrag ist zu lang zum Übersetzen. Kürzen Sie ihn oder teilen Sie den Inhalt.",
+        "unknown": "Die Übersetzung ist fehlgeschlagen. Wiederholen Sie den Vorgang oder prüfen Sie die Übersetzungseinstellungen."
+      }
+    },
     "hide": {
       "action": "Ausblenden",
       "confirm": "Kommentar ausblenden",

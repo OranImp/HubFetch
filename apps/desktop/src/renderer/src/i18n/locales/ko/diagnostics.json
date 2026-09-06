@@ -1,5 +1,18 @@
 {
   "actions": "권장 조치",
+  "capabilityStatus": {
+    "available": "사용 가능",
+    "forbidden": "거부됨",
+    "network": "네트워크",
+    "rate-limited": "요청 제한",
+    "session-required": "세션 필요",
+    "unauthorized": "인증되지 않음",
+    "upstream-changed": "업스트림 변경됨"
+  },
+  "hubCapabilities": {
+    "probe": "프로브",
+    "title": "Hub 기능 호환성"
+  },
   "cancel": "취소",
   "category": {
     "app": "앱",

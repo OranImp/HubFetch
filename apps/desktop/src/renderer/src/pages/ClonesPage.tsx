@@ -28,6 +28,16 @@ type RowAction = 'cancel' | 'retry' | 'open' | 'copy' | 'view' | 'viewParent' | 
 
 const FILTER_ORDER: readonly CloneFilter[] = ['all', ...CLONE_STATUSES]
 
+const STATUS_LABEL_KEY: Record<CloneStatus, string> = {
+  queued: 'clones:status.queued',
+  running: 'clones:status.running',
+  cancelling: 'clones:status.cancelling',
+  completed: 'clones:status.completed',
+  failed: 'clones:status.failed',
+  cancelled: 'clones:status.cancelled',
+  interrupted: 'clones:status.interrupted'
+}
+
 function CloneFilterChip({
   filter,
   active,
@@ -298,7 +308,7 @@ export function ClonesPage(): React.JSX.Element {
                 filter={value}
                 active={filter === value}
                 count={counts.get(value) ?? 0}
-                label={value === 'all' ? t('clones:filter.all') : t(`clones:status.${value}`)}
+                label={value === 'all' ? t('clones:filter.all') : t(STATUS_LABEL_KEY[value])}
                 onSelect={setFilter}
               />
             ))}

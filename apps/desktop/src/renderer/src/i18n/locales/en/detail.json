@@ -7,19 +7,52 @@
     "unfavorite": "Remove from favorites",
     "unfollow": "Unfollow repository"
   },
+  "arrowPreview": {
+    "columns": "detail:arrowPreview.columns",
+    "columns_one": "{{count}} column",
+    "columns_other": "{{count}} columns",
+    "prefixOnly": "Only the first {{size}} of this file was loaded for preview.",
+    "rows": "detail:arrowPreview.rows",
+    "rows_one": "{{count}} row",
+    "rows_other": "{{count}} rows",
+    "unreadableBody": "The Arrow/Feather table couldn't be parsed from the file prefix. Download it to open locally.",
+    "unreadableTitle": "Can't read this Arrow file"
+  },
   "card": {
     "empty": "This repository has no card."
   },
+  "csvPreview": {
+    "columns": "detail:csvPreview.columns",
+    "columns_one": "{{count}} column",
+    "columns_other": "{{count}} columns",
+    "emptyHeader": "Column {{index}}",
+    "rows": "detail:csvPreview.rows",
+    "rows_one": "{{count}} row",
+    "rows_other": "{{count}} rows"
+  },
   "datasetPreview": {
+    "columns": "Columns",
+    "columnSearch": "Find columns",
     "config": "Config",
+    "exportCsv": "Export CSV",
+    "exportError": "Couldn't export: {{error}}",
+    "exportJsonl": "Export JSONL",
+    "exportSaved": "Saved {{label}}",
+    "filter": "Filter this page",
+    "filterPlaceholder": "Search this page…",
     "next": "Next page",
+    "pageScope": "current page (25 rows maximum)",
     "prev": "Previous page",
+    "profileDistinct": "distinct {{count}}",
+    "profileNull": "null {{count}}",
+    "profileNumeric": "min {{min}} · max {{max}}",
+    "profileString": "len {{min}}–{{max}}",
     "range": "Rows {{from}}–{{to}} of {{total}}",
     "rangeNoTotal": "Rows {{from}}–{{to}}",
+    "rowsError": "Couldn't load rows.",
     "sampleNote": "Full viewer unavailable — showing the Hub's sample preview ({{count}} rows).",
     "split": "Split",
-    "unavailable": "The dataset viewer isn't available for this dataset. You can still browse its files, or open it on the Hub.",
-    "rowsError": "Couldn't load rows."
+    "unavailable": "The dataset viewer isn't available for this dataset. You can still browse its files, or open it on the Hub."
   },
   "discussions": {
     "comments": "{{count}} comments",
@@ -79,8 +112,8 @@
     "uploadBrowse": "browse",
     "uploadError": "Upload failed: {{error}}",
     "uploadHint": "Attach images, audio, or video by dragging, pasting, or",
-    "uploadTooLarge": "{{name}} is too large (max 64 MB)",
     "uploading": "Uploading…",
+    "uploadTooLarge": "{{name}} is too large (max 64 MB)",
     "write": "Write"
   },
   "favoriteRemoved": "Removed from favorites",
@@ -109,6 +142,11 @@
     "requestTitle": "Request access",
     "submit": "Agree and send request",
     "submitted": "Access request sent."
+  },
+  "ggufPreview": {
+    "size": "File size",
+    "unreadableBody": "The GGUF header couldn't be parsed (it may need more than the preview window). Download it to inspect locally.",
+    "unreadableTitle": "Can't read this GGUF file"
   },
   "info": {
     "created": "Created",
@@ -145,6 +183,30 @@
     "statusUpdated": "Discussion status updated",
     "titleSave": "Save",
     "titleUpdated": "Title updated"
+  },
+  "onnxPreview": {
+    "colNode": "Node",
+    "colOp": "Op",
+    "graph": "Graph: {{name}}",
+    "inputs": "Inputs",
+    "nodes": "Nodes",
+    "none": "None",
+    "outputs": "Outputs",
+    "size": "File size",
+    "tooLargeBody": "ONNX files larger than {{size}} can't be previewed here (weights are usually embedded). Download it to inspect locally.",
+    "unreadableBody": "The ONNX model protobuf couldn't be decoded. Download it to open locally.",
+    "unreadableTitle": "Can't read this ONNX file"
+  },
+  "parquetPreview": {
+    "columns": "{{count}} columns",
+    "columns_one": "{{count}} column",
+    "columns_other": "{{count}} columns",
+    "rows": "{{count}} rows",
+    "rows_one": "{{count}} row",
+    "rows_other": "{{count}} rows",
+    "unreadableBody": "The file's metadata couldn't be read. Download it to open it locally.",
+    "unreadableTitle": "Can't read this Parquet file",
+    "unsupportedCodec": "This file uses a compression codec that can't be previewed. Download it to open locally."
   },
   "playground": {
     "empty": "The response will appear here.",
@@ -187,13 +249,41 @@
     "noPreviewTitle": "No preview available",
     "pdfErrorBody": "This PDF couldn't be rendered here. Download it to open locally.",
     "pdfErrorTitle": "Can't open this PDF",
-    "pdfTooLargeBody": "PDFs larger than {{size}} can't be previewed here. Download it to open locally.",
     "pdfPage": "Page {{page}} of {{total}}",
+    "pdfTooLargeBody": "PDFs larger than {{size}} can't be previewed here. Download it to open locally.",
     "pickFile": "Select a file to preview",
     "pickFileBody": "Choose a file on the left to see its contents here.",
     "tensors": "Tensors",
     "totalParams": "Total parameters",
     "truncated": "Preview truncated — showing the first {{size}}."
+  },
+  "readiness": {
+    "adapterAvailable": "Adapter available",
+    "adapterUnavailable": "No HubFetch adapter",
+    "architecture": "Architecture {{value}}",
+    "cached": "Cached",
+    "detected": "Detected",
+    "download": "Download selected",
+    "duplicateShards": "Duplicate {{shards}}",
+    "evidenceNote": "These labels are observed file, cache, and tool states. They do not predict whether a model will run.",
+    "export": "Export to {{tool}}",
+    "groupGguf": "GGUF",
+    "groupOnnx": "ONNX",
+    "groupSafetensors": "safetensors",
+    "groupWorkflow": "Workflow files",
+    "missingShards": "Missing {{shards}}",
+    "notCached": "Not cached",
+    "opset": "Opset {{value}}",
+    "quantization": "Quantization {{value}}",
+    "shardComplete": "Complete shard set",
+    "shardDuplicate": "Duplicate shards",
+    "shardIncomplete": "Incomplete shard set",
+    "shardMixed": "Mixed formats in shard set",
+    "shardSingle": "Single file",
+    "targetInstalled": "Target installed",
+    "targetNotInstalled": "Target not installed",
+    "title": "Local readiness",
+    "totalBytes": "{{size}} selected"
   },
   "run": {
     "loading": "Loading the Space…",
@@ -214,48 +304,5 @@
     "playground": "Playground",
     "preview": "Preview",
     "run": "Run"
-  },
-  "parquetPreview": {
-    "rows_one": "{{count}} row",
-    "rows_other": "{{count}} rows",
-    "columns_one": "{{count}} column",
-    "columns_other": "{{count}} columns",
-    "unsupportedCodec": "This file uses a compression codec that can't be previewed. Download it to open locally.",
-    "unreadableTitle": "Can't read this Parquet file",
-    "unreadableBody": "The file's metadata couldn't be read. Download it to open it locally."
-  },
-  "csvPreview": {
-    "rows_one": "{{count}} row",
-    "rows_other": "{{count}} rows",
-    "columns_one": "{{count}} column",
-    "columns_other": "{{count}} columns",
-    "emptyHeader": "Column {{index}}"
-  },
-  "arrowPreview": {
-    "rows_one": "{{count}} row",
-    "rows_other": "{{count}} rows",
-    "columns_one": "{{count}} column",
-    "columns_other": "{{count}} columns",
-    "prefixOnly": "Only the first {{size}} of this file was loaded for preview.",
-    "unreadableTitle": "Can't read this Arrow file",
-    "unreadableBody": "The Arrow/Feather table couldn't be parsed from the file prefix. Download it to open locally."
-  },
-  "ggufPreview": {
-    "size": "File size",
-    "unreadableTitle": "Can't read this GGUF file",
-    "unreadableBody": "The GGUF header couldn't be parsed (it may need more than the preview window). Download it to inspect locally."
-  },
-  "onnxPreview": {
-    "nodes": "Nodes",
-    "size": "File size",
-    "inputs": "Inputs",
-    "outputs": "Outputs",
-    "none": "None",
-    "graph": "Graph: {{name}}",
-    "colNode": "Node",
-    "colOp": "Op",
-    "tooLargeBody": "ONNX files larger than {{size}} can't be previewed here (weights are usually embedded). Download it to inspect locally.",
-    "unreadableTitle": "Can't read this ONNX file",
-    "unreadableBody": "The ONNX model protobuf couldn't be decoded. Download it to open locally."
   }
 }

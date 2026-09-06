@@ -26,6 +26,7 @@
     "confirm": "Abbrechen und entfernen",
     "title": "Aktiven Download entfernen?"
   },
+  "count": "{{count}} Aufgaben",
   "count_one": "{{count}} Aufgabe",
   "count_other": "{{count}} Aufgaben",
   "empty": {
@@ -62,7 +63,22 @@
     "manualLabel": "HTTP(S)-Proxy-URL",
     "invalid": "Geben Sie eine gültige http://- oder https://-URL mit Host und Port ein, ohne Pfad, Abfrage oder Anmeldedaten.",
     "start": "Download starten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "account": "Konto erforderlich",
+    "cached": "Im Cache vorhanden",
+    "covered": "Abgedeckt",
+    "files": "Dateien",
+    "noFiles": "Keine Dateien gefunden",
+    "proxyDirect": "Direkt",
+    "proxyManual": "Manuell",
+    "proxySystem": "System",
+    "resolving": "Auflösen…",
+    "retry": "Erneut versuchen",
+    "searchPlaceholder": "Dateien durchsuchen…",
+    "selectAll": "Alle auswählen",
+    "selectNone": "Keine auswählen",
+    "selected": "{{count}} ausgewählt",
+    "totalSize": "Gesamtgröße: {{size}}"
   },
   "proxyModes": {
     "system": "System",

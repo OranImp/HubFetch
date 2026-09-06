@@ -5,59 +5,15 @@ import { ArrowDownToLine, ChevronLeft, ChevronRight, FileQuestion } from 'lucide
 import type { AsyncBuffer, FileMetaData } from 'hyparquet'
 import type { RepoKind } from '@hubfetch/shared'
 import { invoke } from '@/lib/ipc'
-import {
-  bytesToDataUri,
-  formatParquetCell,
-  imageMimeOfBytes,
-  isUnsupportedCodecError
-} from '@/lib/parquet'
+import { isUnsupportedCodecError } from '@/lib/parquet'
 import { cn, formatBytes } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Lightbox } from '@/components/ui/lightbox'
+import { PreviewCell, TableSkeleton } from '@/components/browse/preview-table'
 import { useHubEndpointKey } from '@/hooks/use-hub-endpoint'
 
 const PAGE_SIZE = 25
-
-/** Skip thumbnailing images larger than this to keep the table light. */
-const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024
-
-function ParquetCell({
-  value,
-  onZoom
-}: {
-  value: unknown
-  onZoom: (src: string) => void
-}): React.JSX.Element {
-  const { t } = useTranslation('common')
-  if (value instanceof Uint8Array && value.byteLength <= MAX_THUMBNAIL_BYTES) {
-    const mime = imageMimeOfBytes(value)
-    if (mime) {
-      const src = bytesToDataUri(value, mime)
-      return (
-        <button
-          type="button"
-          aria-label={t('common:zoomImage')}
-          className="max-h-16 max-w-32 cursor-zoom-in rounded outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          onClick={() => onZoom(src)}
-        >
-          <img
-            src={src}
-            alt=""
-            className="max-h-16 max-w-32 rounded border border-border-card bg-white object-contain"
-          />
-        </button>
-      )
-    }
-  }
-  const text = formatParquetCell(value)
-  return (
-    <div className="max-w-80 truncate" title={text}>
-      {text}
-    </div>
-  )
-}
 
 interface ParquetPreviewProps {
   kind: RepoKind
@@ -105,17 +61,6 @@ interface ParquetInfo {
   metadata: FileMetaData
   columns: string[]
   numRows: number
-}
-
-function TableSkeleton(): React.JSX.Element {
-  return (
-    <div className="flex flex-col gap-1.5 p-3">
-      <Skeleton className="h-7" />
-      {Array.from({ length: 10 }, (_, i) => (
-        <Skeleton key={i} className="h-6" />
-      ))}
-    </div>
-  )
 }
 
 export function ParquetPreview({
@@ -263,7 +208,7 @@ export function ParquetPreview({
                 >
                   {columns.map((col) => (
                     <td key={col} className="px-3 py-1.5">
-                      <ParquetCell value={row[col]} onZoom={setLightbox} />
+                      <PreviewCell value={row[col]} onZoom={setLightbox} />
                     </td>
                   ))}
                 </tr>

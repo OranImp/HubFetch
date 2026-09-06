@@ -26,6 +26,8 @@
     "confirm": "取消並移除",
     "title": "移除進行中的下載？"
   },
+  "count": "{{count}} 項工作",
+  "count_one": "{{count}} 項工作",
   "count_other": "{{count}} 項工作",
   "empty": {
     "body": "找到喜歡的模型後點選下載——檔案會存放在標準的 HF 快取中，可供 transformers、llama.cpp 等工具使用。",
@@ -61,7 +63,22 @@
     "manualLabel": "HTTP(S) 代理位址",
     "invalid": "請輸入有效的 http:// 或 https:// 位址，須包含主機與連接埠，且不含路徑、查詢參數或憑據。",
     "start": "開始下載",
-    "cancel": "取消"
+    "cancel": "取消",
+    "account": "需要帳戶",
+    "cached": "已快取",
+    "covered": "已涵蓋",
+    "files": "檔案",
+    "noFiles": "找不到檔案",
+    "proxyDirect": "直連",
+    "proxyManual": "手動",
+    "proxySystem": "系統",
+    "resolving": "正在解析…",
+    "retry": "重試",
+    "searchPlaceholder": "搜尋檔案…",
+    "selectAll": "全選",
+    "selectNone": "全部取消",
+    "selected": "已選 {{count}} 項",
+    "totalSize": "總大小：{{size}}"
   },
   "proxyModes": {
     "system": "系統",

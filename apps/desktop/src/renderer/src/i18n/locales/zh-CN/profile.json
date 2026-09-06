@@ -46,7 +46,32 @@
     },
     "reply": "回复",
     "replyInThread": "在话题中回复",
-    "replyPlaceholder": "回复 {{user}}… 支持 Markdown。"
+    "replyPlaceholder": "回复 {{user}}… 支持 Markdown。",
+    "translate": {
+      "action": "翻译为{{language}}",
+      "error": {
+        "auth": "翻译服务拒绝了此密钥。请在翻译设置中核对 API 密钥。",
+        "canceled": "翻译已取消。",
+        "empty-response": "翻译服务未返回文本。请重试该请求。",
+        "forbidden": "翻译服务拒绝了该请求。请检查账户权限。",
+        "input-too-long": "这篇帖子过长，无法翻译。请缩短内容或拆分后再试。",
+        "invalid-config": "翻译设置无效。请检查模型与接口地址后再试。",
+        "malformed-response": "无法读取翻译结果。请重试，或换用其他提供方。",
+        "model-not-found": "未找到已配置的翻译模型。请检查模型 ID。",
+        "not-configured": "尚未配置翻译。请在翻译设置中添加服务提供方。",
+        "provider-unavailable": "翻译服务暂时不可用。请稍后再试。",
+        "rate-limited": "翻译服务正在限流。请稍候再重试。",
+        "refused": "翻译服务拒绝翻译这篇帖子。请换一篇帖子或换用其他提供方。",
+        "timeout": "翻译请求超时。请检查网络或代理后再重试。",
+        "unknown": "翻译失败。请重试，或检查翻译设置。"
+      },
+      "openSettings": "打开翻译设置",
+      "original": "原文",
+      "sameLanguage": "这篇帖子已是{{language}}",
+      "translated": "译文",
+      "translating": "正在翻译…",
+      "view": "译文视图"
+    }
   },
   "reactions": {
     "error": "回应更新失败：{{error}}"
@@ -63,14 +88,14 @@
   "unfollow": "取消关注",
   "unwatch": "取消 Watch",
   "unwatchOpenHub": "Hub 会忽略应用发起的 Unwatch——请到其 Hub 页面上操作。",
+  "unwatchSuccess": "已取消 Watch。",
   "viewProfile": "查看主页",
   "watch": "Watch",
   "watchError": "无法更新 Watch：{{error}}",
   "watchOnHub": "在 Hub 中打开",
+  "watchOpenHub": "Hub 会忽略应用发起的 Watch——请到其 Hub 页面上点 Watch repositories。",
   "watchReconnect": "打开设置",
   "watchSessionExpired": "Hub 忽略了本次 Watch 变更——网页会话可能已过期。请在 设置 → 账户 中重新连接。",
   "watchSuccess": "已 Watch——你将收到该账号的 Hub 通知。",
-  "unwatchSuccess": "已取消 Watch。",
-  "watchOpenHub": "Hub 会忽略应用发起的 Watch——请到其 Hub 页面上点 Watch repositories。",
   "watchSyncNotApplied": "已在本地关注。Hub 会忽略应用发起的 watch 请求——如需该账号的 Hub 通知，请到其 Hub 页面上点 Watch。"
 }

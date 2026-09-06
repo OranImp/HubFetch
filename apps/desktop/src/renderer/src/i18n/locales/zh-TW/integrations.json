@@ -4,6 +4,7 @@
     "copied": "已匯出至 {{path}}。",
     "failed": "匯出失敗：{{error}}",
     "invalidPath": "無效的檔案路徑：{{file}}",
+    "lmstudioMissing": "找不到 LM Studio。請從 lmstudio.ai 安裝後再試一次。",
     "notInCache": "{{file}} 尚未存在於本機快取中——請先下載它。",
     "ollamaDone": "已建立 Ollama 模型 {{name}}。",
     "ollamaFailed": "Ollama 匯入失敗：{{error}}",

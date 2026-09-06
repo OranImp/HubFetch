@@ -11,6 +11,7 @@
     "pauseAll": "全部暂停",
     "resumeAll": "全部继续"
   },
+  "checksumsVerified": "校验和验证通过",
   "commands": {
     "actions": "操作",
     "downloadCurrentRepository": "下载 {{repo}}",
@@ -26,12 +27,51 @@
     "confirm": "取消并移除",
     "title": "移除进行中的下载？"
   },
+  "count": "{{count}} 个任务",
+  "count_one": "{{count}} 个任务",
   "count_other": "{{count}} 个任务",
+  "create": {
+    "account": "需要登录",
+    "cached": "已缓存",
+    "cancel": "取消",
+    "covered": "已覆盖",
+    "description": "选择此下载的连接方式。选择在下载开始时确定，并对该任务保持不变。",
+    "files": "文件",
+    "hintDirect": "绕过所有代理，直接连接。",
+    "hintManual": "使用固定的 HTTP(S) 代理服务器。",
+    "hintSystem": "使用操作系统的代理设置。",
+    "invalid": "请输入有效的 http:// 或 https:// 地址，需包含主机和端口，且不含路径、查询参数或凭据。",
+    "manualLabel": "HTTP(S) 代理地址",
+    "modeDirect": "直连",
+    "modeLabel": "代理模式",
+    "modeManual": "手动",
+    "modeSystem": "系统",
+    "noFiles": "未找到文件",
+    "proxyDirect": "直连",
+    "proxyManual": "手动",
+    "proxySystem": "系统",
+    "resolving": "正在解析…",
+    "retry": "重试",
+    "searchPlaceholder": "搜索文件…",
+    "selectAll": "全选",
+    "selected": "已选 {{count}} 项",
+    "selectNone": "取消全选",
+    "start": "开始下载",
+    "title": "下载选项",
+    "totalSize": "总大小：{{size}}",
+    "useDefault": "使用设置默认值",
+    "useDefaultHint": "当前：{{mode}}"
+  },
   "empty": {
     "body": "找到心仪的模型后点击“下载”——文件会存入标准 HF 缓存，transformers、llama.cpp 等工具可直接使用。",
     "title": "还没有下载任务"
   },
   "files": "{{done}}/{{total}} 个文件",
+  "proxyModes": {
+    "direct": "直连",
+    "manual": "手动",
+    "system": "系统"
+  },
   "removed": "已移除下载记录",
   "revision": "修订 {{revision}}",
   "speed": "{{speed}}/秒",
@@ -43,31 +83,8 @@
     "queued": "排队中",
     "running": "下载中"
   },
-  "title": "下载",
-  "verified": "sha256 校验通过",
-  "checksumsVerified": "校验和验证通过",
-  "create": {
-    "title": "下载选项",
-    "description": "选择此下载的连接方式。选择在下载开始时确定，并对该任务保持不变。",
-    "useDefault": "使用设置默认值",
-    "useDefaultHint": "当前：{{mode}}",
-    "modeLabel": "代理模式",
-    "modeSystem": "系统",
-    "modeDirect": "直连",
-    "modeManual": "手动",
-    "hintSystem": "使用操作系统的代理设置。",
-    "hintDirect": "绕过所有代理，直接连接。",
-    "hintManual": "使用固定的 HTTP(S) 代理服务器。",
-    "manualLabel": "HTTP(S) 代理地址",
-    "invalid": "请输入有效的 http:// 或 https:// 地址，需包含主机和端口，且不含路径、查询参数或凭据。",
-    "start": "开始下载",
-    "cancel": "取消"
-  },
-  "proxyModes": {
-    "system": "系统",
-    "direct": "直连",
-    "manual": "手动"
-  },
   "taskProxy": "代理：{{mode}}",
-  "taskProxyManual": "代理：手动（{{url}}）"
+  "taskProxyManual": "代理：手动（{{url}}）",
+  "title": "下载",
+  "verified": "sha256 校验通过"
 }

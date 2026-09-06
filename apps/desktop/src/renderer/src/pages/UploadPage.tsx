@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { FolderOpen, ShieldAlert, UploadCloud, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FolderOpen, RefreshCw, ShieldAlert, Trash2, UploadCloud, X } from 'lucide-react'
 import type {
   RepoKind,
   UploadIntegrationTask,
   UploadSelection,
+  UploadTaskRecord,
   UploadWarningCode
 } from '@hubfetch/shared'
 import { describeError } from '@/lib/errors'
@@ -31,6 +32,7 @@ export function UploadPage(): React.JSX.Element {
   const auth = useAppStore((state) => state.auth)
   const openSettings = useAppStore((state) => state.openSettings)
   const push = useToasts((state) => state.push)
+  const queryClient = useQueryClient()
   const [selection, setSelection] = useState<UploadSelection | null>(null)
   const [acknowledged, setAcknowledged] = useState<Set<UploadWarningCode>>(new Set())
   const [name, setName] = useState('')
@@ -50,6 +52,12 @@ export function UploadPage(): React.JSX.Element {
       ),
     [tasks.data]
   )
+
+  const persistedTasks = useQuery({
+    queryKey: ['upload-persisted'],
+    queryFn: () => invoke('upload:listPersisted', undefined),
+    staleTime: Infinity
+  })
 
   const pickFolder = useMutation({
     mutationFn: () => invoke('upload:selectFolder', undefined),
@@ -83,11 +91,27 @@ export function UploadPage(): React.JSX.Element {
         }
       })
     },
-    onSuccess: () => setSelection(null),
+    onSuccess: () => {
+      setSelection(null)
+      queryClient.invalidateQueries({ queryKey: ['upload-persisted'] })
+    },
     onError: (error) => push(describeError(t, error), 'error')
   })
   const cancel = useMutation({
     mutationFn: (id: string) => invoke('upload:cancel', { id }),
+    onError: (error) => push(describeError(t, error), 'error')
+  })
+  const retry = useMutation({
+    mutationFn: (taskId: string) => invoke('upload:retry', { request: { taskId } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['upload-persisted'] })
+      queryClient.invalidateQueries({ queryKey: ['integration-tasks'] })
+    },
+    onError: (error) => push(describeError(t, error), 'error')
+  })
+  const remove = useMutation({
+    mutationFn: (id: string) => invoke('upload:remove', { id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['upload-persisted'] }),
     onError: (error) => push(describeError(t, error), 'error')
   })
 
@@ -109,6 +133,13 @@ export function UploadPage(): React.JSX.Element {
       return next
     })
   }
+
+  const isRetryable = (status: string): boolean =>
+    status === 'interrupted' || status === 'error' || status === 'account-unavailable'
+
+  const isRemovable = (status: string): boolean =>
+    status === 'done' || status === 'error' || status === 'canceled' ||
+    status === 'interrupted' || status === 'selection-stale' || status === 'account-unavailable'
 
   return (
     <div className="h-full overflow-y-auto">
@@ -282,6 +313,78 @@ export function UploadPage(): React.JSX.Element {
                 <UploadCloud className="size-3.5" aria-hidden />
                 {start.isPending ? t('upload:creating') : t('upload:create')}
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Persisted upload tasks */}
+        {persistedTasks.data && persistedTasks.data.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <h2 className="text-[13px] font-semibold text-ink-strong">
+              {t('upload:previousUploads')}
+            </h2>
+            <div className="flex flex-col gap-2">
+              {persistedTasks.data.map((record) => (
+                <div
+                  key={record.id}
+                  className="flex flex-col gap-2 rounded-lg border border-border-card bg-card-gradient p-3 text-[12px]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-ink-strong">
+                        {record.repoKind}/{record.repoName}
+                      </span>
+                      <span className="ml-2 text-ink-faint">
+                        {t(`upload:status.${record.status}`, { defaultValue: record.status })}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {isRetryable(record.status) && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={retry.isPending}
+                          disabled={Boolean(activeUpload)}
+                          onClick={() => retry.mutate(record.id)}
+                        >
+                          <RefreshCw className="size-3.5" aria-hidden />
+                          {t('upload:retry')}
+                        </Button>
+                      )}
+                      {isRemovable(record.status) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={remove.isPending}
+                          onClick={() => remove.mutate(record.id)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-faint">
+                    <span>
+                      {record.summaryFileCount} {t('upload:files')}, {formatBytes(record.summaryTotalBytes)}
+                    </span>
+                    {record.repoUrl && (
+                      <span className="truncate" title={record.repoUrl}>
+                        {record.repoUrl}
+                      </span>
+                    )}
+                    {record.messageKey && (
+                      <span className="text-warning">
+                        {t(record.messageKey, { ...record.params, defaultValue: record.messageKey })}
+                      </span>
+                    )}
+                  </div>
+                  {record.status === 'interrupted' && (
+                    <p className="text-[11px] text-ink-faint italic">
+                      {t('upload:interruptedHint')}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

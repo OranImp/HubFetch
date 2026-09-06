@@ -58,15 +58,16 @@ export function HomePage(): React.JSX.Element {
   })
 
   // Shares the ['follows'] cache entry with the Inbox page.
+  const auth = useAppStore((s) => s.auth)
+  const accountId = auth.status === 'signedIn' ? auth.accountId : 'legacy-local'
   const follows = useQuery({
-    queryKey: ['follows'],
+    queryKey: ['follows', accountId],
     queryFn: () => invoke('follows:list', undefined),
     staleTime: STALE_TIME
   })
 
   // The REAL Hugging Face following list of the signed-in account drives the feed;
   // local follows extend it (and are the only source when signed out).
-  const auth = useAppStore((s) => s.auth)
   const me = auth.status === 'signedIn' ? auth.user.name : undefined
   const signedIn = auth.status === 'signedIn'
 

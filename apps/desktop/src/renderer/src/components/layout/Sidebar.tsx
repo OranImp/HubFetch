@@ -118,6 +118,7 @@ function isNavItemActive(item: NavItem, pathname: string, allItems: NavItem[]): 
 export function Sidebar(): React.JSX.Element {
   const { t } = useTranslation(['nav', 'auth', 'common'])
   const auth = useAppStore((s) => s.auth)
+  const accountId = auth.status === 'signedIn' ? auth.accountId : 'legacy-local'
   const endpointKey = normalizeHubEndpoint(useAppStore((s) => s.settings.hubEndpoint))
   const settingsOpen = useAppStore((s) => s.settingsOpen)
   const openSettings = useAppStore((s) => s.openSettings)
@@ -130,7 +131,10 @@ export function Sidebar(): React.JSX.Element {
     queryKey: ['downloads'],
     queryFn: () => invoke('downloads:list', undefined)
   })
-  const inbox = useQuery({ queryKey: ['inbox'], queryFn: () => invoke('inbox:list', undefined) })
+  const inbox = useQuery({
+    queryKey: ['inbox', accountId],
+    queryFn: () => invoke('inbox:list', undefined)
+  })
   // Hub notifications are the Inbox's default tab for signed-in users, so the
   // badge counts them too. Shares the NotificationBell's cache entry; options
   // mirror it so the two observers agree.

@@ -4,6 +4,7 @@
     "copied": "Exporté vers {{path}}.",
     "failed": "Échec de l'export : {{error}}",
     "invalidPath": "Chemin de fichier invalide : {{file}}",
+    "lmstudioMissing": "LM Studio est introuvable. Installez-le depuis lmstudio.ai et réessayez.",
     "notInCache": "{{file}} n'est pas encore dans le cache local — téléchargez-le d'abord.",
     "ollamaDone": "Modèle Ollama {{name}} créé.",
     "ollamaFailed": "Échec de l'import Ollama : {{error}}",

@@ -1,6 +1,15 @@
 {
   "actions": "建议操作",
   "cancel": "取消",
+  "capabilityStatus": {
+    "available": "可用",
+    "forbidden": "被拒绝",
+    "network": "网络错误",
+    "rate-limited": "受到限流",
+    "session-required": "需要会话",
+    "unauthorized": "未授权",
+    "upstream-changed": "上游已变化"
+  },
   "category": {
     "app": "应用",
     "cache": "缓存",
@@ -18,9 +27,13 @@
   "durationMs": "{{ms}} 毫秒",
   "exportBundle": "导出支持包",
   "exportCanceled": "支持包导出已取消",
-  "exportFailed": "支持包导出失败",
   "exported": "支持包已保存到 {{path}}",
+  "exportFailed": "支持包导出失败",
   "exporting": "正在导出支持包…",
+  "hubCapabilities": {
+    "probe": "探测",
+    "title": "Hub 能力兼容性"
+  },
   "noResults": {
     "body": "运行就绪检查即可查看报告。",
     "title": "尚未检查"

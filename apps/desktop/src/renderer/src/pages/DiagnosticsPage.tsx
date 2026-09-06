@@ -2,13 +2,19 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, Download, RefreshCw, ShieldCheck, X } from 'lucide-react'
-import type { DiagnosticCategory, DiagnosticStatus, DiagnosticsProgress } from '@hubfetch/shared'
+import type {
+  DiagnosticCategory,
+  DiagnosticStatus,
+  DiagnosticsProgress,
+  HubCapabilityStatus
+} from '@hubfetch/shared'
 import {
   cancelBundleExport,
   cancelDiagnostics,
   exportSupportBundle,
   runDiagnostics
 } from '@/lib/diagnostics'
+import { probeHubCapability, readHubCapabilities } from '@/lib/compatibility'
 import { useIpcEvent } from '@/hooks/use-ipc-event'
 import { describeError } from '@/lib/errors'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +22,9 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToasts } from '@/components/ui/toaster'
+import { useAppStore } from '@/stores/app'
+import { openExternal } from '@/lib/ipc'
+import { hubRelativeUrl } from '@hubfetch/shared'
 
 const CATEGORY_ORDER: DiagnosticCategory[] = [
   'app',
@@ -38,10 +47,25 @@ const STATUS_VARIANT: Record<DiagnosticStatus, 'success' | 'warning' | 'error' |
   unknown: 'neutral'
 }
 
+const CAPABILITY_VARIANT: Record<
+  HubCapabilityStatus['status'],
+  'success' | 'warning' | 'error'
+> = {
+  available: 'success',
+  'session-required': 'warning',
+  unauthorized: 'warning',
+  forbidden: 'error',
+  'rate-limited': 'warning',
+  'upstream-changed': 'error',
+  network: 'error'
+}
+
 export function DiagnosticsPage(): React.JSX.Element {
   const { t } = useTranslation(['diagnostics', 'common', 'errors'])
   const queryClient = useQueryClient()
   const push = useToasts((s) => s.push)
+  const openSettings = useAppStore((state) => state.openSettings)
+  const hubEndpoint = useAppStore((state) => state.settings.hubEndpoint)
   const [runProgress, setRunProgress] = useState<DiagnosticsProgress | null>(null)
   const [exportProgress, setExportProgress] = useState<DiagnosticsProgress | null>(null)
 
@@ -51,6 +75,23 @@ export function DiagnosticsPage(): React.JSX.Element {
     staleTime: 0,
     placeholderData: keepPreviousData,
     retry: false
+  })
+
+  const capabilities = useQuery({
+    queryKey: ['hub-capabilities'],
+    queryFn: () => readHubCapabilities(),
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false
+  })
+
+  const probe = useMutation({
+    mutationFn: (key: HubCapabilityStatus['key']) => probeHubCapability(key),
+    onSuccess: (next) => {
+      queryClient.setQueryData<HubCapabilityStatus[]>(['hub-capabilities'], (current) =>
+        current?.map((entry) => (entry.key === next.key ? next : entry))
+      )
+    },
+    onError: (err) => push(describeError(t, err), 'error')
   })
 
   useIpcEvent(
@@ -206,6 +247,72 @@ export function DiagnosticsPage(): React.JSX.Element {
             </span>
             <span className="truncate">{exportProgress.status}</span>
           </div>
+        )}
+
+        {capabilities.data && (
+          <section className="rounded-lg border">
+            <header className="flex items-center justify-between rounded-t-lg border-b px-3 py-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-3.5 text-ink-muted" aria-hidden />
+                <h2 className="text-[13px] font-semibold text-ink-strong">
+                  {t('diagnostics:hubCapabilities.title')}
+                </h2>
+                <Badge variant="outline" className="nums">
+                  {capabilities.data.length}
+                </Badge>
+              </div>
+            </header>
+            <ul className="divide-y">
+              {capabilities.data.map((capability) => (
+                <li key={capability.key} className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={CAPABILITY_VARIANT[capability.status]} className="shrink-0">
+                      {t(`diagnostics:capabilityStatus.${capability.status}`)}
+                    </Badge>
+                    <code className="min-w-0 flex-1 truncate text-[11.5px] text-ink-strong">
+                      {capability.key}
+                    </code>
+                    <span className="shrink-0 text-[10.5px] text-ink-faint">
+                      {capability.sourceClass}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      loading={probe.isPending && probe.variables === capability.key}
+                      disabled={probe.isPending}
+                      onClick={() => void probe.mutate(capability.key)}
+                    >
+                      {t('diagnostics:hubCapabilities.probe')}
+                    </Button>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2 text-[10.5px] text-ink-faint">
+                    <span>{capability.domain}</span>
+                    <span>{capability.lastCheckedAt}</span>
+                  </div>
+                  {capability.status === 'session-required' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-1.5"
+                      onClick={() => openSettings('account')}
+                    >
+                      {t('auth:hubSession.connect')}
+                    </Button>
+                  )}
+                  {capability.status === 'forbidden' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-1.5"
+                      onClick={() => openExternal(hubRelativeUrl('', hubEndpoint))}
+                    >
+                      {t('common:openOnHub')}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {report.isLoading && (

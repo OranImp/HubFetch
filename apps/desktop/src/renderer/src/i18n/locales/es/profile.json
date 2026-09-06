@@ -32,6 +32,31 @@
     "error": {
       "title": "No se pudo cargar esta publicación"
     },
+    "translate": {
+      "action": "Traducir a {{language}}",
+      "original": "Original",
+      "translated": "Traducción",
+      "view": "Vista de traducción",
+      "sameLanguage": "Ya está en {{language}}",
+      "openSettings": "Abrir ajustes de traducción",
+      "translating": "Traduciendo…",
+      "error": {
+        "not-configured": "La traducción no está configurada. Añada un proveedor en Ajustes de traducción.",
+        "invalid-config": "Los ajustes de traducción no son válidos. Compruebe el modelo y el endpoint e inténtelo de nuevo.",
+        "auth": "El proveedor de traducción rechazó esta clave. Compruebe la clave API en Ajustes de traducción.",
+        "forbidden": "El proveedor de traducción denegó la solicitud. Compruebe los permisos de la cuenta.",
+        "model-not-found": "No se encontró el modelo de traducción configurado. Compruebe el ID del modelo.",
+        "rate-limited": "El proveedor de traducción está limitando las solicitudes. Espere un momento y reintente.",
+        "timeout": "La solicitud de traducción agotó el tiempo. Compruebe la red o el proxy y reintente.",
+        "canceled": "La traducción se canceló.",
+        "provider-unavailable": "El proveedor de traducción no está disponible. Inténtelo de nuevo en un momento.",
+        "malformed-response": "No se pudo leer la respuesta de traducción. Reintente o pruebe otro proveedor.",
+        "empty-response": "El proveedor de traducción no devolvió texto. Reintente la solicitud.",
+        "refused": "El proveedor de traducción rechazó esta publicación. Pruebe otra publicación u otro proveedor.",
+        "input-too-long": "Esta publicación es demasiado larga para traducirla. Acórtela o divida el contenido.",
+        "unknown": "La traducción falló. Reintente o compruebe Ajustes de traducción."
+      }
+    },
     "hide": {
       "action": "Ocultar",
       "confirm": "Ocultar comentario",

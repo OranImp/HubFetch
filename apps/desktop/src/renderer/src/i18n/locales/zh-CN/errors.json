@@ -1,19 +1,27 @@
 {
   "auth": "此操作需要登录。请在设置中填入 Hugging Face 令牌后重试。",
+  "boundary": {
+    "body": "请重新加载应用以恢复页面。如果问题持续，可复制已脱敏的详情用于问题反馈。",
+    "title": "此页面意外停止运行"
+  },
+  "capability": {
+    "forbidden": "Hub 拒绝了此能力。请打开安全的 Hub 页面检查权限或地区限制。",
+    "network": "此 Hub 能力无法连接服务。请检查网络或代理后重试。",
+    "rate-limited": "此 Hub 能力受到限流，请稍候再试。",
+    "session-required": "此能力需要 Hub 网页会话。请在设置中连接会话后重试。",
+    "unauthorized": "此能力需要已授权的 Hub 令牌。请检查账户设置后重试。",
+    "upstream-changed": "此 Hub 能力的上游协议发生变化，请打开 Hub 页面或稍后重试。"
+  },
+  "copyDetails": "复制详情",
+  "details": "技术详情（已脱敏）",
   "gated": "该仓库需要申请访问权限。请先在 Hub 上提交申请，获批后再试。",
   "network": "无法连接 Hugging Face API。请检查网络和代理设置后重试。",
   "notFound": "在 Hub 上找不到该内容——它可能已被移动、重命名或设为私有。",
-  "rateLimit": "Hugging Face API 已限流。应用会自动退避并重试，请稍候再试。",
-  "unknown": "出错了，请重试。",
-  "server": "Hugging Face API 返回服务器错误，请稍后重试。",
   "query": {
     "title": "无法加载此内容"
   },
-  "boundary": {
-    "title": "此页面意外停止运行",
-    "body": "请重新加载应用以恢复页面。如果问题持续，可复制已脱敏的详情用于问题反馈。"
-  },
-  "details": "技术详情（已脱敏）",
-  "copyDetails": "复制详情",
-  "reload": "重新加载应用"
+  "rateLimit": "Hugging Face API 已限流。应用会自动退避并重试，请稍候再试。",
+  "reload": "重新加载应用",
+  "server": "Hugging Face API 返回服务器错误，请稍后重试。",
+  "unknown": "出错了，请重试。"
 }

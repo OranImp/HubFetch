@@ -32,6 +32,31 @@
     "error": {
       "title": "Não foi possível carregar este post"
     },
+    "translate": {
+      "action": "Traduzir para {{language}}",
+      "original": "Original",
+      "translated": "Tradução",
+      "view": "Visualização da tradução",
+      "sameLanguage": "Já está em {{language}}",
+      "openSettings": "Abrir configurações de tradução",
+      "translating": "Traduzindo…",
+      "error": {
+        "not-configured": "A tradução não está configurada. Adicione um provedor nas configurações de tradução.",
+        "invalid-config": "As configurações de tradução são inválidas. Verifique o modelo e o endpoint e tente novamente.",
+        "auth": "O provedor de tradução rejeitou esta chave. Verifique a chave de API nas configurações de tradução.",
+        "forbidden": "O provedor de tradução recusou a solicitação. Verifique as permissões da conta.",
+        "model-not-found": "O modelo de tradução configurado não foi encontrado. Verifique o ID do modelo.",
+        "rate-limited": "O provedor de tradução está limitando as solicitações. Aguarde um momento e tente de novo.",
+        "timeout": "A solicitação de tradução expirou. Verifique a rede ou o proxy e tente de novo.",
+        "canceled": "A tradução foi cancelada.",
+        "provider-unavailable": "O provedor de tradução está indisponível. Tente novamente em instantes.",
+        "malformed-response": "Não foi possível ler a resposta da tradução. Tente de novo ou use outro provedor.",
+        "empty-response": "O provedor de tradução não devolveu texto. Tente a solicitação novamente.",
+        "refused": "O provedor de tradução recusou este post. Tente outro post ou outro provedor.",
+        "input-too-long": "Este post é longo demais para traduzir. Encurte-o ou divida o conteúdo.",
+        "unknown": "A tradução falhou. Tente de novo ou verifique as configurações de tradução."
+      }
+    },
     "hide": {
       "action": "Ocultar",
       "confirm": "Ocultar comentário",

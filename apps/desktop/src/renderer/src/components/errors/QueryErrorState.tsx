@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { CircleAlert, RotateCcw } from 'lucide-react'
+import { CircleAlert, ExternalLink, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { describeError } from '@/lib/errors'
+import { capabilityContextFromError, describeError } from '@/lib/errors'
 import { Button } from '@/components/ui/button'
+import { useAppStore } from '@/stores/app'
+import { openExternal } from '@/lib/ipc'
+import { hubRelativeUrl } from '@hubfetch/shared'
 
 interface QueryErrorStateProps {
   error: unknown
@@ -20,7 +23,10 @@ export function QueryErrorState({
   compact = false,
   className
 }: QueryErrorStateProps): React.JSX.Element {
-  const { t } = useTranslation(['errors', 'common'])
+  const { t } = useTranslation(['errors', 'common', 'auth'])
+  const openSettings = useAppStore((state) => state.openSettings)
+  const hubEndpoint = useAppStore((state) => state.settings.hubEndpoint)
+  const capability = capabilityContextFromError(error)
 
   return (
     <div
@@ -40,12 +46,34 @@ export function QueryErrorState({
         </p>
         <p className="text-[12.5px] leading-relaxed text-ink-muted">{describeError(t, error)}</p>
       </div>
-      {onRetry ? (
-        <Button variant="secondary" size="sm" onClick={onRetry}>
-          <RotateCcw className="size-3.5" aria-hidden />
-          {t('common:retry')}
-        </Button>
-      ) : null}
+      <div className="flex flex-wrap justify-center gap-2">
+        {onRetry ? (
+          <Button variant="secondary" size="sm" onClick={onRetry}>
+            <RotateCcw className="size-3.5" aria-hidden />
+            {t('common:retry')}
+          </Button>
+        ) : null}
+        {capability?.code === 'session-required' ? (
+          <Button variant="cta" size="sm" onClick={() => openSettings('account')}>
+            {t('auth:hubSession.connect')}
+          </Button>
+        ) : null}
+        {capability?.code === 'unauthorized' ? (
+          <Button variant="cta" size="sm" onClick={() => openSettings('account')}>
+            {t('auth:signIn')}
+          </Button>
+        ) : null}
+        {capability?.code === 'forbidden' ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => openExternal(hubRelativeUrl('', hubEndpoint))}
+          >
+            <ExternalLink className="size-3.5" aria-hidden />
+            {t('common:openOnHub')}
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }

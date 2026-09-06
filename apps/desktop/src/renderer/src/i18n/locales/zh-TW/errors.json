@@ -1,5 +1,13 @@
 {
   "auth": "此操作需要登入。請先在設定中新增您的 Hugging Face 權杖，然後再試一次。",
+  "capability": {
+    "forbidden": "Hub 拒絕了此能力。請開啟安全的 Hub 頁面檢查權限或地區限制。",
+    "network": "此 Hub 能力無法連線服務。請檢查網路或代理後重試。",
+    "rate-limited": "此 Hub 能力受到限流，請稍候再試。",
+    "session-required": "此能力需要 Hub 網頁工作階段。請在設定中連線工作階段後重試。",
+    "unauthorized": "此能力需要已授權的 Hub 權杖。請檢查帳戶設定後重試。",
+    "upstream-changed": "此 Hub 能力的上游協定發生變化，請開啟 Hub 頁面或稍後重試。"
+  },
   "gated": "此儲存庫受到限制。請在 Hub 上請求存取權限——獲授予後再試一次。",
   "network": "無法連線至 Hugging Face API。請檢查您的網路與代理伺服器設定後再試一次。",
   "notFound": "在 Hub 上找不到——可能已被移動、重新命名，或已設為私人。",

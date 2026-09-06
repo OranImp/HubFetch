@@ -1,6 +1,15 @@
 {
   "actions": "Recommended action",
   "cancel": "Cancel",
+  "capabilityStatus": {
+    "available": "Available",
+    "forbidden": "Forbidden",
+    "network": "Network",
+    "rate-limited": "Rate limited",
+    "session-required": "Session required",
+    "unauthorized": "Unauthorized",
+    "upstream-changed": "Upstream changed"
+  },
   "category": {
     "app": "App",
     "cache": "Cache",
@@ -18,9 +27,13 @@
   "durationMs": "{{ms}} ms",
   "exportBundle": "Export support bundle",
   "exportCanceled": "Support bundle export canceled",
-  "exportFailed": "Support bundle export failed",
   "exported": "Support bundle saved to {{path}}",
+  "exportFailed": "Support bundle export failed",
   "exporting": "Exporting support bundle…",
+  "hubCapabilities": {
+    "probe": "Probe",
+    "title": "Hub capability compatibility"
+  },
   "noResults": {
     "body": "Run the readiness checks to see a report.",
     "title": "No checks yet"

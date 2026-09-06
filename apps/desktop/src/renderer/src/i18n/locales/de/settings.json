@@ -16,6 +16,22 @@
     }
   },
   "account": {
+    "accounts": {
+      "active": "Aktiv",
+      "addAccount": "Konto hinzufügen",
+      "cancel": "Abbrechen",
+      "confirmRemove": "Konto entfernen",
+      "endpointMismatch": "Anderer Endpunkt",
+      "endpointMismatchHint": "Dieses Konto wurde für eine andere Hub-URL gespeichert. Öffnen Sie die Netzwerkeinstellungen, wechseln Sie zu diesem Endpunkt und nutzen Sie das Konto anschließend.",
+      "inUse": "{{downloads}} Downloads · {{clones}} Klons · {{uploads}} Uploads",
+      "invalid": "Erneute Anmeldung nötig",
+      "manage": "Konten verwalten",
+      "openNetwork": "Netzwerkeinstellungen öffnen",
+      "remove": "Entfernen",
+      "switch": "Wechseln",
+      "switching": "Wird gewechselt…",
+      "title": "Gespeicherte Konten"
+    },
     "billing": {
       "empty": "Für den aktuellen Zeitraum wurde keine Nutzung erfasst.",
       "gated": "Für die Abrechnungsnutzung ist die Berechtigung read-billing erforderlich. Autorisieren Sie erneut, um sie zu gewähren.",
@@ -162,6 +178,53 @@
       "invalid": "Geben Sie eine gültige http://- oder https://-URL mit Host und Port ein, ohne Pfad, Abfrage oder Anmeldedaten.",
       "testOkLatency": "In {{ms}} ms verbunden.",
       "resetProxy": "Proxy auf Standard zurückgesetzt."
+    }
+  },
+  "translation": {
+    "title": "Übersetzung",
+    "description": "Konfigurieren Sie OpenAI, Anthropic oder Gemini, um Beiträge in die aktuelle Softwaresprache zu übersetzen. Schlüssel bleiben auf diesem Gerät verschlüsselt und werden nach dem Speichern nicht mehr angezeigt.",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "gemini": "Gemini"
+    },
+    "configured": "Konfiguriert",
+    "notConfigured": "Nicht konfiguriert",
+    "baseUrl": "Basis-URL",
+    "model": "Modell",
+    "apiKey": "API-Schlüssel",
+    "apiKeyHint": "Leer lassen, um den gespeicherten Schlüssel zu behalten. Ein neuer Wert ersetzt ihn.",
+    "saveKey": "Schlüssel speichern",
+    "deleteKey": "Schlüssel löschen",
+    "deleteTitle": "Diesen API-Schlüssel löschen?",
+    "deleteBody": "Entfernt nur den gespeicherten Schlüssel des ausgewählten Anbieters. Andere Anbieter bleiben unverändert.",
+    "deleteConfirm": "Schlüssel löschen",
+    "reset": "Auf Standard zurücksetzen",
+    "apply": "Anwenden",
+    "test": "Verbindung testen",
+    "testHint": "Sendet eine kleine Anfrage und kann minimale Anbieternutzung verursachen.",
+    "testOkLatency": "In {{ms}} ms verbunden.",
+    "noKey": "Speichern Sie einen API-Schlüssel oder geben Sie hier einen ein, bevor Sie die Verbindung testen.",
+    "saved": "Übersetzungseinstellungen gespeichert.",
+    "keySaved": "API-Schlüssel gespeichert.",
+    "keyDeleted": "API-Schlüssel gelöscht.",
+    "invalidUrl": "Geben Sie eine gültige http://- oder https://-URL ohne Benutzer, Abfrage oder Fragment ein, oder lassen Sie das Feld leer.",
+    "invalidModel": "Geben Sie eine Modell-ID ein.",
+    "errors": {
+      "not-configured": "Für diesen Anbieter ist kein API-Schlüssel gespeichert.",
+      "invalid-config": "Das Modell oder der Endpunkt ist ungültig.",
+      "auth": "Der API-Schlüssel wurde abgelehnt.",
+      "forbidden": "Dieser Schlüssel darf dieses Modell nicht verwenden.",
+      "model-not-found": "Dieses Modell wurde nicht gefunden.",
+      "rate-limited": "Der Anbieter hat diese Anfrage begrenzt. Versuchen Sie es später erneut.",
+      "timeout": "Die Anfrage ist abgelaufen.",
+      "canceled": "Die Anfrage wurde abgebrochen.",
+      "provider-unavailable": "Der Anbieter ist nicht verfügbar.",
+      "malformed-response": "Der Anbieter hat eine nicht verwendbare Antwort zurückgegeben.",
+      "empty-response": "Der Anbieter hat eine leere Probeantwort zurückgegeben.",
+      "refused": "Der Anbieter hat die Anfrage abgelehnt.",
+      "input-too-long": "Die Anfrage war zu lang.",
+      "unknown": "Der Verbindungstest ist fehlgeschlagen."
     }
   },
   "notifications": {

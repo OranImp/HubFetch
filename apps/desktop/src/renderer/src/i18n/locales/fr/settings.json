@@ -16,6 +16,22 @@
     }
   },
   "account": {
+    "accounts": {
+      "active": "Actif",
+      "addAccount": "Ajouter un compte",
+      "cancel": "Annuler",
+      "confirmRemove": "Retirer le compte",
+      "endpointMismatch": "Autre point de terminaison",
+      "endpointMismatchHint": "Ce compte a été enregistré pour une autre URL Hub. Ouvrez les paramètres Réseau, passez à ce point de terminaison, puis vous pourrez utiliser ce compte.",
+      "inUse": "{{downloads}} téléchargements · {{clones}} clones · {{uploads}} envois",
+      "invalid": "Nouvelle connexion requise",
+      "manage": "Gérer les comptes",
+      "openNetwork": "Ouvrir les paramètres Réseau",
+      "remove": "Retirer",
+      "switch": "Changer",
+      "switching": "Changement…",
+      "title": "Comptes enregistrés"
+    },
     "billing": {
       "empty": "Aucune utilisation enregistrée pour la période en cours.",
       "gated": "L'utilisation de facturation nécessite la permission read-billing. Réautorisez pour l'accorder.",
@@ -162,6 +178,53 @@
       "invalid": "Saisissez une URL http:// ou https:// valide avec un hôte et un port, sans chemin, requête ni identifiants.",
       "testOkLatency": "Connecté en {{ms}} ms.",
       "resetProxy": "Proxy réinitialisé par défaut."
+    }
+  },
+  "translation": {
+    "title": "Traduction",
+    "description": "Configurez OpenAI, Anthropic ou Gemini pour traduire les publications dans la langue actuelle du logiciel. Les clés restent chiffrées sur cet appareil et ne s'affichent plus après l'enregistrement.",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "gemini": "Gemini"
+    },
+    "configured": "Configuré",
+    "notConfigured": "Non configuré",
+    "baseUrl": "URL de base",
+    "model": "Modèle",
+    "apiKey": "Clé API",
+    "apiKeyHint": "Laissez vide pour conserver la clé enregistrée. Une nouvelle valeur la remplace.",
+    "saveKey": "Enregistrer la clé",
+    "deleteKey": "Supprimer la clé",
+    "deleteTitle": "Supprimer cette clé API ?",
+    "deleteBody": "Supprime uniquement la clé enregistrée du fournisseur sélectionné. Les autres fournisseurs restent inchangés.",
+    "deleteConfirm": "Supprimer la clé",
+    "reset": "Réinitialiser par défaut",
+    "apply": "Appliquer",
+    "test": "Tester la connexion",
+    "testHint": "Envoie une petite requête et peut entraîner une utilisation minimale du fournisseur.",
+    "testOkLatency": "Connecté en {{ms}} ms.",
+    "noKey": "Enregistrez une clé API, ou saisissez-en une ici, avant de tester la connexion.",
+    "saved": "Paramètres de traduction enregistrés.",
+    "keySaved": "Clé API enregistrée.",
+    "keyDeleted": "Clé API supprimée.",
+    "invalidUrl": "Saisissez une URL http:// ou https:// valide sans utilisateur, requête ni fragment, ou laissez vide.",
+    "invalidModel": "Saisissez un identifiant de modèle.",
+    "errors": {
+      "not-configured": "Aucune clé API n'est enregistrée pour ce fournisseur.",
+      "invalid-config": "Le modèle ou le point de terminaison n'est pas valide.",
+      "auth": "La clé API a été rejetée.",
+      "forbidden": "Cette clé n'est pas autorisée à utiliser ce modèle.",
+      "model-not-found": "Ce modèle est introuvable.",
+      "rate-limited": "Le fournisseur a limité cette requête. Réessayez plus tard.",
+      "timeout": "La requête a expiré.",
+      "canceled": "La requête a été annulée.",
+      "provider-unavailable": "Le fournisseur est indisponible.",
+      "malformed-response": "Le fournisseur a renvoyé une réponse inutilisable.",
+      "empty-response": "Le fournisseur a renvoyé une réponse de test vide.",
+      "refused": "Le fournisseur a refusé la requête.",
+      "input-too-long": "La requête était trop longue.",
+      "unknown": "Le test de connexion a échoué."
     }
   },
   "notifications": {

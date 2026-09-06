@@ -6,6 +6,12 @@
   "confirm": "확인",
   "copied": "복사됨",
   "copy": "복사",
+  "datasetPreview": {
+    "profileDistinct": "고유 값",
+    "profileNull": "누락된 값",
+    "profileNumeric": "숫자 열",
+    "profileString": "문자열 열"
+  },
   "delete": "삭제",
   "dismiss": "닫기",
   "error": {

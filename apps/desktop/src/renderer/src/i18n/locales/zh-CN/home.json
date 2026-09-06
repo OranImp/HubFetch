@@ -20,9 +20,9 @@
     "emptyBody": "Hugging Face Hub 上的动态会显示在这里。",
     "emptyFollowing": "你还没有关注任何人",
     "emptyFollowingBody": "在收件箱中关注用户和组织，他们最新的模型和数据集就会出现在这里。",
+    "error": "动态加载失败",
     "manageFollows": "管理关注",
-    "updated": "<author>{{author}}</author> 更新了 <repo>{{repo}}</repo>",
-    "error": "动态加载失败"
+    "updated": "<author>{{author}}</author> 更新了 <repo>{{repo}}</repo>"
   },
   "kind": {
     "post": "帖子"

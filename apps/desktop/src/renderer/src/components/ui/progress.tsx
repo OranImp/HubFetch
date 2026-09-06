@@ -14,21 +14,23 @@ export function Progress({
   className,
   indeterminate,
   'aria-valuetext': ariaValueText,
+  'aria-label': ariaLabel,
   ...props
 }: ProgressProps): React.JSX.Element {
   const { t } = useTranslation('common')
   const pending = indeterminate || value === undefined
   const pct = Math.max(0, Math.min(1, value ?? 0)) * 100
+  const valueText =
+    ariaValueText ?? (pending ? t('common:progress.indeterminate') : `${Math.round(pct)}%`)
   return (
     <div
       {...props}
       role="progressbar"
+      aria-label={ariaLabel ?? valueText}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={pending ? undefined : Math.round(pct)}
-      aria-valuetext={
-        ariaValueText ?? (pending ? t('common:progress.indeterminate') : `${Math.round(pct)}%`)
-      }
+      aria-valuetext={valueText}
       aria-busy={pending}
       className={cn('h-1.5 w-full overflow-hidden rounded-full bg-panel-2', className)}
     >

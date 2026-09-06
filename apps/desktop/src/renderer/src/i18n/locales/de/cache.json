@@ -1,9 +1,35 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "Das Konto für diese Reparatur ist nicht verfügbar.",
+      "integrity": "Die heruntergeladene Datei stimmte nicht überein. Es wurde nichts geändert.",
+      "internal": "Bereinigung fehlgeschlagen. Es wurde nichts geändert.",
+      "network": "Der Hub war nicht erreichbar. Versuchen Sie es erneut, wenn Sie online sind.",
+      "plan-digest-mismatch": "Diese Vorschau wurde abgelehnt. Erstellen Sie den Plan neu.",
+      "plan-expired": "Diese Vorschau ist abgelaufen. Erstellen Sie den Plan neu.",
+      "plan-not-found": "Diese Vorschau ist verschwunden. Erstellen Sie den Plan neu.",
+      "plan-stale-account": "Das angemeldete Konto hat sich geändert. Erstellen Sie den Plan neu.",
+      "plan-stale-environment": "Die Netzwerkeinstellungen haben sich geändert. Erstellen Sie den Plan neu.",
+      "plan-stale-filesystem": "Dateien auf dem Datenträger haben sich geändert. Erstellen Sie den Plan neu.",
+      "plan-stale-protected": "Ein Download hat begonnen, Dateien zu schützen. Erstellen Sie den Plan neu.",
+      "unsupported-issue": "Diese Probleme können nicht automatisch repariert werden."
+    },
+    "pruneSuccess": "Bereinigung abgeschlossen. {{size}} freigegeben.",
+    "repairSuccess": "Reparatur abgeschlossen. {{size}} erneut heruntergeladen."
+  },
+  "cancelVerify": "Überprüfung abbrechen",
+  "cancelVerifyTooltip": "Integritätsprüfung anhalten",
+  "cleanPartials": "Bereinigen",
   "confirmDelete": {
     "body": "Dadurch werden {{size}} Speicherplatz freigegeben. Dateien, die mit anderen Revisionen geteilt werden, bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
     "title": "{{count}} Revision(en) löschen?",
     "title_one": "{{count}} Revision löschen?",
     "title_other": "{{count}} Revisionen löschen?"
+  },
+  "counts": {
+    "corrupt": "{{count}} beschädigt",
+    "unreadable": "{{count}} unlesbar",
+    "verified": "{{count}} geprüft"
   },
   "deleted": "Gelöscht. {{size}} freigegeben.",
   "deleteRevision": "Revision löschen",
@@ -15,8 +41,57 @@
   "files": "{{count}} Dateien",
   "files_one": "{{count}} Datei",
   "files_other": "{{count}} Dateien",
+  "issues": {
+    "broken-snapshot-link": "Defekter Snapshot-Link",
+    "hash-mismatch": "Hash stimmt nicht überein",
+    "invalid-blob-name": "Ungültiger Blob-Name",
+    "missing-blob": "Fehlender Blob",
+    "snapshot-escape": "Snapshot-Pfad verlassen",
+    "unmatched-snapshot-copy": "Nicht zugeordnete Snapshot-Kopie",
+    "unreadable": "Unlesbar"
+  },
+  "lastVerified": "Zuletzt geprüft {{time}}",
   "location": "Cache-Speicherort",
+  "neverVerified": "Noch nicht geprüft",
   "noRefs": "keine Referenzen",
+  "partialData": "{{size}} unvollständige Downloaddaten",
+  "pinned": "angeheftet",
+  "plan": {
+    "accountAnonymous": "Öffentlicher Hub-Download — für diesen Plan wurde kein Konto erfasst.",
+    "accountRequired": "Verwendet Konto {{label}}",
+    "apply": "Plan anwenden",
+    "download": "Etwa {{size}} werden heruntergeladen",
+    "empty": "Keine Bereinigungskandidaten",
+    "kind": {
+      "detached-snapshot": "Losgelöster Snapshot",
+      "orphan-blob": "Verwaister Blob",
+      "stale-partial": "Verbliebene Teildatei"
+    },
+    "protected": "Laufende oder pausierte Downloads schützen {{commits}} Revision(en) und {{tasks}} Teildatei(en).",
+    "protectedNone": "Keine laufenden Downloads schützen Dateien in diesem Plan.",
+    "pruneBody": "Diese Einträge können entfernt werden. Geschützte laufende Downloads bleiben.",
+    "pruneTitle": "Bereinigungsplan",
+    "reclaim": "Etwa {{size}} werden freigegeben",
+    "repairBody": "Diese Dateien werden für Commit {{commit}} erneut heruntergeladen.",
+    "repairTitle": "Reparaturplan",
+    "replan": "Plan neu erstellen",
+    "stale": "Der Cache hat sich seit dieser Vorschau geändert. Erstellen Sie den Plan neu, um fortzufahren."
+  },
+  "progress": {
+    "done": "Prüfung abgeschlossen",
+    "scanning": "Repositorys werden aufgelistet…",
+    "verifying": "{{current}} wird geprüft ({{completed}}/{{total}})"
+  },
+  "prune": "Bereinigung planen",
+  "pruneTooltip": "Losgelöste Revisionen, verwaiste Blobs und verbliebene Teildateien anzeigen",
+  "repair": "Reparieren",
+  "repairDisabled": {
+    "accountUnavailable": "Das angemeldete Konto ist nicht verfügbar. Öffnen Sie die Kontoeinstellungen.",
+    "noIssues": "Nichts zu reparieren — führen Sie zuerst Prüfen aus, oder der Cache ist bereits in Ordnung.",
+    "signedOut": "Melden Sie sich an, um Dateien vom Hub zu reparieren.",
+    "unsupported": "Diese Probleme können nicht automatisch repariert werden."
+  },
+  "repairTooltip": "Zugeordnete beschädigte Dateien erneut vom Hub herunterladen",
   "reposCount": "{{count}} zwischengespeicherte Repositories",
   "reposCount_one": "{{count}} zwischengespeichertes Repository",
   "reposCount_other": "{{count}} zwischengespeicherte Repositories",
@@ -25,9 +100,13 @@
   "revisions_other": "{{count}} Revisionen",
   "scan": "Erneut scannen",
   "scanning": "Wird gescannt…",
+  "scopeNote": "Integritätsprüfungen vergleichen lokale Blobs mit ihren Namen. Sie prüfen nicht, ob der Hub neuere Dateien hat.",
   "title": "Lokaler Cache",
   "totalOnDisk": "{{size}} auf der Festplatte",
-  "pinned": "angeheftet",
-  "partialData": "{{size}} unvollständige Downloaddaten",
-  "cleanPartials": "Bereinigen"
+  "truncated": "Problemliste gekürzt; nach der Bereinigung erneut ausführen.",
+  "verify": "Integrität prüfen",
+  "verifyCanceled": "Überprüfung abgebrochen",
+  "verifyCleanBody": "Blob-Hashes stimmten mit den Dateinamen überein. Es wird nicht geprüft, ob der Hub neuere Dateien hat.",
+  "verifyError": "Überprüfung fehlgeschlagen",
+  "verifyTooltip": "Lokale Blob-Hashes prüfen. Es wird kein Hub kontaktiert."
 }

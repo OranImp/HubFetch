@@ -6,6 +6,12 @@
   "confirm": "確認",
   "copied": "已複製",
   "copy": "複製",
+  "datasetPreview": {
+    "profileDistinct": "不重複值",
+    "profileNull": "缺失值",
+    "profileNumeric": "數值欄位",
+    "profileString": "字串欄位"
+  },
   "delete": "刪除",
   "dismiss": "關閉",
   "error": {

@@ -48,6 +48,7 @@
   "error": {
     "title": "Could not load collections"
   },
+  "itemCount": "{{count}} items",
   "itemCount_one": "{{count}} item",
   "itemCount_other": "{{count}} items",
   "itemRemoved": "Removed from collection",

@@ -1,8 +1,34 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "用于修复的账户不可用。",
+      "integrity": "下载的文件校验失败，缓存未被改动。",
+      "internal": "清理失败，缓存未被改动。",
+      "network": "无法连接到 Hub。联网后再试。",
+      "plan-digest-mismatch": "此预览已被拒绝。请重新生成计划。",
+      "plan-expired": "此预览已过期。请重新生成计划。",
+      "plan-not-found": "此预览已失效。请重新生成计划。",
+      "plan-stale-account": "登录账户已更改。请重新生成计划。",
+      "plan-stale-environment": "网络设置已更改。请重新生成计划。",
+      "plan-stale-filesystem": "磁盘上的文件已变化。请重新生成计划。",
+      "plan-stale-protected": "有下载开始保护这些文件。请重新生成计划。",
+      "unsupported-issue": "这些问题无法自动修复。"
+    },
+    "pruneSuccess": "清理完成，释放 {{size}}。",
+    "repairSuccess": "修复完成，重新下载 {{size}}。"
+  },
+  "cancelVerify": "取消校验",
+  "cancelVerifyTooltip": "停止完整性检查",
+  "cleanPartials": "清理",
   "confirmDelete": {
     "body": "将释放 {{size}} 磁盘空间。与其他修订共享的文件会保留。此操作不可撤销。",
     "title": "删除 {{count}} 个修订？",
     "title_other": "删除 {{count}} 个修订？"
+  },
+  "counts": {
+    "corrupt": "{{count}} 个损坏",
+    "unreadable": "{{count}} 个无法读取",
+    "verified": "{{count}} 个已校验"
   },
   "deleted": "已删除，释放 {{size}}。",
   "deleteRevision": "删除此修订",
@@ -13,17 +39,70 @@
   },
   "files": "{{count}} 个文件",
   "files_other": "{{count}} 个文件",
+  "issues": {
+    "broken-snapshot-link": "快照链接损坏",
+    "hash-mismatch": "哈希不匹配",
+    "invalid-blob-name": "无效的 blob 名称",
+    "missing-blob": "缺少 blob",
+    "snapshot-escape": "快照路径越界",
+    "unmatched-snapshot-copy": "未匹配的快照副本",
+    "unreadable": "无法读取"
+  },
+  "lastVerified": "上次检查 {{time}}",
   "location": "缓存位置",
+  "neverVerified": "尚未校验",
   "noRefs": "无引用",
+  "partialData": "{{size}} 未完成的下载数据",
+  "pinned": "已固定",
+  "plan": {
+    "accountAnonymous": "公开 Hub 下载 — 此计划未绑定账户。",
+    "accountRequired": "使用账户 {{label}}",
+    "apply": "应用计划",
+    "download": "大约将下载 {{size}}",
+    "empty": "没有可清理的项目",
+    "kind": {
+      "detached-snapshot": "游离快照",
+      "orphan-blob": "孤立 blob",
+      "stale-partial": "残留的不完整文件"
+    },
+    "protected": "进行中或已暂停的下载保护 {{commits}} 个修订和 {{tasks}} 个不完整文件。",
+    "protectedNone": "此计划中没有被进行中下载保护的文件。",
+    "pruneBody": "这些项目可以删除。受保护的进行中下载会保留。",
+    "pruneTitle": "清理计划",
+    "reclaim": "大约将释放 {{size}}",
+    "repairBody": "将按提交 {{commit}} 重新下载这些文件。",
+    "repairTitle": "修复计划",
+    "replan": "重新生成计划",
+    "stale": "缓存已在此预览之后发生变化。请重新生成计划后再继续。"
+  },
+  "progress": {
+    "done": "检查完成",
+    "scanning": "正在列出仓库…",
+    "verifying": "正在检查 {{current}}（{{completed}}/{{total}}）"
+  },
+  "prune": "计划清理",
+  "pruneTooltip": "预览游离修订、孤立 blob 和残留的不完整文件",
+  "repair": "修复",
+  "repairDisabled": {
+    "accountUnavailable": "当前登录账户不可用。请打开账户设置。",
+    "noIssues": "没有可修复的内容 — 请先运行校验，或缓存已经完好。",
+    "signedOut": "登录后才能从 Hub 修复文件。",
+    "unsupported": "这些问题无法自动修复。"
+  },
+  "repairTooltip": "从 Hub 重新下载已映射的损坏文件",
   "reposCount": "{{count}} 个缓存仓库",
   "reposCount_other": "{{count}} 个缓存仓库",
   "revisions": "{{count}} 个修订",
   "revisions_other": "{{count}} 个修订",
   "scan": "重新扫描",
   "scanning": "扫描中…",
+  "scopeNote": "完整性检查只比对本地 blob 与其文件名，不会检查 Hub 是否有更新。",
   "title": "本地缓存",
   "totalOnDisk": "磁盘占用 {{size}}",
-  "pinned": "已固定",
-  "partialData": "{{size}} 未完成的下载数据",
-  "cleanPartials": "清理"
+  "truncated": "问题列表已截断；清理后请再运行一次。",
+  "verify": "校验完整性",
+  "verifyCanceled": "已取消校验",
+  "verifyCleanBody": "Blob 哈希与文件名一致。这不会检查 Hub 是否有更新的文件。",
+  "verifyError": "校验失败",
+  "verifyTooltip": "检查本地 blob 哈希。不会连接 Hub。"
 }

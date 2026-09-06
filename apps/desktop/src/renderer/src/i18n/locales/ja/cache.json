@@ -1,8 +1,34 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "この修復に使うアカウントは利用できません。",
+      "integrity": "ダウンロードしたファイルの検証に失敗しました。キャッシュは変更されていません。",
+      "internal": "クリーンアップに失敗しました。キャッシュは変更されていません。",
+      "network": "Hub に接続できません。オンラインになってから再試行してください。",
+      "plan-digest-mismatch": "このプレビューは拒否されました。計画を作り直してください。",
+      "plan-expired": "このプレビューは期限切れです。計画を作り直してください。",
+      "plan-not-found": "このプレビューは失われました。計画を作り直してください。",
+      "plan-stale-account": "ログイン中のアカウントが変わりました。計画を作り直してください。",
+      "plan-stale-environment": "ネットワーク設定が変わりました。計画を作り直してください。",
+      "plan-stale-filesystem": "ディスク上のファイルが変わりました。計画を作り直してください。",
+      "plan-stale-protected": "ダウンロードがファイルの保護を開始しました。計画を作り直してください。",
+      "unsupported-issue": "これらの問題は自動修復できません。"
+    },
+    "pruneSuccess": "クリーンアップが完了し、{{size}}を解放しました。",
+    "repairSuccess": "修復が完了し、{{size}}を再ダウンロードしました。"
+  },
+  "cancelVerify": "検証をキャンセル",
+  "cancelVerifyTooltip": "整合性チェックを停止",
+  "cleanPartials": "クリーンアップ",
   "confirmDelete": {
     "body": "ディスク上の{{size}}が解放されます。他のリビジョンと共有されているファイルは保持されます。この操作は取り消せません。",
     "title": "{{count}}件のリビジョンを削除しますか?",
     "title_other": "{{count}}件のリビジョンを削除しますか?"
+  },
+  "counts": {
+    "corrupt": "破損 {{count}}",
+    "unreadable": "読み取り不可 {{count}}",
+    "verified": "検証済み {{count}}"
   },
   "deleted": "削除しました。{{size}}を解放しました。",
   "deleteRevision": "リビジョンを削除",
@@ -13,17 +39,70 @@
   },
   "files": "{{count}}個のファイル",
   "files_other": "{{count}}個のファイル",
+  "issues": {
+    "broken-snapshot-link": "壊れたスナップショットリンク",
+    "hash-mismatch": "ハッシュ不一致",
+    "invalid-blob-name": "無効な blob 名",
+    "missing-blob": "blob がありません",
+    "snapshot-escape": "スナップショット経路の逸脱",
+    "unmatched-snapshot-copy": "一致しないスナップショットコピー",
+    "unreadable": "読み取れません"
+  },
+  "lastVerified": "最終確認 {{time}}",
   "location": "キャッシュの場所",
+  "neverVerified": "未検証",
   "noRefs": "参照なし",
+  "partialData": "未完了のダウンロードデータ {{size}}",
+  "pinned": "固定済み",
+  "plan": {
+    "accountAnonymous": "公開 Hub からのダウンロード — この計画にアカウントは含まれていません。",
+    "accountRequired": "アカウント {{label}} を使用します",
+    "apply": "計画を適用",
+    "download": "約 {{size}} をダウンロードします",
+    "empty": "クリーンアップ対象がありません",
+    "kind": {
+      "detached-snapshot": "切り離されたスナップショット",
+      "orphan-blob": "孤立 blob",
+      "stale-partial": "残った未完了ファイル"
+    },
+    "protected": "実行中または一時停止中のダウンロードが {{commits}} 件のリビジョンと {{tasks}} 件の未完了ファイルを保護しています。",
+    "protectedNone": "進行中のダウンロードがこの計画のファイルを保護していません。",
+    "pruneBody": "これらの項目を削除できます。保護された進行中ダウンロードは残ります。",
+    "pruneTitle": "クリーンアップ計画",
+    "reclaim": "約 {{size}} を解放します",
+    "repairBody": "コミット {{commit}} 向けにこれらのファイルを再ダウンロードします。",
+    "repairTitle": "修復計画",
+    "replan": "計画を作り直す",
+    "stale": "このプレビュー以降にキャッシュが変わりました。続けるには計画を作り直してください。"
+  },
+  "progress": {
+    "done": "チェック完了",
+    "scanning": "リポジトリを列挙しています…",
+    "verifying": "{{current}} を確認中（{{completed}}/{{total}}）"
+  },
+  "prune": "クリーンアップを計画",
+  "pruneTooltip": "切り離されたリビジョン、孤立 blob、残った未完了ファイルをプレビュー",
+  "repair": "修復",
+  "repairDisabled": {
+    "accountUnavailable": "ログイン中のアカウントは利用できません。アカウント設定を開いてください。",
+    "noIssues": "修復対象がありません。先に検証するか、キャッシュはすでに正常です。",
+    "signedOut": "Hub からファイルを修復するにはサインインしてください。",
+    "unsupported": "これらの問題は自動修復できません。"
+  },
+  "repairTooltip": "対応づけられた破損ファイルを Hub から再ダウンロード",
   "reposCount": "{{count}}件のキャッシュ済みリポジトリ",
   "reposCount_other": "{{count}}件のキャッシュ済みリポジトリ",
   "revisions": "{{count}}件のリビジョン",
   "revisions_other": "{{count}}件のリビジョン",
   "scan": "再スキャン",
   "scanning": "スキャン中…",
+  "scopeNote": "整合性チェックはローカル blob とファイル名を比較するだけで、Hub の更新有無は確認しません。",
   "title": "ローカルキャッシュ",
   "totalOnDisk": "ディスク使用量 {{size}}",
-  "pinned": "固定済み",
-  "partialData": "未完了のダウンロードデータ {{size}}",
-  "cleanPartials": "クリーンアップ"
+  "truncated": "問題リストは切り詰められました。クリーンアップ後に再実行してください。",
+  "verify": "整合性を検証",
+  "verifyCanceled": "検証をキャンセルしました",
+  "verifyCleanBody": "Blob のハッシュはファイル名と一致しました。Hub に新しいファイルがあるかは確認していません。",
+  "verifyError": "検証に失敗しました",
+  "verifyTooltip": "ローカル blob のハッシュを確認します。Hub には接続しません。"
 }

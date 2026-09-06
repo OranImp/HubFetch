@@ -3,19 +3,35 @@
     "disclaimer": "本应用与 Hugging Face, Inc. 无任何隶属、背书或赞助关系。“Hugging Face” 是 Hugging Face, Inc. 的商标，此处仅用于指称本应用所连接的服务。",
     "github": "GitHub 源代码",
     "license": "基于 Apache-2.0 许可证发布",
+    "notificationRegistration": "系统通知：{{status}}",
+    "notificationStatus": {
+      "disabled": "已在设置中关闭",
+      "failed": "不可用——使用应用内通知",
+      "registered": "已就绪",
+      "unsupported": "此版本不支持"
+    },
     "privacy": "隐私：一切数据都保存在你的设备上。无遥测、无分析统计。访问令牌经操作系统钥匙串加密后仅存储在本地。",
     "title": "关于",
     "unofficialTitle": "非官方声明",
-    "version": "版本 {{version}}",
-    "notificationRegistration": "系统通知：{{status}}",
-    "notificationStatus": {
-      "registered": "已就绪",
-      "unsupported": "此版本不支持",
-      "failed": "不可用——使用应用内通知",
-      "disabled": "已在设置中关闭"
-    }
+    "version": "版本 {{version}}"
   },
   "account": {
+    "accounts": {
+      "active": "当前",
+      "addAccount": "添加账号",
+      "cancel": "取消",
+      "confirmRemove": "移除账号",
+      "endpointMismatch": "端点不同",
+      "endpointMismatchHint": "此账号保存在另一个 Hub 地址下。请先在网络设置中切换到该端点，然后即可使用此账号。",
+      "inUse": "{{downloads}} 个下载 · {{clones}} 个克隆 · {{uploads}} 个上传",
+      "invalid": "需要重新登录",
+      "manage": "管理账号",
+      "openNetwork": "打开网络设置",
+      "remove": "移除",
+      "switch": "切换",
+      "switching": "正在切换…",
+      "title": "已保存的账号"
+    },
     "billing": {
       "empty": "当前账期暂无用量记录。",
       "gated": "查看账单用量需要 read-billing 权限，请重新授权以获取。",
@@ -95,6 +111,22 @@
     "uiScaleDecrease": "缩小界面",
     "uiScaleIncrease": "放大界面"
   },
+  "cloneTools": {
+    "copied": "已复制",
+    "copyConfigure": "复制 git xet install",
+    "copyFailed": "无法复制",
+    "copyWinget": "复制 winget 命令",
+    "description": "Git、Git-Xet 和 Git 凭据管理器是克隆所需或推荐的工具。HubFetch 会打开官方下载页，在那里完成安装，然后重新检查。如果重新检查仍显示缺失，请重启应用以使其识别 PATH 变更。",
+    "gcm": "Git 凭据管理器",
+    "git": "Git",
+    "gitXet": "Git-Xet",
+    "install": "打开下载页",
+    "recheck": "重新检查",
+    "recommended": "推荐",
+    "required": "克隆必需",
+    "restartHint": "如果重新检查仍显示缺失，请重启 HubFetch 以使其识别 PATH 变更。",
+    "title": "克隆工具"
+  },
   "desktop": {
     "closeHintMac": "关闭窗口时应用会隐藏到菜单栏托盘。从托盘菜单或 Dock 退出才会完全关闭。",
     "closeHintOther": "关闭窗口时应用会隐藏到系统托盘。从托盘菜单退出才会完全关闭。",
@@ -122,47 +154,31 @@
     "interface": "界面",
     "system": "系统"
   },
-  "cloneTools": {
-    "title": "克隆工具",
-    "description": "Git、Git-Xet 和 Git 凭据管理器是克隆所需或推荐的工具。HubFetch 会打开官方下载页，在那里完成安装，然后重新检查。如果重新检查仍显示缺失，请重启应用以使其识别 PATH 变更。",
-    "recheck": "重新检查",
-    "install": "打开下载页",
-    "copyWinget": "复制 winget 命令",
-    "copyConfigure": "复制 git xet install",
-    "copied": "已复制",
-    "copyFailed": "无法复制",
-    "restartHint": "如果重新检查仍显示缺失，请重启 HubFetch 以使其识别 PATH 变更。",
-    "git": "Git",
-    "gitXet": "Git-Xet",
-    "gcm": "Git 凭据管理器",
-    "required": "克隆必需",
-    "recommended": "推荐"
-  },
   "network": {
     "apply": "应用",
     "description": "可覆盖 Hub API 地址，并可选通过 HTTP(S) 代理访问。留空则使用默认值。",
     "downloadWarning": "进行中的下载可能仍使用旧的 endpoint 或代理，建议暂停后重新开始。",
     "hubEndpoint": "Hub 地址",
     "invalidUrl": "请输入有效的 http:// 或 https:// URL，或留空。",
+    "proxy": {
+      "hintDirect": "绕过所有代理，直接连接。",
+      "hintManual": "使用固定的 HTTP(S) 代理服务器。",
+      "hintSystem": "使用操作系统的代理设置。",
+      "invalid": "请输入有效的 http:// 或 https:// 地址，需包含主机和端口，且不含路径、查询参数或凭据。",
+      "manualLabel": "HTTP(S) 代理地址",
+      "modeDirect": "直连",
+      "modeLabel": "代理模式",
+      "modeManual": "手动",
+      "modeSystem": "系统",
+      "resetProxy": "代理已重置为默认值。",
+      "testOkLatency": "连接成功，耗时 {{ms}} 毫秒。"
+    },
     "reset": "恢复默认",
     "resetEndpoint": "已恢复默认 Hub 地址。",
     "saved": "网络设置已保存。",
     "test": "测试连接",
     "testFail": "连接失败：{{error}}",
-    "title": "网络",
-    "proxy": {
-      "modeLabel": "代理模式",
-      "modeSystem": "系统",
-      "modeDirect": "直连",
-      "modeManual": "手动",
-      "hintSystem": "使用操作系统的代理设置。",
-      "hintDirect": "绕过所有代理，直接连接。",
-      "hintManual": "使用固定的 HTTP(S) 代理服务器。",
-      "manualLabel": "HTTP(S) 代理地址",
-      "invalid": "请输入有效的 http:// 或 https:// 地址，需包含主机和端口，且不含路径、查询参数或凭据。",
-      "testOkLatency": "连接成功，耗时 {{ms}} 毫秒。",
-      "resetProxy": "代理已重置为默认值。"
-    }
+    "title": "网络"
   },
   "notifications": {
     "enabled": "系统通知",
@@ -212,6 +228,7 @@
   "profile": {
     "avatar": "头像",
     "avatarHint": "支持 PNG、JPEG、WebP，最大 10 MB。",
+    "avatarTooLarge": "图片过大——头像最大 10 MB。",
     "avatarUpload": "上传图片",
     "bluesky": "Bluesky 用户名",
     "details": "AI & ML 兴趣",
@@ -225,19 +242,65 @@
     "needsSession": "编辑公开资料需要 Hub 网页会话——请先在“账户”中连接。",
     "openAccount": "前往账户",
     "primaryOrg": "主要组织",
+    "primaryOrgGroupAvailable": "可选",
+    "primaryOrgGroupUnavailable": "不可选（需付费计划）",
     "primaryOrgHint": "只有 Team / Enterprise / Plus 组织可以设为主要组织。打开下拉后会分组显示：可选 vs 不可选。",
     "primaryOrgNone": "无",
     "primaryOrgNonePaid": "你加入的组织都还不是付费计划，因此暂时无法设置主要组织。",
-    "primaryOrgGroupAvailable": "可选",
-    "primaryOrgGroupUnavailable": "不可选（需付费计划）",
     "primaryOrgOptionAvailable": "{{name}}（{{plan}}）",
     "primaryOrgOptionUnavailable": "{{name}} — 不可选",
     "primaryOrgSummary": "可选 {{available}} 个 · 不可选 {{unavailable}} 个",
     "save": "保存修改",
     "saved": "资料已保存",
     "title": "公开资料",
-    "twitter": "Twitter 用户名",
-    "avatarTooLarge": "图片过大——头像最大 10 MB。"
+    "twitter": "Twitter 用户名"
   },
-  "title": "设置"
+  "title": "设置",
+  "translation": {
+    "apiKey": "API 密钥",
+    "apiKeyHint": "留空则保留已保存的密钥。填写新值会替换它。",
+    "apply": "应用",
+    "baseUrl": "接口地址",
+    "configured": "已配置",
+    "deleteBody": "仅删除当前所选提供商已保存的密钥，其他提供商不受影响。",
+    "deleteConfirm": "删除密钥",
+    "deleteKey": "删除密钥",
+    "deleteTitle": "删除此 API 密钥？",
+    "description": "配置 OpenAI、Anthropic 或 Gemini，将帖子翻译为当前软件语言。密钥在本机加密保存，保存后不会再显示。",
+    "errors": {
+      "auth": "API 密钥被拒绝。",
+      "canceled": "请求已取消。",
+      "empty-response": "提供商返回了空的探测响应。",
+      "forbidden": "此密钥无权使用该模型。",
+      "input-too-long": "请求内容过长。",
+      "invalid-config": "模型或接口地址无效。",
+      "malformed-response": "提供商返回了无法使用的响应。",
+      "model-not-found": "未找到该模型。",
+      "not-configured": "此提供商尚未保存 API 密钥。",
+      "provider-unavailable": "提供商当前不可用。",
+      "rate-limited": "提供商限制了此请求的频率，请稍后再试。",
+      "refused": "提供商拒绝了该请求。",
+      "timeout": "请求超时。",
+      "unknown": "连接测试失败。"
+    },
+    "invalidModel": "请输入模型 ID。",
+    "invalidUrl": "请输入不含用户信息、查询参数或片段的有效 http:// 或 https:// 地址，或留空。",
+    "keyDeleted": "API 密钥已删除。",
+    "keySaved": "API 密钥已保存。",
+    "model": "模型",
+    "noKey": "请先保存 API 密钥，或在此输入密钥后再测试连接。",
+    "notConfigured": "未配置",
+    "providers": {
+      "anthropic": "Anthropic",
+      "gemini": "Gemini",
+      "openai": "OpenAI"
+    },
+    "reset": "恢复默认",
+    "saved": "翻译设置已保存。",
+    "saveKey": "保存密钥",
+    "test": "测试连接",
+    "testHint": "会发送一次很小的请求，可能产生极少的提供商用量。",
+    "testOkLatency": "连接成功，耗时 {{ms}} 毫秒。",
+    "title": "翻译"
+  }
 }

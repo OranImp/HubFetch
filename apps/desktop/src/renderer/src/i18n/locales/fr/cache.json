@@ -1,9 +1,35 @@
 {
+  "apply": {
+    "failure": {
+      "account-unavailable": "Le compte de cette réparation n’est pas disponible.",
+      "integrity": "Le fichier téléchargé ne correspondait pas. Rien n’a été modifié.",
+      "internal": "Le nettoyage a échoué. Rien n’a été modifié.",
+      "network": "Le Hub n’a pas pu être joint. Réessayez lorsque vous serez en ligne.",
+      "plan-digest-mismatch": "Cet aperçu a été rejeté. Recréez le plan.",
+      "plan-expired": "Cet aperçu a expiré. Recréez le plan.",
+      "plan-not-found": "Cet aperçu a disparu. Recréez le plan.",
+      "plan-stale-account": "Le compte connecté a changé. Recréez le plan.",
+      "plan-stale-environment": "Les paramètres réseau ont changé. Recréez le plan.",
+      "plan-stale-filesystem": "Les fichiers sur le disque ont changé. Recréez le plan.",
+      "plan-stale-protected": "Un téléchargement a commencé à protéger des fichiers. Recréez le plan.",
+      "unsupported-issue": "Ces problèmes ne peuvent pas être réparés automatiquement."
+    },
+    "pruneSuccess": "Nettoyage terminé. {{size}} libérés.",
+    "repairSuccess": "Réparation terminée. {{size}} retéléchargés."
+  },
+  "cancelVerify": "Annuler la vérification",
+  "cancelVerifyTooltip": "Arrêter le contrôle d’intégrité",
+  "cleanPartials": "Nettoyer",
   "confirmDelete": {
     "body": "Cette action libère {{size}} sur le disque. Les fichiers partagés avec d'autres révisions sont conservés. Elle est irréversible.",
     "title": "Supprimer {{count}} révision(s) ?",
     "title_one": "Supprimer {{count}} révision ?",
     "title_other": "Supprimer {{count}} révisions ?"
+  },
+  "counts": {
+    "corrupt": "{{count}} corrompus",
+    "unreadable": "{{count}} illisibles",
+    "verified": "{{count}} vérifiés"
   },
   "deleted": "Supprimé. {{size}} libérés.",
   "deleteRevision": "Supprimer la révision",
@@ -15,8 +41,57 @@
   "files": "{{count}} fichiers",
   "files_one": "{{count}} fichier",
   "files_other": "{{count}} fichiers",
+  "issues": {
+    "broken-snapshot-link": "Lien d’instantané brisé",
+    "hash-mismatch": "Empreinte non concordante",
+    "invalid-blob-name": "Nom de blob invalide",
+    "missing-blob": "Blob manquant",
+    "snapshot-escape": "Chemin d’instantané hors limites",
+    "unmatched-snapshot-copy": "Copie d’instantané sans correspondance",
+    "unreadable": "Illisible"
+  },
+  "lastVerified": "Dernière vérification {{time}}",
   "location": "Emplacement du cache",
+  "neverVerified": "Pas encore vérifié",
   "noRefs": "aucune référence",
+  "partialData": "{{size}} de données de téléchargement incomplètes",
+  "pinned": "épinglé",
+  "plan": {
+    "accountAnonymous": "Téléchargement public du Hub — aucun compte n’a été capturé pour ce plan.",
+    "accountRequired": "Utilise le compte {{label}}",
+    "apply": "Appliquer le plan",
+    "download": "Environ {{size}} seront téléchargés",
+    "empty": "Aucun candidat de nettoyage",
+    "kind": {
+      "detached-snapshot": "Instantané détaché",
+      "orphan-blob": "Blob orphelin",
+      "stale-partial": "Fichier partiel restant"
+    },
+    "protected": "Les téléchargements en cours ou en pause protègent {{commits}} révision(s) et {{tasks}} fichier(s) partiel(s).",
+    "protectedNone": "Aucun téléchargement en cours ne protège de fichiers dans ce plan.",
+    "pruneBody": "Ces éléments peuvent être retirés. Les téléchargements protégés en cours restent.",
+    "pruneTitle": "Plan de nettoyage",
+    "reclaim": "Environ {{size}} seront libérés",
+    "repairBody": "Ces fichiers seront retéléchargés pour le commit {{commit}}.",
+    "repairTitle": "Plan de réparation",
+    "replan": "Recréer le plan",
+    "stale": "Le cache a changé depuis cet aperçu. Recréez le plan pour continuer."
+  },
+  "progress": {
+    "done": "Contrôle terminé",
+    "scanning": "Inventaire des dépôts…",
+    "verifying": "Contrôle de {{current}} ({{completed}}/{{total}})"
+  },
+  "prune": "Planifier le nettoyage",
+  "pruneTooltip": "Prévisualiser les révisions détachées, blobs orphelins et fichiers partiels restants",
+  "repair": "Réparer",
+  "repairDisabled": {
+    "accountUnavailable": "Le compte connecté n’est pas disponible. Ouvrez les paramètres du compte.",
+    "noIssues": "Rien à réparer — lancez d’abord Vérifier, ou le cache est déjà intact.",
+    "signedOut": "Connectez-vous pour réparer des fichiers depuis le Hub.",
+    "unsupported": "Ces problèmes ne peuvent pas être réparés automatiquement."
+  },
+  "repairTooltip": "Retélécharger depuis le Hub les fichiers corrompus associés",
   "reposCount": "{{count}} dépôts en cache",
   "reposCount_one": "{{count}} dépôt en cache",
   "reposCount_other": "{{count}} dépôts en cache",
@@ -25,9 +100,13 @@
   "revisions_other": "{{count}} révisions",
   "scan": "Réanalyser",
   "scanning": "Analyse en cours…",
+  "scopeNote": "Les contrôles d’intégrité comparent les blobs locaux à leurs noms. Ils ne vérifient pas si le Hub a des fichiers plus récents.",
   "title": "Cache local",
   "totalOnDisk": "{{size}} sur le disque",
-  "pinned": "épinglé",
-  "partialData": "{{size}} de données de téléchargement incomplètes",
-  "cleanPartials": "Nettoyer"
+  "truncated": "Liste des problèmes tronquée ; relancez après le nettoyage.",
+  "verify": "Vérifier l’intégrité",
+  "verifyCanceled": "Vérification annulée",
+  "verifyCleanBody": "Les empreintes des blobs correspondent à leurs noms. Cela ne vérifie pas si le Hub a des fichiers plus récents.",
+  "verifyError": "La vérification a échoué",
+  "verifyTooltip": "Contrôler les empreintes des blobs locaux. N’appelle pas le Hub."
 }

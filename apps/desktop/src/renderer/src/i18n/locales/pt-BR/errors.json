@@ -1,5 +1,13 @@
 {
   "auth": "É necessário entrar. Adicione seu token do Hugging Face em Configurações e tente novamente.",
+  "capability": {
+    "forbidden": "O Hub recusou este recurso. Abra a página segura do Hub para verificar permissões ou restrições regionais.",
+    "network": "Este recurso do Hub não conseguiu alcançar o serviço. Verifique a conexão ou o proxy e tente novamente.",
+    "rate-limited": "Este recurso do Hub está limitado. Aguarde um momento e tente novamente.",
+    "session-required": "Este recurso precisa de uma sessão web do Hub. Conecte uma em Configurações e tente novamente.",
+    "unauthorized": "Este recurso precisa de um token autorizado do Hub. Verifique as configurações da conta.",
+    "upstream-changed": "O contrato de compatibilidade deste recurso do Hub mudou. Abra o Hub ou tente mais tarde."
+  },
   "gated": "Este repositório é restrito. Solicite acesso no Hub — assim que for concedido, tente novamente.",
   "network": "Não foi possível contatar a API do Hugging Face. Verifique sua conexão e as configurações de proxy e tente novamente.",
   "notFound": "Não encontrado no Hub — pode ter sido movido, renomeado ou tornado privado.",
