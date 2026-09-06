@@ -1,0 +1,9 @@
+{
+  "domain": "collections",
+  "request": { "method": "GET", "path": "/api/collections", "query": { "owner": "fixture-owner" } },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": []
+  }
+}

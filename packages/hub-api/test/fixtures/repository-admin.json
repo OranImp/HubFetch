@@ -1,0 +1,9 @@
+{
+  "domain": "repository-admin",
+  "request": { "method": "POST", "path": "/api/repos/move" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": { "accepted": true }
+  }
+}

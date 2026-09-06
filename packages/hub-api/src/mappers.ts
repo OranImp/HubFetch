@@ -1,4 +1,5 @@
 /** Maps raw Hub REST payloads into the shared domain types. */
+import { HubApiError } from './errors'
 import type {
   AccessRequest,
   ActivityDiscussion,
@@ -8,14 +9,11 @@ import type {
   CollectionDetail,
   CollectionItem,
   CollectionSummary,
-  DatasetRows,
   DiscussionDetail,
   DiscussionSummary,
   FileTreeEntry,
-  GatedFormField,
   HubNotification,
   HubOrgPlan,
-  HubProfileSettings,
   MyRepoEntry,
   NotificationsPage,
   PaperSummary,
@@ -26,7 +24,10 @@ import type {
   RepoDetail,
   RepoKind,
   RepoSummary,
+  SpaceHardwareCatalogEntry,
+  SpaceRuntime,
   SpaceSecret,
+  SpaceStage,
   SpaceVariable,
   UserOverview,
   UserProfile
@@ -381,219 +382,6 @@ export function mapPost(raw: RawPost, endpoint: string): PostSummary {
     attachments: mapPostAttachments(raw.attachments, absolutize),
     url: absolutize(raw.url) ?? `${endpoint}/posts/${author}/${slug}`
   }
-}
-
-interface RawPostComment {
-  id?: string
-  type?: string
-  author?: { name?: string; fullname?: string; avatarUrl?: string; isPro?: boolean }
-  createdAt?: string
-  data?: {
-    hidden?: boolean
-    hiddenReason?: string
-    hiddenBy?: string
-    latest?: { raw?: string }
-    reactions?: RawReaction[]
-  }
-  /** The Hub threads replies one level deep, nested on the parent comment. */
-  replies?: RawPostComment[]
-}
-
-/** Decode the HTML-attribute escaping the Hub applies to embedded JSON islands. */
-function decodeHtmlAttribute(value: string): string {
-  return value
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-}
-
-/**
- * Comments on a community post, parsed from the post page HTML. The Hub has
- * no JSON endpoint for post comments — the thread ships inside the
- * SocialPost component's data-props attribute (live-verified 2026-07-11:
- * socialPost.comments carries the same event shape as discussion comments).
- * Returns [] when the island is missing (page shape drift degrades to an
- * empty thread, never a crash).
- */
-export function parsePostComments(html: string, endpoint: string): PostComment[] {
-  const match =
-    /data-target="SocialPost"[^>]*data-props="([^"]*)"/.exec(html) ??
-    /data-props="([^"]*)"[^>]*data-target="SocialPost"/.exec(html)
-  if (!match) return []
-  let comments: RawPostComment[]
-  try {
-    const props = JSON.parse(decodeHtmlAttribute(match[1]!)) as {
-      socialPost?: { comments?: RawPostComment[] }
-    }
-    comments = props.socialPost?.comments ?? []
-  } catch {
-    return []
-  }
-  const absolutize = (u: string | undefined): string | undefined =>
-    u ? hubRelativeUrl(u, endpoint) : undefined
-  const mapOne = (c: RawPostComment): PostComment[] => {
-    if (c.type !== 'comment' || !c.id) return []
-    const hidden = c.data?.hidden === true
-    const replies = (c.replies ?? []).flatMap(mapOne)
-    return [
-      {
-        id: c.id,
-        author: c.author?.name ?? '',
-        authorFullname: c.author?.fullname,
-        authorAvatarUrl: absolutize(c.author?.avatarUrl),
-        authorIsPro: c.author?.isPro,
-        createdAt: c.createdAt,
-        // The Hub withholds hidden content; keep the row so the UI can show
-        // the "this comment has been hidden" placeholder.
-        content: hidden ? '' : (c.data?.latest?.raw ?? ''),
-        reactions: normalizeReactions(c.data?.reactions),
-        ...(replies.length > 0 ? { replies } : {}),
-        ...(hidden
-          ? { hidden: true, hiddenReason: c.data?.hiddenReason, hiddenBy: c.data?.hiddenBy }
-          : {})
-      }
-    ]
-  }
-  return comments.flatMap(mapOne)
-}
-
-/**
- * The Settings → Profile form, parsed from its SSR HTML (live-captured
- * 2026-07-11: saving is a urlencoded POST back to /settings/profile carrying
- * the page's csrf token; there is no JSON endpoint). Returns undefined when
- * the form is absent — the Hub serves the login page to signed-out sessions.
- */
-export function parseProfileSettingsPage(
-  html: string
-): { csrf: string; settings: HubProfileSettings } | undefined {
-  // Scope to the form carrying the profile fields; other forms on the page
-  // (logout) have their own csrf inputs.
-  const form = html.split('<form').find((chunk) => chunk.includes('name="fullname"'))
-  if (form === undefined) return undefined
-
-  const input = (name: string): string => {
-    const tag = new RegExp(`<input[^>]*\\bname="${name}"[^>]*>`).exec(form)?.[0] ?? ''
-    return decodeHtmlAttribute(/\bvalue="([^"]*)"/.exec(tag)?.[1] ?? '')
-  }
-  const textarea = (name: string): string => {
-    const m = new RegExp(`<textarea[^>]*\\bname="${name}"[^>]*>([\\s\\S]*?)</textarea>`).exec(form)
-    // Browsers drop a single leading newline after <textarea>; mirror that.
-    return decodeHtmlAttribute((m?.[1] ?? '').replace(/^\n/, ''))
-  }
-
-  const csrf = input('csrf')
-  if (csrf === '') return undefined
-
-  const selectHtml = /<select[^>]*\bname="primaryOrg"[\s\S]*?<\/select>/.exec(form)?.[0] ?? ''
-  let primaryOrg = ''
-  const primaryOrgOptions: Array<{ value: string; label: string }> = []
-  for (const m of selectHtml.matchAll(/<option([^>]*)>([\s\S]*?)<\/option>/g)) {
-    const value = decodeHtmlAttribute(/\bvalue="([^"]*)"/.exec(m[1]!)?.[1] ?? '')
-    if (/\bselected\b/.test(m[1]!)) primaryOrg = value
-    if (value !== '') primaryOrgOptions.push({ value, label: decodeHtmlAttribute(m[2]!.trim()) })
-  }
-
-  return {
-    csrf,
-    settings: {
-      fullname: input('fullname'),
-      homepage: input('homepage'),
-      details: textarea('details'),
-      github: input('github'),
-      twitter: input('twitter'),
-      linkedin: input('linkedin'),
-      bluesky: input('bluesky'),
-      primaryOrg,
-      primaryOrgOptions
-    }
-  }
-}
-
-/**
- * The gated repo access form, parsed from the repo page's SSR HTML
- * (live-captured 2026-07-11: `<form action=".../ask-access...">` posting
- * urlencoded csrf + one field per gate question, named by the question text).
- * Returns undefined when the page offers no ask-access form — either the repo
- * isn't gated for this account, or a manual request is already pending.
- */
-export function parseAskAccessForm(
-  html: string
-): { csrf: string; fields: GatedFormField[] } | undefined {
-  const form = html.split('<form').find((chunk) => chunk.includes('/ask-access'))
-  if (form === undefined) return undefined
-  const body = form.slice(0, form.indexOf('</form>'))
-
-  let csrf = ''
-  const fields: GatedFormField[] = []
-  for (const m of body.matchAll(/<(input|textarea|select)\b([^>]*)>/g)) {
-    const attrs = m[2]!
-    const name = decodeHtmlAttribute(/\bname="([^"]*)"/.exec(attrs)?.[1] ?? '')
-    if (name === '') continue
-    const type = /\btype="([^"]*)"/.exec(attrs)?.[1] ?? 'text'
-    if (name === 'csrf') {
-      csrf = decodeHtmlAttribute(/\bvalue="([^"]*)"/.exec(attrs)?.[1] ?? '')
-      continue
-    }
-    if (type === 'hidden') continue
-    const required = /\brequired\b/.test(attrs)
-    if (m[1] === 'select') {
-      const selectHtml =
-        new RegExp(
-          `<select[^>]*name="${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[\\s\\S]*?</select>`
-        ).exec(body)?.[0] ?? ''
-      const options = [...selectHtml.matchAll(/<option[^>]*value="([^"]*)"/g)]
-        .map((o) => decodeHtmlAttribute(o[1]!))
-        .filter((v) => v !== '')
-      fields.push({ name, type: 'select', required, options })
-    } else if (m[1] === 'textarea') {
-      fields.push({ name, type: 'textarea', required })
-    } else if (type === 'checkbox') {
-      fields.push({ name, type: 'checkbox', required })
-    } else if (type === 'date') {
-      fields.push({ name, type: 'date', required })
-    } else {
-      fields.push({ name, type: 'text', required })
-    }
-  }
-  if (csrf === '') return undefined
-  return { csrf, fields }
-}
-
-/**
- * SSR sample rows from a dataset page's DatasetViewer island — the Hub's own
- * fallback when the datasets-server viewer is unavailable (huge or failed
- * builds). Returns undefined when the island carries no sample.
- */
-export function parseDatasetSampleRows(html: string): DatasetRows | undefined {
-  const match =
-    /data-target="DatasetViewer"[^>]*data-props="([^"]*)"/.exec(html) ??
-    /data-props="([^"]*)"[^>]*data-target="DatasetViewer"/.exec(html)
-  if (!match) return undefined
-  let sample: {
-    columns?: Array<{ name?: string }>
-    rows?: Array<{ cells?: Record<string, { value?: unknown }> }>
-  }
-  try {
-    const props = JSON.parse(decodeHtmlAttribute(match[1]!)) as {
-      data?: { sampleData?: { sampleData?: typeof sample } }
-    }
-    sample = props.data?.sampleData?.sampleData ?? {}
-  } catch {
-    return undefined
-  }
-  const columns = (sample.columns ?? []).flatMap((c) => (c?.name ? [c.name] : []))
-  const rows = (sample.rows ?? []).map((r) =>
-    columns.map((col) => {
-      const value = r?.cells?.[col]?.value
-      if (value === undefined || value === null) return ''
-      const text = typeof value === 'string' ? value : JSON.stringify(value)
-      return text.length > 500 ? `${text.slice(0, 500)}…` : text
-    })
-  )
-  if (columns.length === 0 || rows.length === 0) return undefined
-  return { columns, rows, sample: true }
 }
 
 interface RawUserOverview {
@@ -1005,6 +793,93 @@ export function mapSpaceVariables(raw: Record<string, RawSpaceEnvEntry>): SpaceV
     description: entry?.description,
     updatedAt: entry?.updatedAt
   }))
+}
+
+// --- Space runtime & hardware -------------------------------------------------
+
+/** A missing semantic field is a contract drift, not an empty value. */
+function spaceContractError(what: string): HubApiError {
+  return new HubApiError(`malformed space response: ${what}`)
+}
+
+function asRecord(raw: unknown): Record<string, unknown> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw spaceContractError('expected a JSON object')
+  }
+  return raw as Record<string, unknown>
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null
+}
+
+function intOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : null
+}
+
+function boolOrNull(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null
+}
+
+function acceleratorSummary(raw: unknown): string | null {
+  if (typeof raw === 'string' && raw !== '') return raw
+  if (typeof raw !== 'object' || raw === null) return null
+  const data = raw as Record<string, unknown>
+  const model = typeof data.model === 'string' ? data.model : ''
+  const vram = typeof data.vram === 'string' ? data.vram : ''
+  const quantity = typeof data.quantity === 'string' ? data.quantity : ''
+  const summary = [model, vram, quantity !== '' ? `x${quantity}` : '']
+    .filter((part) => part !== '')
+    .join(' ')
+  return summary === '' ? null : summary
+}
+
+/**
+ * Maps `GET /api/spaces/{repoId}/runtime`. `stage` is the only semantic field:
+ * a missing or non-string stage rejects the payload. Every other field is
+ * optional, and unknown additive fields are ignored so future Hub additions
+ * keep parsing.
+ */
+export function mapSpaceRuntime(raw: unknown): SpaceRuntime {
+  const data = asRecord(raw)
+  const stage = data.stage
+  if (typeof stage !== 'string' || stage === '') {
+    throw spaceContractError('missing runtime stage')
+  }
+  return {
+    stage: stage as SpaceStage,
+    hardware: stringOrNull(data.hardware),
+    requestedHardware: stringOrNull(data.requestedHardware),
+    gcTimeout: intOrNull(data.gcTimeout),
+    sleepTime: intOrNull(data.sleepTime),
+    // Parsed for forward compatibility; the app renders neither field and
+    // never manages volumes or dev mode.
+    storage: stringOrNull(data.storage),
+    devMode: boolOrNull(data.devMode)
+  }
+}
+
+/**
+ * Maps the public hardware catalog (`GET /api/spaces/hardware`). Per-unit cost
+ * fields present in the response are deliberately dropped here so no pricing
+ * information can reach the UI.
+ */
+export function mapSpaceHardwareCatalog(raw: unknown): SpaceHardwareCatalogEntry[] {
+  if (!Array.isArray(raw)) throw spaceContractError('expected a hardware catalog array')
+  return raw.map((entry, index) => {
+    const data = asRecord(entry)
+    const name = data.name
+    if (typeof name !== 'string' || name === '') {
+      throw spaceContractError(`hardware catalog entry ${index} has no name`)
+    }
+    return {
+      name,
+      prettyName: stringOrNull(data.prettyName) ?? undefined,
+      cpu: stringOrNull(data.cpu) ?? undefined,
+      ram: stringOrNull(data.ram) ?? undefined,
+      accelerator: acceleratorSummary(data.accelerator)
+    }
+  })
 }
 
 interface RawBillingUsageItem {

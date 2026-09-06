@@ -1,0 +1,9 @@
+{
+  "domain": "gated-access",
+  "request": { "method": "GET", "path": "/api/datasets/fixture-owner/fixture-dataset/auth-check" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": { "access": "granted" }
+  }
+}

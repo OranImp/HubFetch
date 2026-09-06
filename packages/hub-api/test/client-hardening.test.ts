@@ -309,6 +309,10 @@ describe('HubClient datasets-server endpoints', () => {
     expect(result.rows[0]![1]).toBe('3')
     expect(result.rows[0]![2]).toBe('')
     expect(result.rows[1]!).toEqual(['hi', '0', '{"a":1}'])
+    expect(result.values).toEqual([
+      [long, 3, null],
+      ['hi', 0, { a: 1 }]
+    ])
     const url = new URL(fetchImpl.mock.calls[0]![0] as string)
     expect(url.searchParams.get('offset')).toBe('0')
     expect(url.searchParams.get('length')).toBe('2')

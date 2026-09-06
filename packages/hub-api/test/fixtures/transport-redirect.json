@@ -1,0 +1,9 @@
+{
+  "domain": "transport",
+  "request": { "method": "GET", "path": "/api/models" },
+  "response": {
+    "status": 302,
+    "headers": { "location": "http://loopback.invalid/target" },
+    "body": { "redirect": true }
+  }
+}

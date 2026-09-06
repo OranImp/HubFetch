@@ -1,5 +1,6 @@
 export * from './client'
 export * from './errors'
+export * from './capabilities'
 export * from './cache-layout'
 export {
   mapRepoSummary,
@@ -25,5 +26,7 @@ export {
   mapAccessRequest,
   mapSpaceSecrets,
   mapSpaceVariables,
+  mapSpaceRuntime,
+  mapSpaceHardwareCatalog,
   mapBillingUsage
 } from './mappers'

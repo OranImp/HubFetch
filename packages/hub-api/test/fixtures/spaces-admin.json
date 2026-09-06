@@ -1,0 +1,9 @@
+{
+  "domain": "spaces",
+  "request": { "method": "GET", "path": "/api/spaces/fixture-owner/fixture-space/secrets" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": {}
+  }
+}

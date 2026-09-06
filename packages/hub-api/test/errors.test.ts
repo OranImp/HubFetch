@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   CookieRequiredError,
+  HubCapabilityError,
   HubApiError,
   isForbidden,
   isNotFound,
   isTokenRejection,
-  isUnauthorized
+  isUnauthorized,
+  toHubCapabilityError
 } from '../src'
 
 describe('error classification', () => {
@@ -43,5 +45,33 @@ describe('error classification', () => {
     expect(isNotFound(new HubApiError('x', 404))).toBe(true)
     expect(isNotFound(new HubApiError('x', 403))).toBe(false)
     expect(isNotFound(new Error('x'))).toBe(false)
+  })
+
+  it('maps closed capability outcomes without carrying request data', () => {
+    const session = toHubCapabilityError(
+      'listWatched',
+      'cookie-web',
+      new CookieRequiredError('https://hub.test/api/settings/watch?token=secret')
+    )
+    expect(session).toBeInstanceOf(HubCapabilityError)
+    expect(session.code).toBe('session-required')
+    expect(session.message).toContain('HUB_WEB_SESSION_REQUIRED')
+    expect(session.message).not.toContain('token=secret')
+
+    expect(toHubCapabilityError('searchRepos', 'official-public', new HubApiError('x', 401)).code).toBe(
+      'unauthorized'
+    )
+    expect(toHubCapabilityError('searchRepos', 'official-public', new HubApiError('x', 403)).code).toBe(
+      'forbidden'
+    )
+    expect(toHubCapabilityError('searchRepos', 'official-public', new HubApiError('x', 429)).code).toBe(
+      'rate-limited'
+    )
+    expect(
+      toHubCapabilityError('getProfileSettings', 'ssr-scrape', new Error('schema drift')).code
+    ).toBe('upstream-changed')
+    expect(toHubCapabilityError('searchRepos', 'official-public', new Error('fetch failed')).code).toBe(
+      'network'
+    )
   })
 })

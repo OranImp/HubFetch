@@ -1,3 +1,10 @@
+import {
+  HUB_CAPABILITY_ERROR_MARKER,
+  type HubCapabilityErrorCode,
+  type HubCapabilityKey,
+  type HubCapabilitySourceClass
+} from '@hubfetch/shared'
+
 export class HubApiError extends Error {
   constructor(
     message: string,
@@ -7,6 +14,90 @@ export class HubApiError extends Error {
     super(message)
     this.name = 'HubApiError'
   }
+}
+
+/**
+ * A secret-free, capability-scoped error that can cross the Electron boundary.
+ * The marker is intentionally closed and contains no URL, response text, or
+ * request metadata; the renderer can recover the affected capability safely.
+ */
+export class HubCapabilityError extends HubApiError {
+  readonly capability: HubCapabilityKey
+  readonly code: HubCapabilityErrorCode
+
+  constructor(
+    capability: HubCapabilityKey,
+    code: HubCapabilityErrorCode,
+    message: string,
+    status?: number
+  ) {
+    const marker = `[${HUB_CAPABILITY_ERROR_MARKER} key=${capability} code=${code}]`
+    const sentinel = code === 'session-required' ? ' HUB_WEB_SESSION_REQUIRED' : ''
+    super(`${message}${sentinel} ${marker}`, status)
+    this.name = 'HubCapabilityError'
+    this.capability = capability
+    this.code = code
+  }
+}
+
+const NETWORK_ERROR_RE =
+  /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network|timed? ?out|abort/i
+
+const CAPABILITY_MESSAGES: Record<HubCapabilityErrorCode, string> = {
+  'session-required': 'This Hub capability needs a web session.',
+  unauthorized: 'This Hub capability needs an authorized token.',
+  forbidden: 'The Hub denied this capability.',
+  'rate-limited': 'The Hub is rate-limiting this capability.',
+  'upstream-changed': 'The Hub compatibility contract for this capability changed.',
+  network: 'The Hub capability could not reach its service.'
+}
+
+/** Map an arbitrary Hub failure to a closed, capability-scoped error code. */
+export function toHubCapabilityError(
+  capability: HubCapabilityKey,
+  sourceClass: HubCapabilitySourceClass,
+  error: unknown,
+  contractFailure = false
+): HubCapabilityError {
+  if (error instanceof HubCapabilityError) return error
+  if (error instanceof CookieRequiredError) {
+    return new HubCapabilityError(capability, 'session-required', CAPABILITY_MESSAGES['session-required'])
+  }
+  if (error instanceof HubApiError) {
+    switch (error.status) {
+      case 401:
+        return new HubCapabilityError(capability, 'unauthorized', CAPABILITY_MESSAGES.unauthorized, 401)
+      case 403:
+        return new HubCapabilityError(capability, 'forbidden', CAPABILITY_MESSAGES.forbidden, 403)
+      case 429:
+        return new HubCapabilityError(capability, 'rate-limited', CAPABILITY_MESSAGES['rate-limited'], 429)
+      default:
+        break
+    }
+  }
+  const message = error instanceof Error ? error.message : String(error)
+  if (NETWORK_ERROR_RE.test(message)) {
+    return new HubCapabilityError(capability, 'network', CAPABILITY_MESSAGES.network)
+  }
+  if (contractFailure || sourceClass === 'ssr-scrape' || sourceClass === 'datasets-server') {
+    return new HubCapabilityError(
+      capability,
+      'upstream-changed',
+      CAPABILITY_MESSAGES['upstream-changed']
+    )
+  }
+  return new HubCapabilityError(capability, 'network', CAPABILITY_MESSAGES.network)
+}
+
+export function isHubCapabilityErrorCode(value: string): value is HubCapabilityErrorCode {
+  return (
+    value === 'session-required' ||
+    value === 'unauthorized' ||
+    value === 'forbidden' ||
+    value === 'rate-limited' ||
+    value === 'upstream-changed' ||
+    value === 'network'
+  )
 }
 
 /**

@@ -1,0 +1,18 @@
+{
+  "domain": "models",
+  "request": { "method": "GET", "path": "/api/models", "query": { "limit": "1" } },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json", "etag": "\"fixture-models-v1\"" },
+    "body": [
+      {
+        "id": "fixture-owner/fixture-model",
+        "likes": 3,
+        "downloads": 21,
+        "tags": [],
+        "private": false
+      }
+    ]
+  },
+  "nextPath": "/api/models?cursor=fixture-page-2"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "datasets-server",
+  "request": {
+    "method": "GET",
+    "path": "/splits",
+    "query": { "dataset": "fixture-owner/fixture-dataset" }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": {
+      "splits": [
+        { "dataset": "fixture-owner/fixture-dataset", "config": "default", "split": "train" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "domain": "profiles",
+  "request": { "method": "GET", "path": "/api/users/fixture-user/overview" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": { "user": "fixture-user", "numModels": 0, "numDatasets": 0, "numSpaces": 0 }
+  }
+}

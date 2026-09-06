@@ -1,0 +1,17 @@
+{
+  "domain": "account",
+  "request": { "method": "GET", "path": "/api/whoami-v2" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": {
+      "name": "fixture-user",
+      "fullname": "Fixture User",
+      "orgs": [],
+      "auth": {
+        "type": "access_token",
+        "accessToken": { "displayName": "fixture", "role": "read" }
+      }
+    }
+  }
+}

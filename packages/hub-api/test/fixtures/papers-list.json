@@ -1,0 +1,9 @@
+{
+  "domain": "papers",
+  "request": { "method": "GET", "path": "/api/daily_papers", "query": { "limit": "50" } },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": []
+  }
+}

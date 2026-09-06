@@ -1,0 +1,9 @@
+{
+  "domain": "community",
+  "request": { "method": "GET", "path": "/api/posts", "query": { "limit": "30" } },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": { "socialPosts": [], "numTotalItems": 0 }
+  }
+}

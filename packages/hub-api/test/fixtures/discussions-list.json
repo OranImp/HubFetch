@@ -1,0 +1,9 @@
+{
+  "domain": "discussions",
+  "request": { "method": "GET", "path": "/api/models/fixture-owner/fixture-model/discussions" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": { "discussions": [], "count": 0, "start": 0 }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "domain": "notifications",
+  "request": { "method": "GET", "path": "/api/notifications" },
+  "response": {
+    "status": 200,
+    "headers": { "content-type": "application/json" },
+    "body": { "count": { "view": 0, "unread": 0, "all": 0 }, "notifications": [] }
+  }
+}

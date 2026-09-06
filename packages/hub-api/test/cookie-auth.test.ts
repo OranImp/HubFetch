@@ -361,13 +361,17 @@ describe('HubClient.getPostComments', () => {
     })
   })
 
-  it('degrades to an empty thread when the island is missing', async () => {
+  it('reports an upstream contract change when the island is missing', async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response('<html>no island</html>', { status: 200 }))
     await expect(
       new HubClient({ fetchImpl, ...FAST }).getPostComments('julien', '12345')
-    ).resolves.toEqual([])
+    ).rejects.toMatchObject({
+      name: 'HubCapabilityError',
+      capability: 'getPostComments',
+      code: 'upstream-changed'
+    })
   })
 })
 
