@@ -41,7 +41,7 @@ channels, and a sender-trust guard rejects calls from unexpected origins.
 
 The download manager is a **parallel, resumable queue** with speed limiting and SHA-256
 verification. It writes into the **standard HF cache layout** so the cache is interoperable with
-`transformers`, `huggingface-cli`, and friends. Downloads have their own concurrency and are
+`transformers`, `hf`, and friends. Downloads have their own concurrency and are
 independent of the clone subsystem.
 
 ## Clone subsystem
@@ -77,6 +77,40 @@ processes:
 The global Git configuration is **never mutated**; proxy selection is passed per-command. Each
 download/clone task snapshots the proxy selection at creation time so a later settings change does
 not silently retarget an in-flight transfer.
+
+## Space lifecycle administration
+
+Space administration rides the same layered path as every Hub feature: a small domain module
+(`packages/hub-api/src/domains/spaces.ts`) issues typed REST calls through the internal
+`HubTransport` (auth-host allowlist, token/cookie separation, bounded retries, GET cache), the
+`HubClient` facade exposes one-line delegates, and the main process maps each call to a validated
+IPC channel from the shared contract.
+
+The lifecycle operations are the stable, official Space endpoints:
+
+| Operation             | Call                                                                        |
+| --------------------- | --------------------------------------------------------------------------- |
+| Runtime state         | `GET /api/spaces/{repoId}/runtime`                                          |
+| Hardware catalog      | `GET /api/spaces/hardware` (public; cost fields are stripped in the mapper) |
+| Pause                 | `POST /api/spaces/{repoId}/pause`                                           |
+| Resume (paused Space) | `POST /api/spaces/{repoId}/restart`                                         |
+| Factory rebuild       | `POST /api/spaces/{repoId}/restart?factory=true`                            |
+| Hardware switch       | `POST /api/spaces/{repoId}/hardware` with `{flavor, sleepTimeSeconds?}`     |
+| Sleep window          | `POST /api/spaces/{repoId}/sleeptime` with `{seconds}`                      |
+
+Runtime parsing accepts additive unknown fields for forward compatibility and rejects only a
+payload without the semantic `stage` field. Current/requested hardware, `gcTimeout`, the sleep
+window, and storage/dev-mode fields are parsed but the app never manages volumes or dev mode.
+The sleep duration is displayed only when the Hub reports one; a free-tier (`cpu-basic`) Space
+with no reported window shows "Hub-managed automatic sleep" and disables custom sleep input —
+no default is hardcoded. `-1` (never sleep) is sent only where the official API accepts it.
+
+After a pause, resume, restart, hardware, or sleep mutation, the panel polls the runtime on a
+bounded window (a few seconds interval, always expiring, canceled early once the runtime settles)
+and invalidates the runtime/repo queries; Space secrets, variables, and logs caches stay intact.
+POST mutations are not retried on server failures (5xx): only an explicit 429 rate-limit response
+honoring `Retry-After` may retry, matching the shared transport policy — a lifecycle action can
+never double-fire silently.
 
 ## Security boundaries
 

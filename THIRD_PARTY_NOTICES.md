@@ -1,6 +1,6 @@
 # HubFetch Third-Party Notices
 
-HubFetch 0.2.0 is distributed under the Apache-2.0 license; the full project license ships in this
+HubFetch 0.3.0 is distributed under the Apache-2.0 license; the full project license ships in this
 repository as `LICENSE`.
 
 This document lists the third-party software distributed with HubFetch and the licenses that apply
@@ -14,16 +14,20 @@ The generator and its check mode live in `scripts/notices.test.mjs` (see `pnpm t
 
 ## Direct third-party dependencies
 
-| Package                | Version (installed) | License | Homepage                                      |
-| ---------------------- | ------------------- | ------- | --------------------------------------------- |
-| better-sqlite3         | 12.x                | MIT     | https://github.com/WiseLibs/better-sqlite3    |
-| hyparquet              | 1.x                 | MIT     | https://github.com/hyparam/hyparquet          |
-| ignore                 | 5.x                 | MIT     | https://github.com/kaelzhang/node-ignore      |
-| zod                    | 4.x                 | MIT     | https://github.com/colinhacks/zod             |
-| @huggingface/hub       | 2.x                 | MIT     | https://github.com/huggingface/huggingface.js |
-| @huggingface/inference | 4.x                 | MIT     | https://github.com/huggingface/huggingface.js |
+| Package                  | Version (installed) | License    | Homepage                                            |
+| ------------------------ | ------------------- | ---------- | --------------------------------------------------- |
+| better-sqlite3           | 12.x                | MIT        | https://github.com/WiseLibs/better-sqlite3          |
+| hyparquet                | 1.x                 | MIT        | https://github.com/hyparam/hyparquet                |
+| ignore                   | 5.x                 | MIT        | https://github.com/kaelzhang/node-ignore            |
+| zod                      | 4.x                 | MIT        | https://github.com/colinhacks/zod                   |
+| @huggingface/hub         | 2.x                 | MIT        | https://github.com/huggingface/huggingface.js       |
+| @huggingface/inference   | 4.x                 | MIT        | https://github.com/huggingface/huggingface.js       |
+| openai                   | 7.x                 | Apache-2.0 | https://github.com/openai/openai-node               |
+| @anthropic-ai/sdk        | 0.x                 | MIT        | https://github.com/anthropics/anthropic-sdk-typescript |
+| @radix-ui/react-context-menu | 2.x             | MIT        | https://github.com/radix-ui/primitives              |
 
-All direct third-party dependencies are MIT-licensed. The exact installed versions are governed by
+All direct third-party dependencies are permissively licensed: most are MIT-licensed, and the
+`openai` SDK is Apache-2.0. The exact installed versions are governed by
 `pnpm-lock.yaml`; the notices generator in `scripts/notices.test.mjs` verifies that every production
 dependency is present in this table and that its declared license matches the installed metadata.
 

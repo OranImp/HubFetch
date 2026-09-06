@@ -5,7 +5,30 @@ Release notes for HubFetch. The current product is the Electron-based HubFetch (
 below the current release describe earlier states of this codebase and are retained for
 provenance only; they do **not** describe the current product.
 
-## 0.2.0 (current)
+### 0.3.0 (2026-09-05)
+
+The current HubFetch 0.3.0 release. LLM provider support, localization overhaul, and
+post-translation hardening since 0.2.0:
+
+- **LLM provider integration** — OpenAI-compatible chat and Anthropic API support for
+  inference providers alongside the native Hugging Face Inference API.
+- **Localization overhaul** — full i18n framework with nine locales; extract, translate,
+  and format pipelines; hardcoded-string ESLint checks.
+- **Upload & export** — scan and upload local folders to the Hub; one-click export to
+  Ollama, LM Studio, and ComfyUI with progress and cancellation.
+- **Remote-write features** — discussions, PR comments, collections, notifications, repo
+  and Space administration, posts, reactions, upvotes, and profile updates.
+- **History & inbox** — local searchable browsing history with repository-type filters;
+  follow users/orgs/repos and Daily Papers with system notifications.
+- **Security hardening** — auth allow-list enforcement; central redaction registry;
+  fail-closed support-bundle export with leak detection; sender-trust IPC guard.
+- **Test & policy infrastructure** — docs contract, no-updater, privilege-boundary,
+  notices, and release-gate test suites; deterministic clone-test matrix; syntax/build
+  verification gates.
+- **Identity consolidation** — `hubfetch-desktop`, `@hubfetch/hub-api`, and
+  `@hubfetch/shared` all aligned at `0.3.0`; `hf` CLI branding throughout documentation.
+
+## 0.2.0
 
 The Electron HubFetch 0.2.0 release. Highlights since the 0.1.0-era product and the upstream
 `v0.0.9` import:

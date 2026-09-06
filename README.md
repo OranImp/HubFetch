@@ -27,7 +27,7 @@ with your OS keychain (Electron `safeStorage`) and stored in
   plaintext, never in `localStorage`. A captured Hub web session adds cookie-backed social writes.
 - **Download manager** — parallel, queued downloads with speed limiting, SHA-256 verification, and
   system notifications. Files land in the **standard HF cache layout**, fully interoperable with
-  `transformers`, `huggingface-cli`, and friends. Downloads are **independent** of the clone
+  `transformers`, `hf`, and friends. Downloads are **independent** of the clone
   subsystem and have their own concurrency.
 - **Real Git clones** — clone models/datasets/spaces into a working copy through **system Git and
   system Git-Xet** (prerequisites, see below). Clones run one at a time under a durable scheduler
@@ -154,6 +154,9 @@ pnpm test:no-updater    # negative policy test: no self-update capability remain
 pnpm test:privileges    # IPC/CSP privilege-boundary policy test
 pnpm test:release-tools # release tooling policy test
 pnpm test:docs          # docs link checker + docs contract + notices check + command-reference
+pnpm test:visual-tools  # visual-baseline diff/approval gate
+pnpm --filter hubfetch-desktop test:visual  # Playwright screenshot baselines (fixture data)
+pnpm screenshots:update # regenerate baselines; requires visual-qa --approve
 ```
 
 ## Releasing
@@ -162,9 +165,10 @@ Releases are cut from `main` by a commit whose subject is `[RELEASE] Vx.y.z`. Se
 [docs/releasing.md](docs/releasing.md) for the full flow; in short: bump all four workspace manifest
 versions, then land a commit titled e.g. `[RELEASE] V0.2.0`. CI verifies the source, builds and
 smoke-tests the packaged Windows x64 ZIP before it creates the `v0.2.0` tag or draft release, and a
-SHA-256 checksum plus asset inventory are produced for the ZIP. Publishing happens only after the
-remote asset list is verified. There is no updater metadata to validate: the app has no self-update
-capability (see the manual-updates note above).
+SHA-256 checksum and a CycloneDX 1.7 SBOM are published alongside the ZIP; an internal asset
+inventory is produced for remote verification but is not published as a public asset. Publishing
+happens only after the remote asset list is verified. There is no updater metadata to validate: the
+app has no self-update capability (see the manual-updates note above).
 
 ## Architecture
 

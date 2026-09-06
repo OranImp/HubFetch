@@ -94,6 +94,26 @@ semibold active. Every control ships default/hover/focus/active/disabled/loading
 over spinners; empty states teach quietly (no aurora). Toasts: bottom-right, error 8s,
 optional action slot (undo), close icon, hover pauses the timer.
 
+Cache page (Local cache): the existing scan/delete/partials surface plus a reserved
+verification strip (`min-h-[7.5rem]`) so progress, last-checked time, and
+verified/corrupt/unreadable counts never jump the layout. Icon-only header
+actions (Verify, Cancel) and per-repo prune/repair use `ghost` `size="icon"`
+buttons with inverted tooltips; disabled repair states keep the tooltip on a
+wrapping `span`. Prune and repair always open the shared plan-review dialog
+(`bg-elevated`, `shadow-overlay`) and apply by plan id — never by path.
+Issue paths are repo-relative, `break-all`, mono; the only absolute path on
+the page remains the existing cache-root line (`data-visual-mask="path"`).
+Verification errors use a compact `border-border-card bg-panel` alert, separate
+from scan errors that still show the raw errno for debugging.
+
+Account list (Settings → Account) and TopBar `AccountChip` menu: compact rows with avatar,
+mono handle, token label/role, web-session badge, and an Active pill (`badge-select`).
+Endpoint-mismatched rows are disabled and offer Open Network settings. Switching is never
+optimistic — the Active pill follows the validated `account.active` flag after main-process
+whoami. Token fields are password inputs that clear on submit; credentials never enter the
+DOM as text. Sign-out and remove confirm; remove stays disabled while the account still has
+typed download/clone/upload work.
+
 ## Motion
 
 150–250ms, `ease-out`, state changes only: fade, fade-rise (route/dialog), pop (anchored
@@ -102,6 +122,15 @@ overlays), toast-in, skeleton-pulse. No page-load choreography.
 
 ## Iconography
 
-lucide-react, 16px in dense UI, 20px in navigation, 1.5px stroke. Hub-provided emoji (Space
+  lucide-react, 16px in dense UI, 20px in navigation, 1.5px stroke. Hub-provided emoji (Space
 cards, feed items) render as data — that's authentic HF texture. No 🤗 and no HF logo in our
 own chrome.
+
+## Post translation
+
+`TranslatablePostBody` wraps only root post bodies (home `PostCard` and `PostPage`). Right-click
+opens the shared Radix `ContextMenu` with “Translate to \<resolved language\>”; translation never
+starts on its own. Success uses `SegmentedControl` (Original / Translated) above the existing
+sanitized `MarkdownView`. Same-language is a one-line `text-ink-faint` status. Failures use a
+compact `border-border-card bg-panel` alert with `secondary` Retry and `ghost` Open Translation
+Settings. Feed-card menus, radios, and buttons `stopPropagation` so the card does not navigate.

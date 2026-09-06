@@ -44,13 +44,37 @@ You can also capture a Hub web session through the app, which enables cookie-bac
 - Click a repo to see its model card, file tree, metadata, and discussion.
 - Use **Compare** to view 2–4 models side by side.
 
+## Space administration
+
+If you own a Space (or collaborate on it) and sign in with a token that includes repository
+administration rights, the Space detail page offers an operations panel:
+
+- **Runtime status** shows the lifecycle stage (running, building, paused, sleeping, stopped,
+  errors), the current hardware flavor, a pending hardware switch ("Requested hardware"), and the
+  sleep window — only when the Hub reports one. A free-tier `cpu-basic` Space without a reported
+  window shows "Hub-managed automatic sleep"; the app never guesses a duration.
+- **Pause** stops the app and releases its hardware (files and settings are kept). Pausing asks
+  for confirmation. **Resume** brings a paused Space back through a normal restart.
+- **Restart** rebuilds and restarts the app; **Factory rebuild** also clears the build cache and
+  requires typing the exact repository id to confirm.
+- **Hardware** can be switched from the public catalog. Selecting an upgraded flavor asks for
+  typed confirmation of the repository id and warns that billing may start immediately — the app
+  deliberately shows no prices or cost estimates; check the Hub website for actual pricing.
+- **Sleep time** sets how long an idle upgraded-hardware Space stays awake before sleeping; you
+  can also choose "never sleep" where the Hub accepts it. The control is disabled where the Hub
+  manages sleep automatically.
+- **Secrets** (write-only values), **variables**, and **build/run logs** behave as before and are
+  unaffected by lifecycle actions.
+
+Space volumes, dev mode, SSH, and metrics management are intentionally not part of the app.
+
 ## Downloading
 
 - Open a repo and start a download, or use the download manager to queue and schedule transfers.
 - Downloads are **parallel and resumable**, support **speed limiting**, and verify files with
   **SHA-256**.
 - Files land in the **standard HF cache layout**, so they interoperate with `transformers`,
-  `huggingface-cli`, and other tooling.
+  `hf`, and other tooling.
 - Downloads and clones are independent subsystems with separate concurrency; pausing or cancelling
   a download does not affect clone tasks.
 

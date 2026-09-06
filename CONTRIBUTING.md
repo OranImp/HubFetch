@@ -28,10 +28,10 @@ pnpm dev
 
 1. Fork / branch from `main`.
 2. Make your change. Keep the app runnable — `pnpm dev` must work at every commit.
-3. `pnpm typecheck && pnpm lint && pnpm test` must pass.
-4. If you touched UI strings, run `pnpm i18n:extract` and fill in **both** `en` and `zh-CN`
-   locales (machine-translated zh-CN is fine; mark it with `// TODO(i18n): review`).
-5. Open a PR with a clear description.
+3. Run a Gitleaks secret scan on the full git history (see [Secret scanning](docs/security.md#secret-scanning) in the security docs) and fix any findings before pushing.
+4. `pnpm typecheck && pnpm lint && pnpm test` must pass.
+5. If you touched UI strings, run `pnpm i18n:extract` and fill in **both** `en` and `zh-CN` locales (machine-translated zh-CN is fine; mark it with `// TODO(i18n): review`).
+6. Open a PR with a clear description.
 
 ## Adding a language
 
