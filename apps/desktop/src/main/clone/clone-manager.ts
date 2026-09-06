@@ -53,7 +53,9 @@ import {
   type CloneDestinationReservation
 } from './clone-contract'
 import type { CloneOutcome, CloneRunRecord } from './clone-host'
-import type { CloneStore } from './clone-store'
+import type { CloneStore, CloneTransitionExtra } from './clone-store'
+import type { AccountCredentialLease } from '../auth'
+import type { AccountReferenceCoordinator } from '../account-references'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -90,6 +92,7 @@ export interface CloneManagerHost {
     envelope: CloneEnvelope
     onEvent?: (event: CloneEvent) => void
     auth?: 'system' | 'app-token'
+    accessToken?: string
   }): Promise<CloneRunRecord>
   cancelClone(assignmentId: string): Promise<CloneRunRecord>
   shutdown(): Promise<CloneRunRecord[]>
@@ -117,6 +120,8 @@ export interface CloneManagerOptions {
   now?: () => number
   /** Working directory for the Git child (default process.cwd()). */
   cwd?: string
+  leaseAccountCredential?: (accountId: string) => AccountCredentialLease
+  references?: AccountReferenceCoordinator
 }
 
 /** Typed shutdown result proving zero surviving work. */
@@ -154,6 +159,11 @@ export class CloneManager {
   private readonly broadcastMs: number
   private readonly now: () => number
   private readonly cwd: string
+  private readonly leaseAccountCredential?: (accountId: string) => AccountCredentialLease
+  private readonly references?: AccountReferenceCoordinator
+  private readonly accountLeases = new Map<string, AccountCredentialLease>()
+  private readonly accountReferenceReleases = new Map<string, () => void>()
+  private readonly accountUnavailable = new Set<string>()
 
   /** Latest unpersisted progress per attempt (throttled write queue). */
   private readonly latestProgress = new Map<string, CloneProgress>()
@@ -181,6 +191,8 @@ export class CloneManager {
     this.broadcastMs = options.broadcastMs ?? DEFAULT_BROADCAST_MS
     this.now = options.now ?? (() => Date.now())
     this.cwd = options.cwd ?? process.cwd()
+    this.leaseAccountCredential = options.leaseAccountCredential
+    this.references = options.references
   }
 
   // -------------------------------------------------------------------------
@@ -194,7 +206,23 @@ export class CloneManager {
 
   /** Enqueue one new attempt and pump the FIFO. */
   create(input: CloneCreateInput): CloneRecord {
-    const record = this.store.createQueued(input)
+    const accountId = input.auth === 'app-token' ? input.accountId : undefined
+    const account = accountId === undefined ? undefined : this.acquireAccount(accountId)
+    const accountLabel = account?.accountLabel
+    let record: CloneRecord
+    try {
+      record = this.store.createQueued({
+        ...input,
+        ...(accountId === undefined || accountLabel === undefined
+          ? {}
+          : { accountId, accountLabel })
+      })
+    } catch (error) {
+      account?.release()
+      throw error
+    }
+    if (account) this.accountLeases.set(record.id, account)
+    this.registerAccountReference(record)
     this.publishNow()
     this.pump()
     return record
@@ -202,7 +230,25 @@ export class CloneManager {
 
   /** Retry a terminal attempt (delegates to the Todo 31 linked fresh row). */
   retry(parentId: string, input: CloneCreateInput): CloneRecord {
-    const record = this.store.retry(parentId, input)
+    const parent = this.store.get(parentId)
+    const accountId =
+      input.auth === 'app-token' ? (input.accountId ?? parent?.accountId) : undefined
+    const account = accountId === undefined ? undefined : this.acquireAccount(accountId)
+    const accountLabel = account?.accountLabel
+    let record: CloneRecord
+    try {
+      record = this.store.retry(parentId, {
+        ...input,
+        ...(accountId === undefined || accountLabel === undefined
+          ? {}
+          : { accountId, accountLabel })
+      })
+    } catch (error) {
+      account?.release()
+      throw error
+    }
+    if (account) this.accountLeases.set(record.id, account)
+    this.registerAccountReference(record)
     this.publishNow()
     this.pump()
     return record
@@ -215,6 +261,7 @@ export class CloneManager {
    */
   remove(id: string): CloneRecord[] {
     const records = this.store.removeTerminal(id)
+    this.releaseAccountReference(id)
     this.publishNow()
     return records
   }
@@ -225,6 +272,7 @@ export class CloneManager {
    */
   recover(): CloneRecord[] {
     const changed = this.store.recoverInterrupted()
+    for (const record of this.store.list()) this.registerAccountReference(record)
     if (changed.length > 0) this.publishNow()
     this.pump()
     return changed
@@ -239,6 +287,8 @@ export class CloneManager {
     if (record === undefined) return this.list()
     if (record.status === 'queued') {
       this.store.cancelQueued(id)
+      if (record.auth === 'app-token') this.releaseAccountLease(id)
+      else this.releaseAccountReference(id)
       this.publishNow()
       return this.list()
     }
@@ -296,6 +346,7 @@ export class CloneManager {
     }
     const remainingJobPids = this.host.activeIds()
     const storeActive = this.store.activeCount()
+    for (const id of this.accountLeases.keys()) this.releaseAccountLease(id)
     return {
       active: active.map((r) => r.id),
       remainingJobPids,
@@ -332,6 +383,21 @@ export class CloneManager {
    */
   private async startAttempt(id: string): Promise<void> {
     try {
+      const queued = this.store.get(id)
+      if (queued?.auth === 'app-token') {
+        try {
+          if (queued.accountId === undefined) throw new Error('account-unavailable')
+          this.ensureAccountLease(queued)
+        } catch {
+          this.store.fail(id, {
+            errorCode: 'account-unavailable',
+            error: 'The account for this clone is unavailable.'
+          })
+          this.releaseAccountReference(id)
+          this.publishNow()
+          return
+        }
+      }
       const running = this.store.start(id)
       this.publishNow()
 
@@ -390,6 +456,7 @@ export class CloneManager {
         assignmentId: id,
         envelope,
         auth: running.auth === 'app-token' ? 'app-token' : 'system',
+        accessToken: this.accountLeases.get(running.id)?.accessToken,
         onEvent: (event) => this.onWorkerEvent(id, event)
       })
 
@@ -529,32 +596,43 @@ export class CloneManager {
         switch (outcome) {
           case 'completed':
             this.store.complete(id)
+            this.releaseAccountReference(id)
             break
           case 'failed':
             this.store.fail(id, failure ?? { errorCode: 'internal', error: 'clone failed' })
+            this.releaseAccountLease(id)
             break
           case 'interrupted':
-            this.store.transition(id, 'interrupted')
+            this.store.transition(id, 'interrupted', new Date(), this.accountFailureExtra(id))
+            this.releaseAccountLease(id)
             break
           case 'cancelled':
             // running->cancelled is illegal; a cancel always moves through
             // cancelling first. This defensive path uses the legal sink.
-            this.store.transition(id, 'interrupted')
+            this.store.transition(id, 'interrupted', new Date(), this.accountFailureExtra(id))
+            this.releaseAccountLease(id)
             break
         }
         break
       case 'cancelling':
         switch (outcome) {
           case 'cancelled':
-            this.store.finishCancelled(id)
+            if (this.accountUnavailable.has(id)) {
+              this.store.transition(id, 'interrupted', new Date(), this.accountFailureExtra(id))
+            } else {
+              this.store.finishCancelled(id)
+            }
+            this.releaseAccountLease(id)
             break
           case 'interrupted':
-            this.store.transition(id, 'interrupted')
+            this.store.transition(id, 'interrupted', new Date(), this.accountFailureExtra(id))
+            this.releaseAccountLease(id)
             break
           default:
             // completed/failed while a cancel was in flight: the outcome is
             // unverifiable, so cancelling -> interrupted is the legal terminal.
-            this.store.transition(id, 'interrupted')
+            this.store.transition(id, 'interrupted', new Date(), this.accountFailureExtra(id))
+            this.releaseAccountLease(id)
             break
         }
         break
@@ -625,5 +703,69 @@ export class CloneManager {
     }
     for (const timer of this.deferredFlush.values()) clearTimeout(timer)
     this.deferredFlush.clear()
+  }
+
+  accountUsage(accountId: string): number {
+    return this.store.accountUsage(accountId)
+  }
+
+  private acquireAccount(accountId: string): AccountCredentialLease {
+    if (!this.leaseAccountCredential) throw new Error('account-unavailable')
+    const lease = this.leaseAccountCredential(accountId)
+    return lease
+  }
+
+  private ensureAccountLease(record: CloneRecord): void {
+    if (record.accountId === undefined || this.accountLeases.has(record.id)) return
+    const lease = this.acquireAccount(record.accountId)
+    this.accountLeases.set(record.id, lease)
+  }
+
+  private registerAccountReference(record: CloneRecord): void {
+    if (record.accountId === undefined || this.references === undefined) return
+    if (record.status !== 'queued' && record.status !== 'running' && record.status !== 'cancelling')
+      return
+    this.accountReferenceReleases.set(
+      record.id,
+      this.references.register(record.accountId, 'clone', record.id, () => {
+        const current = this.store.get(record.id)
+        if (current?.status === 'queued') {
+          this.store.fail(record.id, {
+            errorCode: 'account-unavailable',
+            error: 'The account for this clone is unavailable.'
+          })
+          this.releaseAccountLease(record.id)
+          this.publishNow()
+        } else if (current?.status === 'running') {
+          this.accountUnavailable.add(record.id)
+          this.store.requestCancel(record.id)
+          void this.host.cancelClone(record.id)
+        } else if (current?.status === 'cancelling') {
+          this.accountUnavailable.add(record.id)
+          void this.host.cancelClone(record.id)
+        }
+      })
+    )
+  }
+
+  private releaseAccountReference(id: string): void {
+    this.accountReferenceReleases.get(id)?.()
+    this.accountReferenceReleases.delete(id)
+    this.accountUnavailable.delete(id)
+    this.releaseAccountLease(id)
+  }
+
+  private accountFailureExtra(id: string): CloneTransitionExtra {
+    return this.accountUnavailable.has(id)
+      ? {
+          errorCode: 'account-unavailable',
+          error: 'The account for this clone is unavailable.'
+        }
+      : {}
+  }
+
+  private releaseAccountLease(id: string): void {
+    this.accountLeases.get(id)?.release()
+    this.accountLeases.delete(id)
   }
 }

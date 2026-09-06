@@ -99,6 +99,8 @@ function insertRow(
     transport: overrides.transport ?? 'https',
     destination: overrides.destination ?? join(tmpdir(), 't31-insert-dest'),
     auth: overrides.auth ?? 'none',
+    account_id: overrides.account_id ?? null,
+    account_label: overrides.account_label ?? null,
     proxy_mode: overrides.proxy_mode ?? 'system',
     proxy_url: overrides.proxy_url ?? null,
     status: overrides.status,
@@ -679,7 +681,12 @@ describe('schema column integrity', () => {
 
   it('an app-token attempt stores only the closed enum, never token bytes', () => {
     const queued = store.createQueued(
-      makeInput({ auth: 'app-token', proxy: { mode: 'manual', url: 'http://127.0.0.1:7897' } })
+      makeInput({
+        auth: 'app-token',
+        accountId: '11111111-1111-4111-8111-111111111111',
+        accountLabel: 'tester',
+        proxy: { mode: 'manual', url: 'http://127.0.0.1:7897' }
+      })
     )
     const row = db
       .prepare('SELECT * FROM clone_tasks WHERE id = ?')

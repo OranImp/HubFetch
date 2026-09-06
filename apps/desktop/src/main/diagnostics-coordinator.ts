@@ -20,6 +20,7 @@ import { DiagnosticsService, type DiagnosticsEnv } from './diagnostics'
 import type { GitDiagnostics } from './git-diagnostics'
 import { secretRegistry } from './security/secret-registry'
 import { redactor } from './security/log'
+import type { CompatibilityService } from './compatibility'
 
 export interface DiagnosticsCoordinatorOptions {
   /** Fresh env per run (current settings/proxy applied at call time). */
@@ -37,6 +38,7 @@ export interface DiagnosticsCoordinatorOptions {
    * must never report a pre-run cache hit.
    */
   gitDiagnostics: GitDiagnostics
+  compatibility?: CompatibilityService
 }
 
 export class DiagnosticsCoordinator {
@@ -50,6 +52,7 @@ export class DiagnosticsCoordinator {
   private readonly flushLogs: (() => Promise<void>) | undefined
   private readonly broadcast: (progress: DiagnosticsProgress) => void
   private readonly gitDiagnostics: GitDiagnostics
+  private readonly compatibility: CompatibilityService | undefined
 
   constructor(options: DiagnosticsCoordinatorOptions) {
     this.envFactory = options.envFactory
@@ -59,6 +62,7 @@ export class DiagnosticsCoordinator {
     this.flushLogs = options.flushLogs
     this.broadcast = options.broadcast
     this.gitDiagnostics = options.gitDiagnostics
+    this.compatibility = options.compatibility
   }
 
   get report(): DiagnosticReport | null {
@@ -87,8 +91,11 @@ export class DiagnosticsCoordinator {
           totalChecks: total
         })
       })
-      this.lastReport = report
-      return report
+      const withCapabilities = this.compatibility
+        ? { ...report, capabilities: this.compatibility.read() }
+        : report
+      this.lastReport = withCapabilities
+      return withCapabilities
     } finally {
       if (this.runController === controller) this.runController = null
     }

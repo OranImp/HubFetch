@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { IPC_INVOKE_CHANNELS, ipcRequestSchemas, settingsExportFileSchema } from '@hubfetch/shared'
 import {
   checkSenderTrust,
   decideExternalTarget,
@@ -214,5 +215,231 @@ describe('sanitized logging', () => {
     } finally {
       warn.mockRestore()
     }
+  })
+})
+
+const LLM_UUID = '123e4567-e89b-12d3-a456-426614174000'
+const ANTHROPIC_DEFAULT_BASE = 'https://api.anthropic.com'
+const GEMINI_DEFAULT_BASE = 'https://generativelanguage.googleapis.com'
+
+const llmSchemas: Record<string, { safeParse: (payload: unknown) => { success: boolean; data?: unknown } } | undefined> =
+  ipcRequestSchemas
+
+function parseOrThrow(channel: string, payload: unknown): unknown {
+  const schema = llmSchemas[channel]
+  if (!schema) throw new Error(`missing schema for ${channel}`)
+  const parsed = schema.safeParse(payload)
+  if (!parsed.success) throw new Error(`Invalid payload for ${channel}`)
+  return parsed.data
+}
+
+describe('LLM IPC request schemas', () => {
+  it('registers the six llm channels on the invoke allowlist', () => {
+    for (const channel of [
+      'llm:get-status',
+      'llm:set-credential',
+      'llm:delete-credential',
+      'llm:test-connection',
+      'llm:translate',
+      'llm:cancel'
+    ] as const) {
+      expect(IPC_INVOKE_CHANNELS).toContain(channel)
+    }
+  })
+
+  it('rejects malformed provider and base URL before any handler runs', () => {
+    const handler = vi.fn()
+    const run = (payload: unknown): void => {
+      const data = parseOrThrow('llm:test-connection', payload)
+      handler(data)
+    }
+
+    expect(() =>
+      run({
+        provider: 'huggingface',
+        modelId: 'gpt-4o-mini',
+        baseUrl: null
+      })
+    ).toThrow(/Invalid payload/)
+    expect(() =>
+      run({
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        baseUrl: 'ftp://api.openai.com/v1'
+      })
+    ).toThrow(/Invalid payload/)
+    expect(() =>
+      run({
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        baseUrl: 'https://user:pass@api.openai.com/v1'
+      })
+    ).toThrow(/Invalid payload/)
+    expect(() =>
+      run({
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        baseUrl: 'https://api.openai.com/v1?key=secret'
+      })
+    ).toThrow(/Invalid payload/)
+    expect(() =>
+      run({
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        baseUrl: 'https://api.openai.com/v1#frag'
+      })
+    ).toThrow(/Invalid payload/)
+    expect(handler).not.toHaveBeenCalled()
+
+    expect(
+      llmSchemas['llm:test-connection']?.safeParse({
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        baseUrl: null
+      }).success
+    ).toBe(true)
+    expect(
+      llmSchemas['llm:test-connection']?.safeParse({
+        provider: 'anthropic',
+        modelId: 'claude-sonnet-4-0',
+        baseUrl: ANTHROPIC_DEFAULT_BASE,
+        apiKey: 'sk-ant-test-key-value'
+      }).success
+    ).toBe(true)
+  })
+
+  it('rejects invalid UUID, unsupported locale, blank model, and oversized Markdown', () => {
+    const translate = llmSchemas['llm:translate']
+    expect(translate).toBeDefined()
+    if (!translate) return
+    expect(
+      translate.safeParse({
+        requestId: LLM_UUID,
+        markdown: '# hi',
+        targetLocale: 'zh-CN'
+      }).success
+    ).toBe(true)
+    expect(
+      translate.safeParse({
+        requestId: 'not-a-uuid',
+        markdown: '# hi',
+        targetLocale: 'zh-CN'
+      }).success
+    ).toBe(false)
+    expect(
+      translate.safeParse({
+        requestId: LLM_UUID,
+        markdown: '# hi',
+        targetLocale: 'system'
+      }).success
+    ).toBe(false)
+    expect(
+      translate.safeParse({
+        requestId: LLM_UUID,
+        markdown: '# hi',
+        targetLocale: 'xx'
+      }).success
+    ).toBe(false)
+    expect(
+      translate.safeParse({
+        requestId: LLM_UUID,
+        markdown: 'x'.repeat(50_001),
+        targetLocale: 'en'
+      }).success
+    ).toBe(false)
+    expect(
+      translate.safeParse({
+        requestId: LLM_UUID,
+        markdown: 'x'.repeat(50_000),
+        targetLocale: 'en'
+      }).success
+    ).toBe(true)
+
+    const testConnection = llmSchemas['llm:test-connection']
+    expect(testConnection).toBeDefined()
+    expect(
+      testConnection?.safeParse({ provider: 'openai', modelId: '   ', baseUrl: null }).success
+    ).toBe(false)
+    expect(
+      testConnection?.safeParse({
+        provider: 'gemini',
+        modelId: '  gemini-2.5-flash  ',
+        baseUrl: null
+      }).data
+    ).toEqual({
+      provider: 'gemini',
+      modelId: 'gemini-2.5-flash',
+      baseUrl: null
+    })
+  })
+
+  it('enforces API-key length bounds and omits keys from settings patches', () => {
+    const setCredential = llmSchemas['llm:set-credential']
+    expect(setCredential).toBeDefined()
+    if (!setCredential) return
+    expect(
+      setCredential.safeParse({ provider: 'openai', apiKey: 'sk-live-test-key' }).success
+    ).toBe(true)
+    expect(setCredential.safeParse({ provider: 'openai', apiKey: 'short' }).success).toBe(false)
+    expect(setCredential.safeParse({ provider: 'openai', apiKey: 'x'.repeat(513) }).success).toBe(
+      false
+    )
+    expect(setCredential.safeParse({ provider: 'openai', apiKey: '   ' }).success).toBe(false)
+
+    const settingsSet = ipcRequestSchemas['settings:set']!
+    expect(
+      settingsSet.safeParse({
+        patch: {
+          llm: {
+            activeProvider: 'openai',
+            providers: {
+              openai: { modelId: 'gpt-4o-mini', baseUrl: null },
+              anthropic: { modelId: '', baseUrl: null },
+              gemini: { modelId: '', baseUrl: null }
+            }
+          }
+        }
+      }).success
+    ).toBe(true)
+    expect(
+      settingsSet.safeParse({
+        patch: {
+          llm: {
+            activeProvider: 'openai',
+            providers: {
+              openai: { modelId: 'gpt-4o-mini', baseUrl: null, apiKey: 'sk-should-not-appear' },
+              anthropic: { modelId: '', baseUrl: null },
+              gemini: { modelId: '', baseUrl: null }
+            }
+          }
+        }
+      }).success
+    ).toBe(false)
+    expect(
+      settingsExportFileSchema.safeParse({
+        version: 1,
+        exportedAt: '2026-08-20T00:00:00.000Z',
+        settings: {
+          llm: {
+            activeProvider: 'gemini',
+            providers: {
+              openai: { modelId: '', baseUrl: null },
+              anthropic: { modelId: '', baseUrl: null },
+              gemini: { modelId: 'gemini-2.5-flash', baseUrl: GEMINI_DEFAULT_BASE }
+            }
+          }
+        }
+      }).success
+    ).toBe(true)
+  })
+
+  it('accepts credential delete and cancel payloads with closed provider and UUID', () => {
+    expect(llmSchemas['llm:delete-credential']?.safeParse({ provider: 'anthropic' }).success).toBe(
+      true
+    )
+    expect(llmSchemas['llm:delete-credential']?.safeParse({ provider: 'cohere' }).success).toBe(false)
+    expect(llmSchemas['llm:cancel']?.safeParse({ requestId: LLM_UUID }).success).toBe(true)
+    expect(llmSchemas['llm:cancel']?.safeParse({ requestId: 'nope' }).success).toBe(false)
+    expect(llmSchemas['llm:get-status']).toBeUndefined()
   })
 })

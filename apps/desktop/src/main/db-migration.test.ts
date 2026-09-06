@@ -76,10 +76,10 @@ describe('openDatabase migration orchestration', () => {
     const db = latestInstance()
 
     expect(db.userVersion).toBe(MIGRATIONS.length)
-    // Every migration SQL ran in order, ending with the clone_tasks migration.
+    // Every migration SQL ran in order, ending with the upload_tasks migration.
     expect(db.execs).toEqual([...MIGRATIONS])
-    expect(db.execs.at(-1)).toContain('CREATE TABLE clone_tasks')
-    expect(db.execs.at(-1)).toContain('CREATE INDEX idx_clone_tasks_status_created')
+    expect(db.execs.at(-1)).toContain('CREATE TABLE upload_tasks')
+    expect(db.execs.at(-1)).toContain('CREATE INDEX idx_upload_tasks_status')
   })
 
   it('upgrades an upstream v2 fixture: runs the remaining migrations and remaps settings', () => {
@@ -93,7 +93,7 @@ describe('openDatabase migration orchestration', () => {
     migrate(db as never)
 
     expect(db.userVersion).toBe(MIGRATIONS.length)
-    expect(db.execs).toEqual([MIGRATIONS[2], MIGRATIONS[3]])
+    expect(db.execs).toEqual([MIGRATIONS[2], MIGRATIONS[3], MIGRATIONS[4], MIGRATIONS[5]])
     const upgraded = JSON.parse(db.kv.get('settings')!) as Record<string, unknown>
     expect(upgraded).not.toHaveProperty('proxyUrl')
     expect(upgraded.proxy).toEqual({ mode: 'manual', manualUrl: 'http://127.0.0.1:7890' })
@@ -255,6 +255,111 @@ describe('migration SQL on a real SQLite engine', () => {
       status: string
     }
     expect(download.status).toBe('completed')
+    db.close()
+  })
+
+  it('adds account metadata and marks legacy follows/inbox rows as legacy-local', () => {
+    const db = new DatabaseSync(':memory:')
+    for (const sql of MIGRATIONS.slice(0, 4)) db.exec(sql)
+    db.exec(
+      `INSERT INTO follows (id, type, target, created_at) VALUES ('f', 'user', 'alice', '2026-01-01')`
+    )
+    db.exec(
+      `INSERT INTO inbox (id, kind, title, body, route, created_at) VALUES ('i', 'paper', 't', 'b', '/papers/p', '2026-01-01')`
+    )
+    db.exec(MIGRATIONS[4]!)
+
+    const follows = db.prepare('SELECT * FROM follows').all()
+    const inbox = db.prepare('SELECT * FROM inbox').all()
+    expect(follows[0]).toMatchObject({ account_id: null, legacy_origin: 'legacy-local' })
+    expect(inbox[0]).toMatchObject({ account_id: null, legacy_origin: 'legacy-local' })
+    const downloadColumns = db
+      .prepare('PRAGMA table_info(downloads)')
+      .all()
+      .map((column) => column.name)
+    expect(downloadColumns).toEqual(expect.arrayContaining(['account_id', 'account_label']))
+    const cloneColumns = db
+      .prepare('PRAGMA table_info(clone_tasks)')
+      .all()
+      .map((column) => column.name)
+    expect(cloneColumns).toEqual(expect.arrayContaining(['account_id', 'account_label']))
+    db.close()
+  })
+
+  it('creates upload_tasks with all columns and status CHECK on a fresh database', () => {
+    const db = new DatabaseSync(':memory:')
+    for (const sql of MIGRATIONS) db.exec(sql)
+
+    const table = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='upload_tasks'")
+      .get()
+    expect(table).toBeDefined()
+
+    const columns = db
+      .prepare('PRAGMA table_info(upload_tasks)')
+      .all()
+      .map((column: Record<string, unknown>) => column.name)
+    expect(columns).toEqual(
+      expect.arrayContaining([
+        'id',
+        'account_id',
+        'account_label',
+        'repo_kind',
+        'repo_name',
+        'repo_visibility',
+        'root_path',
+        'manifest_fingerprint',
+        'warning_codes',
+        'summary_file_count',
+        'summary_total_bytes',
+        'status',
+        'phase',
+        'progress',
+        'message_key',
+        'params_json',
+        'repo_id',
+        'repo_url',
+        'created_at',
+        'updated_at',
+        'completed_at'
+      ])
+    )
+
+    const indexes = db
+      .prepare("PRAGMA index_list('upload_tasks')")
+      .all()
+      .map((index: Record<string, unknown>) => index.name)
+    expect(indexes).toContain('idx_upload_tasks_status')
+
+    // Verify CHECK constraint rejects invalid status
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO upload_tasks (
+            id, repo_kind, repo_name, repo_visibility, root_path,
+            manifest_fingerprint, warning_codes,
+            summary_file_count, summary_total_bytes,
+            status, phase, progress, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'bad',
+          'model',
+          'test',
+          'public',
+          '/tmp',
+          'abc',
+          '[]',
+          0,
+          0,
+          'bogus-status',
+          'preparing',
+          0,
+          '2026-01-01T00:00:00.000Z',
+          '2026-01-01T00:00:00.000Z'
+        )
+    ).toThrow()
+
     db.close()
   })
 })

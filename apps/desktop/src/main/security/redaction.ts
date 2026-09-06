@@ -14,6 +14,7 @@
  * stand in for secret material.
  */
 import type { SecretRegistry } from './secret-registry'
+import { HUB_CAPABILITY_KEYS } from '@hubfetch/shared'
 
 /** Deterministic placeholder that replaces every removed secret. */
 export const REDACTED = '[REDACTED]'
@@ -255,7 +256,8 @@ export class Redactor {
           break
         }
         const redactedKey = this.redactText(key)
-        const redactedValue = SENSITIVE_FIELD_NAMES.has(key.toLowerCase())
+        const redactedValue =
+          SENSITIVE_FIELD_NAMES.has(key.toLowerCase()) && !isPublicCapabilityKey(key, item)
           ? REDACTED
           : this.redactValueAt(item, depth + 1, seen)
         out[redactedKey] = redactedValue
@@ -332,6 +334,14 @@ export class Redactor {
     if (typeof error === 'string') return error
     return String(error)
   }
+}
+
+function isPublicCapabilityKey(fieldName: string, value: unknown): boolean {
+  return (
+    fieldName === 'key' &&
+    typeof value === 'string' &&
+    HUB_CAPABILITY_KEYS.some((capabilityKey) => capabilityKey === value)
+  )
 }
 
 function isBinaryView(value: object): value is ArrayBuffer | ArrayBufferView {

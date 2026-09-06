@@ -77,7 +77,9 @@ export interface CloneHostOptions {
    * envelope and the session is closed on settle. A throw fails the clone
    * typed. System clones never call it.
    */
-  askPass?: { createForJob(job: HubFetchJobHandle): AskPassCloneBundle } | null
+  askPass?: {
+    createForJob(job: HubFetchJobHandle, accessToken?: string): AskPassCloneBundle
+  } | null
 }
 
 export type CloneStep = 'spawn' | 'ready' | 'assign' | 'contains' | 'arm' | 'start'
@@ -132,6 +134,8 @@ export interface StartCloneOptions {
    * the armed envelope; `system` (default) leaves GCM/SSH untouched.
    */
   auth?: 'system' | 'app-token'
+  /** Account-pinned token retained only for the Job-bound AskPass setup. */
+  accessToken?: string
 }
 
 interface ActiveClone {
@@ -192,8 +196,9 @@ export class CloneHost {
   private readonly graceIntervalMs: number
   private readonly waitTimeoutMs: number
   private readonly emptyTimeoutMs: number
-  private readonly askPass: { createForJob(job: HubFetchJobHandle): AskPassCloneBundle } | null =
-    null
+  private readonly askPass: {
+    createForJob(job: HubFetchJobHandle, accessToken?: string): AskPassCloneBundle
+  } | null = null
   private readonly active = new Map<string, ActiveClone>()
 
   constructor(options: CloneHostOptions) {
@@ -251,7 +256,7 @@ export class CloneHost {
         return record
       }
       try {
-        askPassBundle = this.askPass.createForJob(created.handle)
+        askPassBundle = this.askPass.createForJob(created.handle, options.accessToken)
       } catch (error) {
         record.error = `AskPass session failed: ${error instanceof Error ? error.message : String(error)}`
         return record

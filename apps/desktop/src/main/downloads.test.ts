@@ -134,6 +134,156 @@ describe('download environment helpers', () => {
 })
 
 describe('DownloadManager frozen environment', () => {
+  it('pins an authenticated task to the account that was active at creation', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    let activeAccountId = '11111111-1111-4111-8111-111111111111'
+    const lease = vi.fn((accountId: string) => ({
+      accountId,
+      accountLabel:
+        accountId === '11111111-1111-4111-8111-111111111111' ? 'account-a' : 'account-b',
+      accessToken: accountId === '11111111-1111-4111-8111-111111111111' ? 'token-a' : 'token-b',
+      release: vi.fn()
+    }))
+    const manager = new DownloadManager(
+      db as never,
+      createSettings() as never,
+      createHub() as never,
+      { show: vi.fn() } as never,
+      () => undefined,
+      vi.fn(),
+      undefined,
+      { activeAccountId: () => activeAccountId, leaseAccountCredential: lease }
+    )
+
+    await manager.start({ repoId: 'org/repo', kind: 'model' })
+    activeAccountId = '22222222-2222-4222-8222-222222222222'
+
+    expect(manager.list()[0]).toMatchObject({
+      accountId: '11111111-1111-4111-8111-111111111111',
+      accountLabel: 'account-a'
+    })
+    const runtimeTokens = (manager as unknown as { runtimeAuthTokens: Map<string, string> })
+      .runtimeAuthTokens
+    expect([...runtimeTokens.values()]).toEqual(['token-a'])
+    expect(lease).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111')
+    expect(db.writes.at(-1)).toMatchObject({
+      accountId: '11111111-1111-4111-8111-111111111111'
+    })
+    manager.shutdown()
+  })
+
+  it('resolves a restarted task by its stored account id without active-account fallback', () => {
+    vi.useFakeTimers()
+    const accountId = '11111111-1111-4111-8111-111111111111'
+    const db = new FakeDatabase([
+      {
+        id: 'download-a',
+        repo_id: 'org/repo',
+        kind: 'model',
+        revision: 'main',
+        resolved_commit: COMMIT_A,
+        endpoint: 'https://hub.example.test',
+        proxy_mode: 'system',
+        proxy_url: null,
+        cache_dir: 'C:\\cache',
+        environment_version: 1,
+        account_id: accountId,
+        account_label: 'account-a',
+        status: 'paused',
+        total_bytes: 42,
+        received_bytes: 0,
+        files_json: JSON.stringify([
+          { path: 'weights.bin', size: 42, receivedBytes: 0, status: 'paused' }
+        ]),
+        error: null,
+        error_code: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        completed_at: null
+      }
+    ])
+    const lease = vi.fn(() => ({
+      accountId,
+      accountLabel: 'account-a',
+      accessToken: 'token-a',
+      release: vi.fn()
+    }))
+    const manager = new DownloadManager(
+      db as never,
+      createSettings() as never,
+      createHub() as never,
+      { show: vi.fn() } as never,
+      () => 'token-b',
+      vi.fn(),
+      undefined,
+      {
+        activeAccountId: () => '22222222-2222-4222-8222-222222222222',
+        leaseAccountCredential: lease
+      }
+    )
+
+    manager.resume('download-a')
+
+    expect(lease).toHaveBeenCalledWith(accountId)
+    const runtimeTokens = (manager as unknown as { runtimeAuthTokens: Map<string, string> })
+      .runtimeAuthTokens
+    expect(runtimeTokens.get('download-a')).toBe('token-a')
+    manager.shutdown()
+  })
+
+  it('marks a restarted task unavailable instead of using the active account', () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase([
+      {
+        id: 'download-missing',
+        repo_id: 'org/repo',
+        kind: 'model',
+        revision: 'main',
+        resolved_commit: COMMIT_A,
+        endpoint: 'https://hub.example.test',
+        proxy_mode: 'system',
+        proxy_url: null,
+        cache_dir: 'C:\\cache',
+        environment_version: 1,
+        account_id: '11111111-1111-4111-8111-111111111111',
+        account_label: 'account-a',
+        status: 'paused',
+        total_bytes: 42,
+        received_bytes: 0,
+        files_json: JSON.stringify([
+          { path: 'weights.bin', size: 42, receivedBytes: 0, status: 'paused' }
+        ]),
+        error: null,
+        error_code: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        completed_at: null
+      }
+    ])
+    const manager = new DownloadManager(
+      db as never,
+      createSettings() as never,
+      createHub() as never,
+      { show: vi.fn() } as never,
+      () => 'token-b',
+      vi.fn(),
+      undefined,
+      {
+        activeAccountId: () => '22222222-2222-4222-8222-222222222222',
+        leaseAccountCredential: () => {
+          throw new Error('account-unavailable')
+        }
+      }
+    )
+
+    manager.resume('download-missing')
+
+    expect(manager.list()[0]).toMatchObject({ status: 'error', errorCode: 'account-unavailable' })
+    expect(
+      (manager as unknown as { runtimeAuthTokens: Map<string, string> }).runtimeAuthTokens.size
+    ).toBe(0)
+    manager.shutdown()
+  })
+
   it('resolves the revision first, then enumerates the tree at that commit', async () => {
     vi.useFakeTimers()
     const db = new FakeDatabase()
@@ -539,6 +689,268 @@ describe('DownloadManager frozen environment', () => {
       errorCode: 'legacy-task',
       resumable: false
     })
+    manager.shutdown()
+  })
+})
+
+describe('DownloadManager plan flow', () => {
+  it('returns an immutable plan without writing state or spawning workers', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const hub = createHub()
+    const manager = createManager(db, hub)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model', revision: 'main' })
+
+    // Plan has all required fields.
+    expect(plan.planId).toBeTruthy()
+    expect(plan.repoId).toBe('org/repo')
+    expect(plan.kind).toBe('model')
+    expect(plan.revision).toBe('main')
+    expect(plan.resolvedCommit).toBe(COMMIT_A)
+    expect(plan.endpoint).toBe('https://hub.example.test')
+    expect(plan.proxy).toEqual({ mode: 'manual', url: 'http://127.0.0.1:7890' })
+    expect(plan.files).toHaveLength(1)
+    expect(plan.files[0]!.path).toBe('weights.bin')
+    expect(plan.files[0]!.size).toBe(42)
+    expect(plan.totalBytes).toBe(42)
+    expect(plan.totalFiles).toBe(1)
+    expect(plan.expiresAt).toBeTruthy()
+    expect(plan.digest).toBeTruthy()
+
+    // No DB writes happened.
+    expect(db.writes).toHaveLength(0)
+
+    // No workers were spawned.
+    const internals = manager as unknown as { workers: Map<string, unknown> }
+    expect(internals.workers.size).toBe(0)
+
+    manager.shutdown()
+  })
+
+  it('starts a download from a plan with selected paths', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const hub = createHub()
+    const manager = createManager(db, hub)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model', revision: 'main' })
+    const tasks = await manager.startPlanned({ planId: plan.planId, paths: ['weights.bin'] })
+
+    expect(tasks).toHaveLength(1)
+    expect(tasks[0]!).toMatchObject({
+      repoId: 'org/repo',
+      kind: 'model',
+      revision: 'main',
+      resolvedCommit: COMMIT_A,
+      status: 'queued',
+      totalBytes: 42
+    })
+    expect(tasks[0]!.files).toHaveLength(1)
+    expect(tasks[0]!.files[0]!.path).toBe('weights.bin')
+
+    // DB write happened (task persisted).
+    expect(db.writes.length).toBeGreaterThan(0)
+    expect(db.writes.at(-1)).toMatchObject({
+      resolvedCommit: COMMIT_A,
+      status: 'queued'
+    })
+
+    manager.shutdown()
+  })
+
+  it('rejects an expired plan', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const manager = createManager(db)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+    // Advance time past the 15-minute TTL so the timer fires and removes the plan.
+    await vi.advanceTimersByTimeAsync(16 * 60 * 1000)
+
+    await expect(
+      manager.startPlanned({ planId: plan.planId, paths: ['weights.bin'] })
+    ).rejects.toThrow('plan-not-found')
+
+    manager.shutdown()
+  })
+
+  it('rejects a tampered plan (digest mismatch)', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const manager = createManager(db)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+    // Tamper with the plan's digest.
+    const internals = manager as unknown as {
+      plans: Map<string, { plan: { digest: string } }>
+    }
+    const stored = internals.plans.get(plan.planId)
+    if (stored) stored.plan.digest = 'tampered-digest'
+
+    await expect(
+      manager.startPlanned({ planId: plan.planId, paths: ['weights.bin'] })
+    ).rejects.toThrow('plan-digest-mismatch')
+
+    manager.shutdown()
+  })
+
+  it('rejects an empty selection', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const manager = createManager(db)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+
+    await expect(
+      manager.startPlanned({ planId: plan.planId, paths: [] })
+    ).rejects.toThrow('empty-selection')
+
+    manager.shutdown()
+  })
+
+  it('rejects a path not in the plan', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const manager = createManager(db)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+
+    await expect(
+      manager.startPlanned({ planId: plan.planId, paths: ['nonexistent.bin'] })
+    ).rejects.toThrow('unsafe-selection')
+
+    manager.shutdown()
+  })
+
+  it('rejects an unknown plan id', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const manager = createManager(db)
+
+    await expect(
+      manager.startPlanned({ planId: '00000000-0000-4000-8000-000000000000', paths: ['weights.bin'] })
+    ).rejects.toThrow('plan-not-found')
+
+    manager.shutdown()
+  })
+
+  it('rejects when environment changed (different endpoint)', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const hub = createHub()
+    const manager = createManager(db, hub)
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+    // Change the endpoint.
+    hub.baseUrl = 'https://different-hub.example.test'
+
+    await expect(
+      manager.startPlanned({ planId: plan.planId, paths: ['weights.bin'] })
+    ).rejects.toThrow('environment-mismatch')
+
+    manager.shutdown()
+  })
+
+  it('deduplicates against live tasks when starting from plan', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const hub = createHub()
+    const manager = createManager(db, hub)
+
+    // Create a plan and start it.
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+    await manager.startPlanned({ planId: plan.planId, paths: ['weights.bin'] })
+
+    // Create another plan for the same repo/commit and try to start.
+    const plan2 = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+    const tasks2 = await manager.startPlanned({ planId: plan2.planId, paths: ['weights.bin'] })
+
+    // The file is already covered by the first task — no new task created.
+    expect(tasks2).toHaveLength(1) // Only the first task remains.
+    expect(tasks2[0]!.files[0]!.path).toBe('weights.bin')
+
+    manager.shutdown()
+  })
+
+  it('pins an authenticated plan to the active account', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const accountId = '11111111-1111-4111-8111-111111111111'
+    const lease = vi.fn(() => ({
+      accountId,
+      accountLabel: 'account-a',
+      accessToken: 'token-a',
+      release: vi.fn()
+    }))
+    const manager = new DownloadManager(
+      db as never,
+      createSettings() as never,
+      createHub() as never,
+      { show: vi.fn() } as never,
+      () => undefined,
+      vi.fn(),
+      undefined,
+      { activeAccountId: () => accountId, leaseAccountCredential: lease }
+    )
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+
+    expect(plan.accountId).toBe(accountId)
+    expect(plan.accountLabel).toBe('account-a')
+
+    // No DB writes during planning.
+    expect(db.writes).toHaveLength(0)
+
+    manager.shutdown()
+  })
+
+  it('rejects startPlanned when account changed', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    let activeAccountId = '11111111-1111-4111-8111-111111111111'
+    const lease = vi.fn(() => ({
+      accountId: activeAccountId,
+      accountLabel: 'account-a',
+      accessToken: 'token-a',
+      release: vi.fn()
+    }))
+    const manager = new DownloadManager(
+      db as never,
+      createSettings() as never,
+      createHub() as never,
+      { show: vi.fn() } as never,
+      () => undefined,
+      vi.fn(),
+      undefined,
+      { activeAccountId: () => activeAccountId, leaseAccountCredential: lease }
+    )
+
+    const plan = await manager.plan({ repoId: 'org/repo', kind: 'model' })
+    // Switch account.
+    activeAccountId = '22222222-2222-4222-8222-222222222222'
+
+    await expect(
+      manager.startPlanned({ planId: plan.planId, paths: ['weights.bin'] })
+    ).rejects.toThrow('account-unavailable')
+
+    manager.shutdown()
+  })
+
+  it('strips unsafe paths from plan file tree', async () => {
+    vi.useFakeTimers()
+    const db = new FakeDatabase()
+    const hub = createHub()
+    hub.getFileTree = vi.fn().mockResolvedValue([
+      { type: 'file', path: 'safe.bin', size: 42 },
+      { type: 'file', path: '../escape.bin', size: 10 }
+    ])
+    const manager = createManager(db, hub)
+
+    await expect(
+      manager.plan({ repoId: 'org/repo', kind: 'model' })
+    ).rejects.toThrow('unsafe relative path')
+
     manager.shutdown()
   })
 })

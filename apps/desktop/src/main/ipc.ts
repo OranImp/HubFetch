@@ -26,7 +26,12 @@ import {
   ipcRequestSchemas,
   settingsExportFileSchema
 } from '@hubfetch/shared'
-import { defaultCacheDir, HubApiError } from '@hubfetch/hub-api'
+import {
+  defaultCacheDir,
+  HUB_CAPABILITIES,
+  HubApiError,
+  toHubCapabilityError
+} from '@hubfetch/hub-api'
 import type { HubClient } from '@hubfetch/hub-api'
 import type { AuthManager } from './auth'
 import { buildHubClient, snapshotFromConfig } from './hub'
@@ -47,6 +52,7 @@ import {
   runInferenceStream
 } from './integrations'
 import { matchLocale } from './i18n'
+import { exportDatasetPage } from './dataset-export'
 import {
   checkSenderTrust,
   logIpcDenial,
@@ -54,9 +60,13 @@ import {
   type TrustedOrigins
 } from './ipc-guard'
 import { redactor } from './security/log'
+import { secretRegistry } from './security/secret-registry'
 import type { DiagnosticsCoordinator } from './diagnostics-coordinator'
 import { SupportBundleError } from './support-bundle'
 import type { CloneManager } from './clone/clone-manager'
+import type { LlmCredentialStore } from './llm-credentials'
+import type { LlmService } from './llm/llm-service'
+import { CompatibilityService, capabilityForIpcChannel } from './compatibility'
 
 export interface AppContext {
   db: AppDatabase
@@ -83,6 +93,9 @@ export interface AppContext {
   ) => void
   diagnostics: DiagnosticsCoordinator
   clones: CloneManager
+  llmCredentials: LlmCredentialStore
+  llmService: LlmService
+  compatibility?: CompatibilityService
 }
 
 function handle<C extends IpcInvokeChannel>(
@@ -113,6 +126,14 @@ function handle<C extends IpcInvokeChannel>(
       // message here — the single boundary — so no secret-bearing error text
       // ever reaches the renderer or its devtools, while the sentinel the
       // renderer matches on (HUB_WEB_SESSION_REQUIRED) passes through unchanged.
+      const capability = capabilityForIpcChannel(channel)
+      const status = err instanceof HubApiError ? err.status : undefined
+      const preserveExistingHttpClassification =
+        status !== undefined && status !== 401 && status !== 403 && status !== 429
+      if (capability && !preserveExistingHttpClassification) {
+        const normalized = toHubCapabilityError(capability, HUB_CAPABILITIES[capability].class, err)
+        throw new Error(redactor.redactErrorText(normalized), { cause: normalized })
+      }
       throw new Error(redactor.redactErrorText(err), { cause: err })
     }
   })
@@ -178,6 +199,12 @@ async function applySettingsPatch(
 
 export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): void {
   trustedOrigins = origins
+  const compatibility =
+    ctx.compatibility ??
+    new CompatibilityService({
+      getClient: () => ctx.hub,
+      getAuthState: () => ctx.auth.getState()
+    })
   /**
    * A 401 from a cookie-backed social write means the captured web session
    * expired or was revoked: auto-disconnect it (broadcasts evt:auth so the
@@ -415,6 +442,20 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   handle('hub:datasetRows', ({ repoId, config, split, offset, length }) =>
     ctx.hub.getDatasetRows(repoId, config, split, offset, length)
   )
+  handle('dataset:exportPage', async (req, event) => {
+    const parent = ownerWindow(event)
+    return exportDatasetPage(req, {
+      getDatasetRows: (repoId, config, split, offset, length) =>
+        ctx.hub.getDatasetRows(repoId, config, split, offset, length),
+      showSaveDialog: async (options) => {
+        const result = parent
+          ? await dialog.showSaveDialog(parent, options)
+          : await dialog.showSaveDialog(options)
+        if (result.canceled || !result.filePath) return { canceled: true as const }
+        return { canceled: false as const, filePath: result.filePath }
+      }
+    })
+  })
 
   // --- hub: collections ---------------------------------------------------------
   handle('hub:collections', ({ owner }) => ctx.hub.listCollections(owner))
@@ -480,6 +521,13 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   handle('hub:spaceVariableDelete', ({ repoId, key }) => ctx.hub.deleteSpaceVariable(repoId, key))
   handle('hub:spaceLogs', ({ repoId, logType }) => ctx.hub.getSpaceLogsSnapshot(repoId, logType))
   handle('hub:spaceRestart', ({ repoId, factory }) => ctx.hub.restartSpace(repoId, factory))
+  handle('hub:spaceRuntime', ({ repoId }) => ctx.hub.getSpaceRuntime(repoId))
+  handle('hub:spaceHardwareList', () => ctx.hub.listSpaceHardware())
+  handle('hub:spacePause', ({ repoId }) => ctx.hub.pauseSpace(repoId))
+  handle('hub:spaceHardwareSet', ({ repoId, flavor, sleepTimeSeconds }) =>
+    ctx.hub.requestSpaceHardware(repoId, flavor, sleepTimeSeconds)
+  )
+  handle('hub:spaceSleepTimeSet', ({ repoId, seconds }) => ctx.hub.setSpaceSleepTime(repoId, seconds))
 
   // --- hub: community & billing --------------------------------------------------------
   // Like (POST) rides the web session; unlike (DELETE) rides the token, so a
@@ -557,9 +605,12 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
 
   // --- auth ---------------------------------------------------------------------
   handle('auth:getState', () => ctx.auth.getState())
+  handle('auth:listAccounts', () => ctx.auth.listAccounts())
   // The token is a secret: never log this payload.
   handle('auth:signInWithToken', ({ token }) => ctx.auth.signInWithToken(token))
   handle('auth:signOut', () => ctx.auth.signOut())
+  handle('auth:switchAccount', ({ accountId }) => ctx.auth.switchAccount(accountId))
+  handle('auth:removeAccount', ({ accountId }) => ctx.auth.removeAccount(accountId))
   // The captured cookie is a secret: it stays in the main process, never logged.
   handle('auth:connectHubSession', async (_req, event) => {
     if (ctx.auth.getState().status !== 'signedIn')
@@ -590,6 +641,8 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   // --- downloads -------------------------------------------------------------------
   handle('downloads:list', () => ctx.downloads.list())
   handle('downloads:start', ({ request }) => ctx.downloads.start(request))
+  handle('downloads:plan', ({ request }) => ctx.downloads.plan(request))
+  handle('downloads:startPlanned', ({ request }) => ctx.downloads.startPlanned(request))
   handle('downloads:pause', ({ id }) => ctx.downloads.pause(id))
   handle('downloads:resume', ({ id }) => ctx.downloads.resume(id))
   handle('downloads:cancel', ({ id }) => ctx.downloads.cancel(id))
@@ -609,6 +662,19 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   handle('cache:cleanPartials', ({ kind, repoId }) => ctx.cache.cleanPartials(kind, repoId))
   handle('cache:revealRepo', async ({ kind, repoId }) => {
     shell.showItemInFolder(await ctx.cache.resolveRepo(kind, repoId))
+  })
+  // Cache action plans (plan Todo 15): the schema already restricted the
+  // payload to logical repo identity, issue ids, and 40-hex retained commits —
+  // never a path or a hash target. The returned plan is sanitized by the
+  // manager (relative display paths only); absolute paths and expected hashes
+  // stay in the main-memory registry. Apply is one-shot and typed.
+  handle('cache:planAction', ({ request }) => ctx.cache.planAction(request))
+  handle('cache:applyAction', ({ request }) => ctx.cache.applyAction(request.planId))
+  handle('cache:verify', () =>
+    ctx.cache.verify((progress) => ctx.broadcast('evt:cacheVerification', progress))
+  )
+  handle('cache:verifyCancel', () => {
+    ctx.cache.cancelVerify()
   })
 
   // --- follows & inbox ------------------------------------------------------------------
@@ -631,6 +697,9 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     ctx.integrationTasks.startUpload(request, event.sender.id)
   )
   handle('upload:cancel', ({ id }) => ctx.integrationTasks.cancel(id, 'upload'))
+  handle('upload:retry', async ({ request }) => ctx.integrationTasks.retryUpload(request))
+  handle('upload:remove', ({ id }) => ({ removed: ctx.integrationTasks.removeUpload(id) }))
+  handle('upload:listPersisted', () => ctx.integrationTasks.listPersistedUploads())
   handle('integrationTasks:list', () => ctx.integrationTasks.list())
   handle('integrationTasks:revealOutput', ({ id }) => ctx.integrationTasks.revealOutput(id))
   handle('inference:run', ({ request }) => runInference(request, ctx.auth.accessToken()))
@@ -642,6 +711,43 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   )
   handle('inference:cancel', ({ id }) => {
     cancelInference(id)
+  })
+
+  // --- llm (plan Todo 10) ----------------------------------------------------------
+  // Every handler is gated by the central `handle` wrapper: Zod payload validation
+  // happens BEFORE any service call and the sender must be the app's own trusted
+  // main frame. Results are closed union types; errors never leak raw exceptions.
+  handle('llm:get-status', () => ctx.llmService.getStatus())
+
+  handle('llm:set-credential', ({ provider, apiKey }) => {
+    ctx.llmService.setCredential(provider, apiKey)
+    return ctx.llmService.getStatus()
+  })
+
+  handle('llm:delete-credential', ({ provider }) => {
+    ctx.llmService.deleteCredential(provider)
+    return ctx.llmService.getStatus()
+  })
+
+  handle('llm:test-connection', async (request) => {
+    // Register draft key before any logging so the redactor can mask it.
+    let transientHandle: ReturnType<typeof secretRegistry.register> | undefined
+    if (request.apiKey) {
+      transientHandle = secretRegistry.register(request.apiKey)
+    }
+    try {
+      return await ctx.llmService.testConnection(request)
+    } finally {
+      if (transientHandle) {
+        secretRegistry.unregister(transientHandle)
+      }
+    }
+  })
+
+  handle('llm:translate', (request) => ctx.llmService.translate(request))
+
+  handle('llm:cancel', ({ requestId }) => {
+    ctx.llmService.cancel(requestId)
   })
 
   // --- diagnostics (plan Todo 24) ------------------------------------------------
@@ -682,6 +788,12 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
     ctx.diagnostics.cancelExport()
   })
 
+  // --- Hub compatibility ------------------------------------------------------
+  // Reads are local/static. A probe is only started by an explicit renderer
+  // invocation and always uses the active Hub client/proxy.
+  handle('compatibility:read', () => compatibility.read())
+  handle('compatibility:probe', ({ key }) => compatibility.probe(key))
+
   // --- clones (plan Todo 33) ------------------------------------------------------
   // Every operation is already gated by the central `handle` wrapper: Zod
   // payload validation happens BEFORE any manager call and the sender must be
@@ -689,9 +801,22 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   // omitted proxy override to the FROZEN settings snapshot here in main — the
   // renderer never supplies an arbitrary proxy config beyond the closed
   // override, and never a raw URL or token (the clone URL is always derived).
-  const withResolvedCloneProxy = (request: CloneRequest): CloneCreateInput => ({
+  const withResolvedCloneProxy = (
+    request: CloneRequest,
+    bindActiveAccount = true
+  ): CloneCreateInput => ({
     ...request,
-    proxy: request.proxy ?? snapshotFromConfig(ctx.settings.get().proxy)
+    proxy: request.proxy ?? snapshotFromConfig(ctx.settings.get().proxy),
+    ...(bindActiveAccount && request.auth === 'app-token'
+      ? (() => {
+          const accountId = ctx.auth.getActiveAccountId()
+          if (accountId === null) throw new Error('account-unavailable')
+          return {
+            accountId,
+            accountLabel: ctx.auth.activeAccountLabel() ?? undefined
+          }
+        })()
+      : {})
   })
 
   handle('clones:list', () => ctx.clones.list())
@@ -699,7 +824,7 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   handle('clones:create', ({ request }) => ctx.clones.create(withResolvedCloneProxy(request)))
   handle('clones:cancel', ({ id }) => ctx.clones.cancel(id))
   handle('clones:retry', ({ parentId, request }) =>
-    ctx.clones.retry(parentId, withResolvedCloneProxy(request))
+    ctx.clones.retry(parentId, withResolvedCloneProxy(request, false))
   )
   // Terminal-only record removal. The UUID is validated and the sender trusted
   // by the central wrapper BEFORE the manager call; the manager removes the

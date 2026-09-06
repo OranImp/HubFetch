@@ -1,5 +1,12 @@
 import { existsSync, unlinkSync } from 'node:fs'
-import { join } from 'node:path'
+import { createWriteStream } from 'node:fs'
+import { lstat } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { Readable } from 'node:stream'
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web'
+import { pipeline } from 'node:stream/promises'
 import {
   BrowserWindow,
   app,
@@ -41,12 +48,14 @@ import {
 } from './hub'
 import { MainI18n, matchLocale } from './i18n'
 import { IntegrationTaskManager } from './integration-tasks'
+import { UploadTaskManager } from './upload-task-manager'
 import { registerIpcHandlers } from './ipc'
 import { CloneHost } from './clone/clone-host'
 import { CloneManager } from './clone/clone-manager'
 import { CloneStore } from './clone/clone-store'
 import { AskPassBroker, resolveAskPassHelperPath } from './askpass/askpass-broker'
 import { Library } from './library'
+import { AccountReferenceCoordinator } from './account-references'
 import { createLogCaptures, sanitizeRendererLine } from './log-capture'
 import { buildMenu } from './menu'
 import { NotificationService } from './notifications'
@@ -64,6 +73,16 @@ import {
   registerWindowsNotificationShortcut,
   removeWindowsNotificationShortcut
 } from './windows-notification-registration'
+import { LlmCredentialStore } from './llm-credentials'
+import { LlmService } from './llm/llm-service'
+import { OpenAIAdapter } from './llm/openai-adapter'
+import { AnthropicAdapter } from './llm/anthropic-adapter'
+import { createGeminiAdapter } from './llm/gemini-adapter'
+import { resolveBaseUrl } from './llm/config'
+import { CompatibilityService } from './compatibility'
+import type { LlmProvider, ProxySnapshot } from '@hubfetch/shared'
+
+const MAIN_DIR = dirname(fileURLToPath(import.meta.url))
 
 // One HubFetch identity everywhere: the name drives the default userData root
 // (`%APPDATA%\HubFetch`), so dev and packaged builds share one database and one
@@ -98,7 +117,7 @@ const isDev = !app.isPackaged
 // frame at exactly the packaged `file:` entry (or the dev-server origin).
 const trustedOrigins: TrustedOrigins = resolveTrustedOrigins(
   app.isPackaged,
-  join(__dirname, '../renderer/index.html')
+  join(MAIN_DIR, '../renderer/index.html')
 )
 
 function isTrustedWebContents(wc: WebContents | null | undefined): boolean {
@@ -216,11 +235,11 @@ if (!gotLock) {
     })
     const cloneHost = new CloneHost({
       bridge: hubFetchJobBridge,
-      workerModulePath: join(__dirname, 'clone-worker.mjs'),
+      workerModulePath: join(MAIN_DIR, 'clone-worker.mjs'),
       askPass: {
-        createForJob: (job) =>
+        createForJob: (job, accessToken) =>
           askPassBroker.openSession({
-            token: auth.accessToken() ?? '',
+            token: accessToken ?? '',
             job,
             ttlMs: 60_000,
             promptLimit: 4
@@ -231,31 +250,18 @@ if (!gotLock) {
     const db = openDatabase()
     const settings = new SettingsStore(db)
     const i18n = new MainI18n()
+    const auth = new AuthManager(db, (state) => broadcast('evt:auth', state))
+    const accountReferences = new AccountReferenceCoordinator()
     const configuredLocale = settings.get().locale
     i18n.setLocale(configuredLocale === 'system' ? matchLocale(app.getLocale()) : configuredLocale)
 
-    // Todo 32: durable single-active clone FIFO alongside the parallel
-    // download manager. Recover running/cancelling rows from a previous crash
-    // (running/cancelling -> interrupted), then pump the oldest queued clone.
-    // Each start is gated on destination validation/reserve AND Git readiness
-    // before any worker spawns; progress persistence is throttled; exactly one
-    // terminal event per attempt pumps the next queued clone. Downloads are
-    // untouched — CloneManager shares no concurrency state with DownloadManager.
     // One shared Git readiness probe (plan Todo 4): CloneManager gates every
     // start on it, and DiagnosticsCoordinator invalidates it before each run
     // so a Recheck never reports a pre-run cache hit.
     const gitDiagnostics = new GitDiagnostics({
       runner: { runCommand: (argv, opts) => runCommandBounded(argv, opts) }
     })
-    const cloneManager = new CloneManager({
-      store: new CloneStore(db),
-      host: cloneHost,
-      diagnostics: gitDiagnostics,
-      publish: (records) => broadcast('evt:clones', records)
-    })
-    cloneManager.recover()
 
-    const auth = new AuthManager(db, (state) => broadcast('evt:auth', state))
     const initial = settings.get()
     const hubHolder: HubHolder = {
       current: createHubClient(
@@ -270,7 +276,21 @@ if (!gotLock) {
     const hub = createHubProxy(hubHolder)
     auth.attachClient(hubHolder.current)
     await applyAppProxy(initial.proxy)
+    await auth.init()
     app.setLoginItemSettings({ openAtLogin: initial.launchAtLogin })
+
+    // Todo 32: durable single-active clone FIFO alongside the parallel
+    // download manager. Credential leases are resolved by the persisted
+    // account id only after AuthManager has restored its account inventory.
+    const cloneManager = new CloneManager({
+      store: new CloneStore(db),
+      host: cloneHost,
+      diagnostics: gitDiagnostics,
+      publish: (records) => broadcast('evt:clones', records),
+      leaseAccountCredential: (accountId) => auth.leaseAccountCredential(accountId),
+      references: accountReferences
+    })
+    cloneManager.recover()
 
     // Permission policy — default deny. No renderer permission request is ever
     // granted (Spaces embedded as sandboxed iframes cannot reach the camera,
@@ -324,7 +344,11 @@ if (!gotLock) {
       }
     })
 
-    const library = new Library(db, () => settings.get().historyLimit)
+    const library = new Library(
+      db,
+      () => settings.get().historyLimit,
+      () => auth.getActiveAccountId()
+    )
     // Portable ZIP builds have no installer to place the Start Menu shortcut, so
     // Windows toast AUMID routing would silently no-op. Register/repair the
     // shortcut now — before any NotificationService emission — and surface the
@@ -351,14 +375,60 @@ if (!gotLock) {
       notifications,
       () => auth.accessToken(),
       (tasks) => broadcast('evt:downloads', tasks),
-      (taskId, snapshot) => transportManager.transportFor(taskId, snapshot)
+      (taskId, snapshot) => transportManager.transportFor(taskId, snapshot),
+      {
+        activeAccountId: () => auth.getActiveAccountId(),
+        leaseAccountCredential: (accountId) => auth.leaseAccountCredential(accountId),
+        references: accountReferences
+      }
     )
     // Cache cleanup must spare partials of still-resumable downloads.
+    // Plan deps (Todo 15): repair leases credentials by account id (Todo 12)
+    // and refetches through a frozen endpoint/proxy snapshot (Todo 17 pattern);
+    // the transport rides the shared per-snapshot transport pool.
     const cache = new CacheManager(
       settings,
       () => downloads.protectedTaskIds(),
-      (kind, repoId) => downloads.protectedCommits(kind, repoId)
+      (kind, repoId) => downloads.protectedCommits(kind, repoId),
+      {
+        activeAccountId: () => auth.getActiveAccountId(),
+        leaseAccountCredential: (accountId) => auth.leaseAccountCredential(accountId),
+        currentEndpoint: () => hub.baseUrl.replace(/\/+$/, ''),
+        currentProxy: () => snapshotFromConfig(settings.get().proxy),
+        createRepairTransport: (snapshot) => {
+          const transport = transportManager.transportFor(`cache-repair-${randomUUID()}`, snapshot)
+          return {
+            fetchToFile: async (input) => {
+              const res = await transport.fetchImpl(input.url, {
+                method: 'GET',
+                headers: input.authToken
+                  ? { Authorization: `Bearer ${input.authToken}` }
+                  : undefined,
+                redirect: 'follow',
+                signal: input.signal ?? null
+              })
+              if (!res.ok || !res.body) {
+                throw new Error(`download failed with status ${res.status}`)
+              }
+              const etagHeader = res.headers.get('x-linked-etag') ?? res.headers.get('etag') ?? ''
+              const etag = etagHeader.replace(/^W\//, '').replace(/"/g, '').toLowerCase()
+              await pipeline(
+                Readable.fromWeb(res.body as NodeWebReadableStream),
+                createWriteStream(input.destination)
+              )
+              const size = (await lstat(input.destination)).size
+              return { etag, size }
+            },
+            close: () => transport.close()
+          }
+        }
+      }
     )
+    // Todo 15: sweep stale `.hubfetch-repair` staging before any plan is accepted.
+    cache.startup().catch((error: unknown) => {
+      logger.error('cache', 'repair staging startup sweep failed', error)
+    })
+    const uploadTaskManager = new UploadTaskManager(db)
     const integrationTasks = new IntegrationTaskManager({
       accessToken: () => auth.accessToken(),
       username: () => {
@@ -367,15 +437,59 @@ if (!gotLock) {
       },
       cacheDir: () => cache.cacheDir(),
       broadcast: (tasks) => broadcast('evt:integrationTasks', tasks),
-      notifications
+      notifications,
+      activeAccountId: () => auth.getActiveAccountId(),
+      activeAccountLabel: () => auth.activeAccountLabel(),
+      leaseAccountCredential: (accountId) => auth.leaseAccountCredential(accountId),
+      references: accountReferences,
+      uploadTaskManager
     })
+    // Interrupt any active upload tasks from a previous session
+    const interruptedCount = uploadTaskManager.interruptActive()
+    if (interruptedCount > 0) {
+      logger.info('upload', `interrupted ${interruptedCount} active upload task(s) from previous session`)
+    }
     const follows = new FollowsPoller(
       library,
       hub,
       settings,
-      (items) => broadcast('evt:inbox', items),
-      notifications
+      (payload) => broadcast('evt:inbox', payload),
+      notifications,
+      () => auth.getActiveAccountId()
     )
+    auth.setAccountUsage((accountId) => ({
+      downloads: downloads.accountUsage(accountId),
+      clones: cloneManager.accountUsage(accountId),
+      uploads: integrationTasks.accountUsage(accountId)
+    }))
+    auth.onCredentialsUnavailable((accountIds) => accountReferences.markUnavailable(accountIds))
+
+    // --- LLM (plan Todo 10) ----------------------------------------------------
+    const llmCredentials = new LlmCredentialStore()
+    await llmCredentials.load()
+    const llmService = new LlmService({
+      credentialStore: llmCredentials,
+      getSettings: () => settings.get().llm,
+      getProxySnapshot: () => snapshotFromConfig(settings.get().proxy),
+      createAdapter: (provider, apiKey, proxy, modelId, baseUrl) => {
+        switch (provider) {
+          case 'openai':
+            return new OpenAIAdapter(apiKey, proxy, modelId, baseUrl)
+          case 'anthropic':
+            return new AnthropicAdapter(apiKey, modelId, {
+              baseURL: baseUrl ?? undefined,
+              fetch: createProxiedFetch(proxy)
+            })
+          case 'gemini':
+            return createGeminiAdapter({
+              apiKey,
+              baseUrl: resolveBaseUrl(provider, { modelId, baseUrl }),
+              modelId,
+              fetchImpl: createProxiedFetch(proxy)
+            })
+        }
+      }
+    })
 
     const tray = new TrayManager(
       () => BrowserWindow.getAllWindows()[0],
@@ -414,6 +528,7 @@ if (!gotLock) {
           }
         )
         auth.attachClient(hubHolder.current)
+        if (endpointChanged) auth.onEndpointChanged()
       }
     }
 
@@ -459,6 +574,11 @@ if (!gotLock) {
       }
     }
 
+    const compatibility = new CompatibilityService({
+      getClient: () => hub,
+      getAuthState: () => auth.getState()
+    })
+
     // Diagnostics + support-bundle coordinator (plan Todo 24). The env is built
     // fresh per run so settings/proxy changes apply immediately; the reachability
     // probe rides the same snapshot-aware proxied fetch as every other request.
@@ -497,7 +617,8 @@ if (!gotLock) {
         await logCaptures.renderer.flush()
       },
       broadcast: (progress) => broadcast('evt:diagnosticsProgress', progress),
-      gitDiagnostics
+      gitDiagnostics,
+      compatibility
     })
 
     registerIpcHandlers(
@@ -527,7 +648,10 @@ if (!gotLock) {
         applyNetworkSettings,
         applyDesktopSettings,
         diagnostics,
-        clones: cloneManager
+        compatibility,
+        clones: cloneManager,
+        llmCredentials,
+        llmService
       },
       trustedOrigins
     )
@@ -557,9 +681,9 @@ if (!gotLock) {
           ? { titleBarStyle: 'hidden' as const, titleBarOverlay: titleBarOverlay() }
           : {}),
         // Window/taskbar icon for Windows and Linux; macOS uses the app bundle icon.
-        ...(process.platform !== 'darwin' ? { icon: join(__dirname, '../../build/icon.png') } : {}),
+        ...(process.platform !== 'darwin' ? { icon: join(MAIN_DIR, '../../build/icon.png') } : {}),
         webPreferences: {
-          preload: join(__dirname, '../preload/index.js'),
+          preload: join(MAIN_DIR, '../preload/index.js'),
           contextIsolation: true,
           nodeIntegration: false,
           sandbox: true,
@@ -682,7 +806,7 @@ if (!gotLock) {
       if (isDev && process.env.ELECTRON_RENDERER_URL) {
         void win.loadURL(process.env.ELECTRON_RENDERER_URL)
       } else {
-        void win.loadFile(join(__dirname, '../renderer/index.html'))
+        void win.loadFile(join(MAIN_DIR, '../renderer/index.html'))
       }
       return win
     }
@@ -696,7 +820,6 @@ if (!gotLock) {
     follows.start()
 
     // Session restore happens after the window exists so auth events reach the UI.
-    void auth.init()
 
     app.on('activate', () => {
       const win = BrowserWindow.getAllWindows()[0]
@@ -713,6 +836,10 @@ if (!gotLock) {
       isQuitting = true
       downloads.shutdown()
       integrationTasks.shutdown()
+      // Todo 15: abort in-flight cache applies and remove registered repair
+      // temp files so no staging bytes outlive the process.
+      void cache.shutdown()
+      accountReferences.clear()
       follows.stop()
       tray.destroy()
       // Todo 27/32: cancel every active clone through the cooperative cancel ->
@@ -726,6 +853,11 @@ if (!gotLock) {
       // Release per-task sessions/dispatchers and the app-level fetch pool.
       void transportManager.closeAll()
       void closeDefaultTransportPool()
+      // Todo 10: abort every active LLM request, then release every LLM
+      // credential handle so no API key copy outlives the process.
+      llmService.dispose()
+      llmCredentials.dispose()
+      auth.dispose()
       // Drop every registered secret (token, session cookie, task tokens) so
       // no credential copy outlives the process. Runs after every owner has
       // released its registrations.

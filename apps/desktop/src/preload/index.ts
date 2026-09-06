@@ -3,6 +3,7 @@ import type {
   CloneBridge,
   CloneRecord,
   CloneRequest,
+  CompatibilityBridge,
   DiagnosticReport,
   DiagnosticsBridge,
   DiagnosticsExportResult,
@@ -12,6 +13,8 @@ import type {
   IpcInvokeChannel,
   IpcRequest,
   IpcResponse,
+  HubCapabilityKey,
+  HubCapabilityStatus,
   RendererApi
 } from '@hubfetch/shared'
 import { IPC_EVENT_CHANNELS, IPC_INVOKE_CHANNELS } from '@hubfetch/shared'
@@ -80,6 +83,15 @@ const cloneBridge: CloneBridge = {
   }
 }
 
+const compatibilityBridge: CompatibilityBridge = {
+  read(): Promise<HubCapabilityStatus[]> {
+    return ipcRenderer.invoke('compatibility:read') as Promise<HubCapabilityStatus[]>
+  },
+  probe(key: HubCapabilityKey): Promise<HubCapabilityStatus> {
+    return ipcRenderer.invoke('compatibility:probe', { key }) as Promise<HubCapabilityStatus>
+  }
+}
+
 /**
  * The minimal, typed bridge. Only channels defined in the shared contract can be
  * invoked or subscribed to; everything else throws before touching IPC.
@@ -105,6 +117,7 @@ const api: RendererApi = {
     }
   },
   diagnostics: diagnosticsBridge,
+  compatibility: compatibilityBridge,
   clones: cloneBridge
 }
 

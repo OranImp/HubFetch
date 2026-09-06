@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { HubClient } from '@hubfetch/hub-api'
 
 const mocks = vi.hoisted(() => ({
   resolution: 'DIRECT',
@@ -39,7 +40,50 @@ vi.mock('undici', () => ({
   }
 }))
 
-import { createProxiedFetch, proxyUrlFromResolution, resolveSystemProxyUrl } from './hub'
+import {
+  createHubProxy,
+  createProxiedFetch,
+  proxyUrlFromResolution,
+  resolveSystemProxyUrl
+} from './hub'
+
+class FakeHubFacade {
+  readonly calls: string[] = []
+  readonly ownMethod: () => string
+
+  constructor(readonly identity: string) {
+    this.ownMethod = function (this: FakeHubFacade): string {
+      this.calls.push('ownMethod')
+      return this.identity
+    }
+  }
+
+  prototypeMethod(): string {
+    this.calls.push('prototypeMethod')
+    return this.identity
+  }
+}
+
+function functionMemberNames(value: object): string[] {
+  const names = new Set<string>()
+  let current: object | null = value
+  while (current && current !== Object.prototype) {
+    for (const name of Object.getOwnPropertyNames(current)) {
+      if (name === 'constructor') continue
+      if (typeof Reflect.get(value, name, value) === 'function') names.add(name)
+    }
+    current = Object.getPrototypeOf(current)
+  }
+  return [...names].sort()
+}
+
+function invokeFunctions(proxy: HubClient, names: readonly string[]): string[] {
+  return names.map((name) => {
+    const method = Reflect.get(proxy, name, proxy)
+    if (typeof method !== 'function') throw new TypeError(`proxy member ${name} is not callable`)
+    return method()
+  })
+}
 
 describe('Hub system proxy transport', () => {
   beforeEach(() => {
@@ -121,5 +165,22 @@ describe('Hub system proxy transport', () => {
     const dispatcher = mocks.fetchCalls[0]?.init?.dispatcher as { uri?: string } | undefined
     expect(dispatcher).toBeDefined()
     expect(dispatcher?.uri).toBeUndefined()
+  })
+
+  it('dispatches every fake facade function against the current holder after a swap', () => {
+    const first = new FakeHubFacade('first')
+    const second = new FakeHubFacade('second')
+    const names = functionMemberNames(first)
+    const holder = { current: first as unknown as HubClient }
+    const proxy = createHubProxy(holder)
+
+    expect(names).toEqual(['ownMethod', 'prototypeMethod'])
+    expect(invokeFunctions(proxy, names)).toEqual(['first', 'first'])
+
+    holder.current = second as unknown as HubClient
+
+    expect(invokeFunctions(proxy, names)).toEqual(['second', 'second'])
+    expect(first.calls).toEqual(['ownMethod', 'prototypeMethod'])
+    expect(second.calls).toEqual(['ownMethod', 'prototypeMethod'])
   })
 })

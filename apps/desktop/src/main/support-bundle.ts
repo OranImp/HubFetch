@@ -540,6 +540,8 @@ export class SupportBundleBuilder {
         repoId: t.repoId,
         kind: t.kind,
         revision: t.revision,
+        ...(t.accountId === undefined ? {} : { accountId: t.accountId }),
+        ...(t.accountLabel === undefined ? {} : { accountLabel: t.accountLabel }),
         status: t.status,
         totalBytes: t.totalBytes,
         receivedBytes: t.receivedBytes,

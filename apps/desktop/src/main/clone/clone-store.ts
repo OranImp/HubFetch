@@ -66,6 +66,8 @@ export interface CloneRow {
   transport: string
   destination: string
   auth: string
+  account_id: string | null
+  account_label: string | null
   proxy_mode: string
   proxy_url: string | null
   status: string
@@ -159,7 +161,7 @@ export class CloneValidationError extends CloneStoreError {
 // ---------------------------------------------------------------------------
 
 export const CLONE_TRANSITION_MATRIX: Readonly<Record<CloneStatus, readonly CloneStatus[]>> = {
-  queued: ['running', 'cancelled'],
+  queued: ['running', 'failed', 'cancelled'],
   running: ['cancelling', 'completed', 'failed', 'interrupted'],
   cancelling: ['cancelled', 'interrupted'],
   completed: [],
@@ -261,10 +263,13 @@ export class CloneStore {
       .prepare(
         `INSERT INTO clone_tasks (
            id, attempt, repo_kind, repo_id, revision_json, transport, destination,
-           auth, proxy_mode, proxy_url, status, error_code, error,
+           auth, account_id, account_label, proxy_mode, proxy_url, status, error_code, error,
            progress_phase, progress_percent, progress_done, progress_total,
            created_at, started_at, updated_at, completed_at, retry_of
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         ) VALUES (
+           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         )`
       )
       .run(
         id,
@@ -275,6 +280,8 @@ export class CloneStore {
         parsed.transport,
         parsed.destination,
         parsed.auth,
+        parsed.accountId ?? null,
+        parsed.accountLabel ?? null,
         proxy.mode,
         proxy.mode === 'manual' ? proxy.url : null,
         'queued',
@@ -299,6 +306,8 @@ export class CloneStore {
       transport: parsed.transport,
       destination: parsed.destination,
       auth: parsed.auth,
+      ...(parsed.accountId === undefined ? {} : { accountId: parsed.accountId }),
+      ...(parsed.accountLabel === undefined ? {} : { accountLabel: parsed.accountLabel }),
       proxy,
       status: 'queued',
       createdAt,
@@ -462,9 +471,19 @@ export class CloneStore {
     now = new Date(),
     options: { destinationAvailable?: (destination: string) => void } = {}
   ): CloneRecord {
+    const parentBeforeValidation = this.row(id)
+    if (parentBeforeValidation === undefined) throw new CloneNotFoundError(id)
     const parsed = this.parseOrThrow(
       cloneCreateInputSchema,
-      input,
+      {
+        ...input,
+        ...(input.accountId === undefined && parentBeforeValidation.account_id !== null
+          ? { accountId: parentBeforeValidation.account_id }
+          : {}),
+        ...(input.accountLabel === undefined && parentBeforeValidation.account_label !== null
+          ? { accountLabel: parentBeforeValidation.account_label }
+          : {})
+      },
       'invalid clone retry input'
     ) as CloneCreateInput
     const createdAt = now.toISOString()
@@ -484,10 +503,13 @@ export class CloneStore {
         .prepare(
           `INSERT INTO clone_tasks (
              id, attempt, repo_kind, repo_id, revision_json, transport, destination,
-             auth, proxy_mode, proxy_url, status, error_code, error,
+             auth, account_id, account_label, proxy_mode, proxy_url, status, error_code, error,
              progress_phase, progress_percent, progress_done, progress_total,
              created_at, started_at, updated_at, completed_at, retry_of
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           ) VALUES (
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+           )`
         )
         .run(
           newId,
@@ -498,6 +520,8 @@ export class CloneStore {
           parsed.transport,
           parsed.destination,
           parsed.auth,
+          parsed.accountId ?? null,
+          parsed.accountLabel ?? null,
           proxy.mode,
           proxy.mode === 'manual' ? proxy.url : null,
           'queued',
@@ -599,6 +623,15 @@ export class CloneStore {
     return Number(row.n)
   }
 
+  accountUsage(accountId: string): number {
+    const row = this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM clone_tasks WHERE account_id = ? AND auth = 'app-token' AND status IN ('queued', 'running', 'cancelling', 'failed', 'cancelled', 'interrupted')"
+      )
+      .get(accountId) as { n: number }
+    return Number(row.n)
+  }
+
   /** Every attempt in deterministic FIFO order (created_at, id). */
   list(): CloneRecord[] {
     const rows = this.db.prepare('SELECT * FROM clone_tasks ORDER BY created_at, id').all()
@@ -642,6 +675,8 @@ export class CloneStore {
       transport: raw.transport as CloneRecord['transport'],
       destination: raw.destination,
       auth: raw.auth as CloneRecord['auth'],
+      ...(raw.account_id == null ? {} : { accountId: raw.account_id }),
+      ...(raw.account_label == null ? {} : { accountLabel: raw.account_label }),
       proxy,
       status: raw.status as CloneStatus,
       progress:

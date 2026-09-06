@@ -12,6 +12,7 @@ export const APP_NAME = 'HubFetch'
 export const APP_USER_MODEL_ID = 'io.github.oranimp.hubfetch'
 export const DB_FILENAME = 'hubfetch.db'
 export const CREDENTIALS_FILENAME = 'credentials.json'
+export const LLM_CREDENTIALS_FILENAME = 'llm-credentials.json'
 
 /**
  * Test override for the userData root. Must run before any code reads
@@ -36,4 +37,9 @@ export function databaseFile(): string {
 export function credentialsFile(): string {
   const dir = process.env.HUBFETCH_CREDENTIALS_DIR ?? userDataDir()
   return join(dir, CREDENTIALS_FILENAME)
+}
+
+export function llmCredentialsFile(): string {
+  const dir = process.env.HUBFETCH_CREDENTIALS_DIR ?? userDataDir()
+  return join(dir, LLM_CREDENTIALS_FILENAME)
 }

@@ -29,7 +29,7 @@ import type {
 } from '../native/hubfetch-job-loader'
 import type { GitProbeStatus } from '../git-diagnostics'
 import { CloneHost, type CloneRunRecord, type ForkFn, type UtilityProcessLike } from './clone-host'
-import { CloneManager, type CloneManagerDiagnostics } from './clone-manager'
+import { CloneManager, type CloneManagerDiagnostics, type CloneManagerHost } from './clone-manager'
 import { CloneStore, type CloneStoreDatabase } from './clone-store'
 
 vi.mock('electron', () => ({
@@ -852,6 +852,73 @@ describe('CloneManager: remove', () => {
     expect(host.startClone).toHaveBeenCalledTimes(0)
     expect(host.cancelClone).toHaveBeenCalledTimes(0)
     expect(host.shutdown).toHaveBeenCalledTimes(0)
+    db.close()
+  })
+})
+
+describe('CloneManager: account-pinned authentication', () => {
+  it('uses the persisted account token after the active account changes', async () => {
+    const db = new DatabaseSync(':memory:')
+    for (const sql of MIGRATIONS) db.exec(sql)
+    const store = new CloneStore(nodeStoreDb(db))
+    const captured: Array<{ accessToken?: string }> = []
+    const host: CloneManagerHost = {
+      startClone: vi.fn(async (options) => {
+        captured.push({ accessToken: options.accessToken })
+        return {
+          assignmentId: options.assignmentId,
+          steps: [],
+          outcome: 'completed' as const,
+          exitCode: 0,
+          signal: null,
+          zeroProven: true,
+          degradedTaskkill: false,
+          error: null,
+          gitPid: null,
+          utilityPid: null,
+          receivedProgress: 0,
+          receivedLog: 0,
+          refusedCode: null,
+          appToken: true,
+          askPassMerged: true,
+          askPassPipeName: 'pipe'
+        }
+      }),
+      cancelClone: vi.fn(async () => {
+        throw new Error('unexpected cancel')
+      }),
+      shutdown: vi.fn(async () => []),
+      activeIds: () => []
+    }
+    const lease = vi.fn((accountId: string) => ({
+      accountId,
+      accountLabel: accountId === '11111111-1111-4111-8111-111111111111' ? 'A' : 'B',
+      accessToken: accountId === '11111111-1111-4111-8111-111111111111' ? 'token-a' : 'token-b',
+      release: vi.fn()
+    }))
+    let activeAccountId = '11111111-1111-4111-8111-111111111111'
+    const manager = new CloneManager({
+      store,
+      host,
+      diagnostics: makeDiagnostics(),
+      publish: () => undefined,
+      leaseAccountCredential: lease
+    })
+
+    const record = manager.create(
+      makeInput(join(tmpdir(), `t32-account-${Date.now()}`), {
+        auth: 'app-token',
+        accountId: activeAccountId,
+        accountLabel: 'A'
+      })
+    )
+    activeAccountId = '22222222-2222-4222-8222-222222222222'
+    await waitFor(
+      () => manager.list().find((item) => item.id === record.id)?.status === 'completed'
+    )
+
+    expect(captured).toEqual([{ accessToken: 'token-a' }])
+    expect(lease).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111')
     db.close()
   })
 })

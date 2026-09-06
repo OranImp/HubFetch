@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { ipcRequestSchemas, settingsExportFileSchema } from '@hubfetch/shared'
+import { describe, expect, it, vi } from 'vitest'
+import { IPC_INVOKE_CHANNELS, ipcRequestSchemas, settingsExportFileSchema } from '@hubfetch/shared'
 
 /**
  * The IPC request schemas are the input-validation boundary for the main
@@ -219,6 +219,37 @@ describe('ipcRequestSchemas', () => {
     expect(schema.safeParse({ endpoint: 'ftp://bad.example' }).success).toBe(false)
   })
 
+  it('accepts upload:retry with a valid taskId and rejects missing/extra fields', () => {
+    const schema = ipcRequestSchemas['upload:retry']!
+    expect(schema.safeParse({ request: { taskId: 'abc-123' } }).success).toBe(true)
+    expect(schema.safeParse({ request: {} }).success).toBe(false)
+    expect(schema.safeParse({}).success).toBe(false)
+    expect(schema.safeParse({ request: { taskId: 'abc-123', extra: true } }).success).toBe(false)
+    expect(schema.safeParse({ request: { taskId: 42 } }).success).toBe(false)
+  })
+
+  it('accepts upload:remove with a valid UUID and rejects non-UUID ids', () => {
+    const schema = ipcRequestSchemas['upload:remove']!
+    expect(schema.safeParse({ id: '550e8400-e29b-41d4-a716-446655440000' }).success).toBe(true)
+    expect(schema.safeParse({ id: 'not-a-uuid' }).success).toBe(false)
+    expect(schema.safeParse({}).success).toBe(false)
+    expect(schema.safeParse({ id: '550e8400-e29b-41d4-a716-446655440000', extra: true }).success).toBe(
+      false
+    )
+  })
+
+  it('rejects malformed capability probes before service invocation', () => {
+    const schema = ipcRequestSchemas['compatibility:probe']!
+    const service = vi.fn()
+    expect(schema.safeParse({ key: 'searchRepos' }).success).toBe(true)
+    expect(schema.safeParse({ key: 'not-a-capability' }).success).toBe(false)
+    expect(schema.safeParse({ key: 'searchRepos', token: 'secret' }).success).toBe(false)
+    if (schema.safeParse({ key: 'not-a-capability' }).success) service()
+    expect(service).not.toHaveBeenCalled()
+    expect(IPC_INVOKE_CHANNELS).toContain('compatibility:read')
+    expect(IPC_INVOKE_CHANNELS).toContain('compatibility:probe')
+  })
+
   it('rejects non-closed or credential-bearing proxy drafts for network:testConnection', () => {
     const schema = ipcRequestSchemas['network:testConnection']!
     // A free-form mode string is never accepted.
@@ -236,6 +267,29 @@ describe('ipcRequestSchemas', () => {
     expect(
       schema.safeParse({ proxy: { mode: 'direct', url: 'http://127.0.0.1:7897' } }).success
     ).toBe(false)
+  })
+
+  it('rejects oversized, malformed, and renderer-supplied dataset export pages', () => {
+    const schema = ipcRequestSchemas['dataset:exportPage']!
+    const valid = {
+      repoId: 'owner/ds',
+      config: 'default',
+      split: 'train',
+      offset: 0,
+      length: 25,
+      format: 'csv'
+    }
+    expect(schema.safeParse(valid).success).toBe(true)
+    expect(schema.safeParse({ ...valid, format: 'jsonl' }).success).toBe(true)
+    expect(schema.safeParse({ ...valid, length: 100 }).success).toBe(true)
+    expect(schema.safeParse({ ...valid, length: 101 }).success).toBe(false)
+    expect(schema.safeParse({ ...valid, format: 'parquet' }).success).toBe(false)
+    expect(schema.safeParse({ ...valid, offset: -1 }).success).toBe(false)
+    expect(schema.safeParse({ ...valid, config: '' }).success).toBe(false)
+    expect(schema.safeParse({ ...valid, split: '../train' }).success).toBe(false)
+    expect(schema.safeParse({ ...valid, config: 'a/b' }).success).toBe(false)
+    expect(schema.safeParse({ ...valid, rows: [['injected']] }).success).toBe(false)
+    expect(IPC_INVOKE_CHANNELS).toContain('dataset:exportPage')
   })
 
   it('accepts hub quicksearch query channels and rejects empty/oversized', () => {

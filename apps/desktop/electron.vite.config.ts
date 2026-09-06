@@ -32,6 +32,10 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts'),
           'download-worker': resolve(__dirname, 'src/main/workers/download-worker.ts'),
           'cache-worker': resolve(__dirname, 'src/main/workers/cache-worker.ts'),
+          'cache-verification-worker': resolve(
+            __dirname,
+            'src/main/workers/cache-verification-worker.ts'
+          ),
           'clone-worker': resolve(__dirname, 'src/utility/clone-worker.ts')
         }
       }
@@ -50,7 +54,8 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src/renderer/src')
-      }
+      },
+      dedupe: ['react', 'react-dom']
     }
   }
 })

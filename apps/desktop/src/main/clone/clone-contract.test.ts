@@ -588,10 +588,11 @@ describe('error classification', () => {
     expect(classifyCloneError(stderr.toLocaleLowerCase(), 128)).toBe(expected)
   })
 
-  it('covers exactly the closed 10-code set', () => {
+  it('covers exactly the closed account-aware code set', () => {
     expect(CLONE_ERROR_CODES).toEqual([
       'dependency',
       'auth',
+      'account-unavailable',
       'gated',
       'not-found',
       'network',

@@ -4,6 +4,9 @@ import { databaseFile } from './runtime-paths'
 
 export type AppDatabase = Database.Database
 
+export const LEGACY_LOCAL_ORIGIN = 'legacy-local'
+export const MIGRATED_ACCOUNT_ORIGIN = 'v1-migrated'
+
 /**
  * All local state lives in one SQLite file under userData:
  * favorites, history, download tasks, follows, inbox, settings, and the
@@ -139,6 +142,130 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_clone_tasks_status_created ON clone_tasks (status, created_at, id);
   CREATE INDEX idx_clone_tasks_retry_of ON clone_tasks (retry_of);
+  `,
+  `
+  ALTER TABLE downloads ADD COLUMN account_id TEXT;
+  ALTER TABLE downloads ADD COLUMN account_label TEXT;
+
+  CREATE TABLE clone_tasks_v5 (
+    id TEXT PRIMARY KEY,
+    attempt INTEGER NOT NULL CHECK (attempt >= 1),
+    repo_kind TEXT NOT NULL CHECK (repo_kind IN ('model', 'dataset', 'space')),
+    repo_id TEXT NOT NULL CHECK (length(repo_id) BETWEEN 1 AND 255),
+    revision_json TEXT CHECK (revision_json IS NULL OR json_valid(revision_json)),
+    transport TEXT NOT NULL CHECK (transport IN ('https', 'ssh')),
+    destination TEXT NOT NULL CHECK (length(destination) BETWEEN 1 AND 1024),
+    auth TEXT NOT NULL CHECK (auth IN ('none', 'app-token', 'system')),
+    account_id TEXT,
+    account_label TEXT,
+    proxy_mode TEXT NOT NULL CHECK (proxy_mode IN ('system', 'direct', 'manual')),
+    proxy_url TEXT,
+    status TEXT NOT NULL CHECK (
+      status IN ('queued', 'running', 'cancelling', 'completed', 'failed', 'cancelled', 'interrupted')
+    ),
+    error_code TEXT CHECK (
+      error_code IS NULL OR
+      error_code IN ('dependency', 'auth', 'account-unavailable', 'gated', 'not-found', 'network', 'proxy', 'disk', 'destination', 'cancelled', 'internal')
+    ),
+    error TEXT,
+    progress_phase TEXT CHECK (
+      progress_phase IS NULL OR
+      progress_phase IN ('enumerating', 'counting', 'compressing', 'receiving', 'resolving', 'updating', 'checkout', 'xet')
+    ),
+    progress_percent INTEGER NOT NULL DEFAULT 0 CHECK (progress_percent >= 0 AND progress_percent <= 100),
+    progress_done INTEGER NOT NULL DEFAULT 0 CHECK (progress_done >= 0),
+    progress_total INTEGER NOT NULL DEFAULT 0 CHECK (progress_total >= 0),
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT,
+    retry_of TEXT REFERENCES clone_tasks_v5(id)
+  );
+  INSERT INTO clone_tasks_v5 (
+    id, attempt, repo_kind, repo_id, revision_json, transport, destination,
+    auth, account_id, account_label, proxy_mode, proxy_url, status, error_code, error,
+    progress_phase, progress_percent, progress_done, progress_total,
+    created_at, started_at, updated_at, completed_at, retry_of
+  )
+  SELECT id, attempt, repo_kind, repo_id, revision_json, transport, destination,
+    auth, NULL, NULL, proxy_mode, proxy_url, status, error_code, error,
+    progress_phase, progress_percent, progress_done, progress_total,
+    created_at, started_at, updated_at, completed_at, retry_of
+  FROM clone_tasks;
+  DROP TABLE clone_tasks;
+  ALTER TABLE clone_tasks_v5 RENAME TO clone_tasks;
+  CREATE INDEX idx_clone_tasks_status_created ON clone_tasks (status, created_at, id);
+  CREATE INDEX idx_clone_tasks_retry_of ON clone_tasks (retry_of);
+
+  CREATE TABLE follows_v5 (
+    id TEXT PRIMARY KEY,
+    account_id TEXT,
+    legacy_origin TEXT,
+    type TEXT NOT NULL,
+    target TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    last_checked_at TEXT,
+    state_json TEXT
+  );
+  INSERT INTO follows_v5 (
+    id, account_id, legacy_origin, type, target, created_at, last_checked_at, state_json
+  )
+  SELECT id, NULL, 'legacy-local', type, target, created_at, last_checked_at, state_json
+  FROM follows;
+  DROP TABLE follows;
+  ALTER TABLE follows_v5 RENAME TO follows;
+  CREATE INDEX idx_follows_account_created ON follows (account_id, created_at);
+  CREATE UNIQUE INDEX idx_follows_scope_target
+    ON follows (COALESCE(account_id, 'legacy-local'), type, target);
+
+  CREATE TABLE inbox_v5 (
+    id TEXT PRIMARY KEY,
+    account_id TEXT,
+    legacy_origin TEXT,
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    route TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    read_at TEXT
+  );
+  INSERT INTO inbox_v5 (
+    id, account_id, legacy_origin, kind, title, body, route, created_at, read_at
+  )
+  SELECT id, NULL, 'legacy-local', kind, title, body, route, created_at, read_at
+  FROM inbox;
+  DROP TABLE inbox;
+  ALTER TABLE inbox_v5 RENAME TO inbox;
+  CREATE INDEX idx_inbox_created ON inbox (created_at DESC);
+  CREATE INDEX idx_inbox_account_created ON inbox (account_id, created_at DESC);
+  `,
+  `
+  CREATE TABLE upload_tasks (
+    id TEXT PRIMARY KEY,
+    account_id TEXT,
+    account_label TEXT,
+    repo_kind TEXT NOT NULL CHECK (repo_kind IN ('model', 'dataset', 'space')),
+    repo_name TEXT NOT NULL CHECK (length(repo_name) BETWEEN 1 AND 255),
+    repo_visibility TEXT NOT NULL CHECK (repo_visibility IN ('public', 'private')),
+    root_path TEXT NOT NULL CHECK (length(root_path) BETWEEN 1 AND 4096),
+    manifest_fingerprint TEXT NOT NULL,
+    warning_codes TEXT NOT NULL,
+    summary_file_count INTEGER NOT NULL CHECK (summary_file_count >= 0),
+    summary_total_bytes INTEGER NOT NULL CHECK (summary_total_bytes >= 0),
+    status TEXT NOT NULL CHECK (
+      status IN ('preparing', 'running', 'hashing', 'done', 'error', 'canceled', 'interrupted', 'selection-stale', 'account-unavailable')
+    ),
+    phase TEXT NOT NULL DEFAULT 'preparing',
+    progress REAL NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 1),
+    message_key TEXT,
+    params_json TEXT,
+    repo_id TEXT,
+    repo_url TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+  );
+  CREATE INDEX idx_upload_tasks_status ON upload_tasks (status);
   `
 ]
 

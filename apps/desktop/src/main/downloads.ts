@@ -1,12 +1,17 @@
-import { randomUUID } from 'node:crypto'
-import { lstatSync, mkdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
+import { existsSync, lstatSync, mkdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { lstat, readdir, realpath, rm } from 'node:fs/promises'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import { app } from 'electron'
 import { computeSpeedShare } from '@hubfetch/shared'
 import type {
   DownloadFileState,
+  DownloadPlan,
+  DownloadPlanFileRow,
+  DownloadPlanRequest,
+  DownloadPlanStartRequest,
   DownloadProxyOverride,
   DownloadRequest,
   DownloadStatus,
@@ -18,6 +23,8 @@ import { DEFAULT_MANUAL_PROXY_URL } from '@hubfetch/shared'
 import type { HubClient } from '@hubfetch/hub-api'
 import { RESOLVE_PREFIX, defaultCacheDir, repoCachePaths } from '@hubfetch/hub-api'
 import type { AppDatabase } from './db'
+import type { AccountCredentialLease } from './auth'
+import type { AccountReferenceCoordinator } from './account-references'
 import type { NotificationService } from './notifications'
 import { logger, redactor } from './security/log'
 import { secretRegistry } from './security/secret-registry'
@@ -37,6 +44,7 @@ interface WorkerMessage {
 const PROGRESS_BROADCAST_MS = 400
 const PROGRESS_PERSIST_MS = 3000
 const DOWNLOAD_ENVIRONMENT_VERSION = 1
+const MAIN_DIR = dirname(fileURLToPath(import.meta.url))
 
 function isMissingPath(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT'
@@ -73,7 +81,18 @@ const COMMIT_RE = /^[0-9a-f]{40}$/
 type ResolvedCommit = string & { readonly __resolvedCommit: unique symbol }
 
 type DownloadErrorCode =
-  'legacy-task' | 'environment-mismatch' | 'commit-mismatch' | 'network' | 'integrity'
+  | 'legacy-task'
+  | 'environment-mismatch'
+  | 'commit-mismatch'
+  | 'network'
+  | 'integrity'
+  | 'account-unavailable'
+
+export interface DownloadAccountDeps {
+  readonly activeAccountId: () => string | null
+  readonly leaseAccountCredential: (accountId: string) => AccountCredentialLease
+  readonly references?: AccountReferenceCoordinator
+}
 
 interface DownloadEnvironment {
   endpoint: string
@@ -171,6 +190,8 @@ interface DownloadRow {
   error_code: string | null
   created_at: string
   completed_at: string | null
+  account_id: string | null
+  account_label: string | null
 }
 
 export function isResolvedCommit(value: string | undefined | null): value is ResolvedCommit {
@@ -210,6 +231,7 @@ function normalizeErrorCode(value: string | null): DownloadErrorCode | undefined
     case 'commit-mismatch':
     case 'network':
     case 'integrity':
+    case 'account-unavailable':
       return value
     default:
       return undefined
@@ -233,10 +255,68 @@ export class DownloadManager {
   private readonly tasks = new Map<string, ManagedDownloadTask>()
   private readonly workers = new Map<string, Worker>()
   private readonly runtimeAuthTokens = new Map<string, string | undefined>()
+  private readonly accountLeases = new Map<string, AccountCredentialLease>()
+  private readonly accountReferenceReleases = new Map<string, () => void>()
   private readonly stoppingTasks = new Map<string, Promise<unknown>>()
   private readonly latestRevisionTasks = new Map<string, { sequence: number; taskId: string }>()
   private readonly speedWindow = new Map<string, { at: number; bytes: number; bps: number }>()
   private readonly dirtyTaskIds = new Set<string>()
+
+  /** Active download plans keyed by planId. Plans expire after 15 minutes. */
+  private readonly plans = new Map<string, { plan: DownloadPlan; timer: NodeJS.Timeout }>()
+
+  /** Plan TTL in milliseconds (15 minutes). */
+  private static readonly PLAN_TTL_MS = 15 * 60 * 1000
+
+  /**
+   * Compute a deterministic digest for a plan's content. Excludes planId,
+   * expiresAt, and digest itself so the digest is stable across serialization.
+   */
+  private static computePlanDigest(plan: Omit<DownloadPlan, 'planId' | 'expiresAt' | 'digest'>): string {
+    const canonical = JSON.stringify(plan, Object.keys(plan).sort())
+    return createHash('sha256').update(canonical).digest('hex')
+  }
+
+  /**
+   * Check whether a file blob is already fully cached in the HF cache layout.
+   */
+  private static isFileCached(
+    cacheDir: string,
+    kind: DownloadTask['kind'],
+    repoId: string,
+    commit: string,
+    path: string,
+    sha256?: string
+  ): boolean {
+    const { blobsDir } = repoCachePaths(cacheDir, kind, repoId)
+    // The HF cache stores blobs by their SHA-256 (LFS oid) or by commit+path hash.
+    // For LFS files, the blob name is the sha256 oid.
+    if (sha256) {
+      const blobPath = join(blobsDir, sha256)
+      if (existsSync(blobPath)) {
+        try {
+          const stat = lstatSync(blobPath)
+          return stat.isFile() && !stat.isSymbolicLink()
+        } catch {
+          return false
+        }
+      }
+      return false
+    }
+    // For non-LFS files, check if the commit+path blob exists.
+    // The HF cache uses the pattern: <blobs>/<sha256-of-commit+path>
+    const pathHash = createHash('sha256').update(`${commit}:${path}`).digest('hex')
+    const blobPath = join(blobsDir, pathHash)
+    if (existsSync(blobPath)) {
+      try {
+        const stat = lstatSync(blobPath)
+        return stat.isFile() && !stat.isSymbolicLink()
+      } catch {
+        return false
+      }
+    }
+    return false
+  }
 
   /**
    * Snapshot a task's auth token for its workers AND register it for value
@@ -246,7 +326,18 @@ export class DownloadManager {
    * the registry keeps shared tokens safe across concurrent tasks.
    */
   private rememberTaskToken(taskId: string): void {
-    const token = this.getAuthToken()
+    const task = this.tasks.get(taskId)
+    this.forgetTaskToken(taskId)
+    if (task?.accountId !== undefined && this.accountDeps === undefined) {
+      throw new Error('account-unavailable')
+    }
+    const lease =
+      task?.accountId === undefined
+        ? undefined
+        : this.accountDeps?.leaseAccountCredential(task.accountId)
+    if (lease) this.accountLeases.set(taskId, lease)
+    if (lease && task) task.accountLabel = lease.accountLabel
+    const token = lease?.accessToken ?? this.getAuthToken()
     this.runtimeAuthTokens.set(taskId, token)
     if (token) {
       try {
@@ -261,6 +352,8 @@ export class DownloadManager {
     const token = this.runtimeAuthTokens.get(taskId)
     this.runtimeAuthTokens.delete(taskId)
     if (token) secretRegistry.unregister(token)
+    this.accountLeases.get(taskId)?.release()
+    this.accountLeases.delete(taskId)
   }
   /** Per-task transports (dedicated Chromium session partitions + dispatchers). */
   private readonly taskTransports = new Map<string, TaskTransport>()
@@ -283,7 +376,8 @@ export class DownloadManager {
     private readonly transportFactory: (
       taskId: string,
       snapshot: ProxySnapshot
-    ) => TaskTransport = (taskId, snapshot) => defaultTransport(taskId, snapshot)
+    ) => TaskTransport = (taskId, snapshot) => defaultTransport(taskId, snapshot),
+    private readonly accountDeps?: DownloadAccountDeps
   ) {
     this.loadPersisted()
   }
@@ -327,6 +421,8 @@ export class DownloadManager {
         id: row.id,
         repoId: row.repo_id,
         kind: row.kind as DownloadTask['kind'],
+        ...(row.account_id == null ? {} : { accountId: row.account_id }),
+        ...(row.account_label == null ? {} : { accountLabel: row.account_label }),
         revision: row.revision,
         resolvedCommit: isResolvedCommit(resolvedCommit) ? resolvedCommit : undefined,
         proxy: snapshotFromRow(row.proxy_mode, row.proxy_url),
@@ -355,6 +451,28 @@ export class DownloadManager {
       }
       task.resumable = this.canResume(task)
       this.tasks.set(row.id, task)
+      if (
+        task.accountId !== undefined &&
+        task.status !== 'completed' &&
+        task.status !== 'canceled'
+      ) {
+        try {
+          this.rememberTaskToken(task.id)
+        } catch {
+          task.status = 'error'
+          task.errorCode = 'account-unavailable'
+          task.error = 'The account for this download is unavailable.'
+          task.resumable = true
+        }
+      }
+      if (task.accountId !== undefined && this.accountDeps?.references) {
+        this.accountReferenceReleases.set(
+          task.id,
+          this.accountDeps.references.register(task.accountId, 'download', task.id, () =>
+            this.markAccountUnavailable(task.id)
+          )
+        )
+      }
       this.rememberRevisionTask(task)
     }
   }
@@ -362,16 +480,18 @@ export class DownloadManager {
   private persistRow(task: ManagedDownloadTask): void {
     this.db
       .prepare(
-        `INSERT INTO downloads (id, repo_id, kind, revision, resolved_commit, endpoint, proxy_mode, proxy_url, cache_dir, environment_version, status, total_bytes, received_bytes, files_json, error, error_code, created_at, completed_at)
-         VALUES (@id, @repoId, @kind, @revision, @resolvedCommit, @endpoint, @proxyMode, @proxyUrl, @cacheDir, @environmentVersion, @status, @totalBytes, @receivedBytes, @filesJson, @error, @errorCode, @createdAt, @completedAt)
+        `INSERT INTO downloads (id, repo_id, kind, revision, resolved_commit, endpoint, proxy_mode, proxy_url, cache_dir, environment_version, account_id, account_label, status, total_bytes, received_bytes, files_json, error, error_code, created_at, completed_at)
+         VALUES (@id, @repoId, @kind, @revision, @resolvedCommit, @endpoint, @proxyMode, @proxyUrl, @cacheDir, @environmentVersion, @accountId, @accountLabel, @status, @totalBytes, @receivedBytes, @filesJson, @error, @errorCode, @createdAt, @completedAt)
          ON CONFLICT(id) DO UPDATE SET
            resolved_commit = excluded.resolved_commit,
            endpoint = excluded.endpoint,
            proxy_mode = excluded.proxy_mode,
            proxy_url = excluded.proxy_url,
-           cache_dir = excluded.cache_dir,
-           environment_version = excluded.environment_version,
-           status = excluded.status,
+            cache_dir = excluded.cache_dir,
+            environment_version = excluded.environment_version,
+            account_id = excluded.account_id,
+            account_label = excluded.account_label,
+            status = excluded.status,
            total_bytes = excluded.total_bytes,
            received_bytes = excluded.received_bytes,
            files_json = excluded.files_json,
@@ -390,6 +510,8 @@ export class DownloadManager {
         proxyUrl: task.environment?.proxy.mode === 'manual' ? task.environment.proxy.url : null,
         cacheDir: task.environment?.cacheDir ?? null,
         environmentVersion: task.environment?.version ?? null,
+        accountId: task.accountId ?? null,
+        accountLabel: task.accountLabel ?? null,
         status: task.status,
         totalBytes: task.totalBytes,
         receivedBytes: task.receivedBytes,
@@ -536,7 +658,270 @@ export class DownloadManager {
     }, PROGRESS_PERSIST_MS)
   }
 
+  /**
+   * Resolve a download plan without writing state or starting workers.
+   * Returns an immutable plan with a 15-minute TTL. The plan captures the
+   * resolved commit, file tree, cache status, live-task coverage, account
+   * identity, frozen endpoint, proxy, and a digest for tamper detection.
+   */
+  async plan(request: DownloadPlanRequest): Promise<DownloadPlan> {
+    const activeAccountId = this.accountDeps?.activeAccountId() ?? undefined
+    const revision = request.revision ?? 'main'
+    // Capture bound methods before the first await so a Settings endpoint
+    // rebuild cannot split detail resolution and tree enumeration.
+    const getRepoDetail = this.hub.getRepoDetail.bind(this.hub)
+    const getFileTree = this.hub.getFileTree.bind(this.hub)
+    const settings = this.settings.get()
+    const endpoint = this.currentEndpoint()
+    const proxy = resolveCreateProxySnapshot(request.proxy, settings.proxy)
+    const cacheDir = resolve(settings.hfCacheDir ?? defaultCacheDir())
+
+    const detail = await getRepoDetail(request.kind, request.repoId, revision)
+    const resolvedCommit = detail.sha?.toLowerCase()
+    if (!isResolvedCommit(resolvedCommit)) {
+      throw new Error('Hub did not resolve the requested revision to a 40-character commit')
+    }
+
+    const tree = await getFileTree(request.kind, request.repoId, resolvedCommit, '', {
+      recursive: true
+    })
+    const wanted = new Set(request.files)
+    const treeFiles = tree.filter((entry) => entry.type === 'file')
+    if (treeFiles.some((entry) => !isSafeRepoFilePath(entry.path))) {
+      throw new Error('Hub file tree contains an unsafe relative path')
+    }
+
+    // Build file rows with cache and coverage checks.
+    const coveredByLive = new Set<string>()
+    for (const existing of this.tasks.values()) {
+      if (existing.repoId !== request.repoId || existing.kind !== request.kind) continue
+      if (existing.resolvedCommit !== resolvedCommit) continue
+      if (existing.environment?.endpoint !== endpoint) continue
+      if (existing.environment?.cacheDir !== cacheDir) continue
+      if (existing.status !== 'queued' && existing.status !== 'running') continue
+      for (const f of existing.files) coveredByLive.add(f.path)
+    }
+
+    const files: DownloadPlanFileRow[] = treeFiles
+      .filter((e) => !request.files || wanted.has(e.path))
+      .map((e) => ({
+        path: e.path,
+        size: e.size,
+        sha256: e.lfs?.oid,
+        alreadyCached: DownloadManager.isFileCached(cacheDir, request.kind, request.repoId, resolvedCommit, e.path, e.lfs?.oid),
+        coveredByLiveTask: coveredByLive.has(e.path)
+      }))
+
+    if (files.length === 0) throw new Error('No matching files to download')
+
+    const totalBytes = files.reduce((acc, f) => acc + f.size, 0)
+    const totalFiles = files.length
+
+    // Resolve account info.
+    let accountId: string | undefined
+    let accountLabel: string | undefined
+    if (activeAccountId !== undefined) {
+      accountId = activeAccountId
+      try {
+        const lease = this.accountDeps?.leaseAccountCredential(activeAccountId)
+        if (lease) {
+          accountLabel = lease.accountLabel
+          lease.release()
+        }
+      } catch {
+        // Account unavailable at plan time — the plan still carries the id
+        // so startPlanned can reject with a clear error.
+      }
+    }
+
+    const planBase = {
+      repoId: request.repoId,
+      kind: request.kind,
+      revision,
+      resolvedCommit,
+      endpoint,
+      proxy,
+      accountId,
+      accountLabel,
+      files,
+      totalBytes,
+      totalFiles
+    }
+    const digest = DownloadManager.computePlanDigest(planBase)
+    const planId = randomUUID()
+    const expiresAt = new Date(Date.now() + DownloadManager.PLAN_TTL_MS).toISOString()
+
+    const plan: DownloadPlan = {
+      planId,
+      ...planBase,
+      expiresAt,
+      digest
+    }
+
+    // Store the plan with an expiry timer.
+    const timer = setTimeout(() => {
+      this.plans.delete(planId)
+    }, DownloadManager.PLAN_TTL_MS)
+    timer.unref()
+    this.plans.set(planId, { plan, timer })
+
+    return plan
+  }
+
+  /**
+   * Start a download from a previously created plan. Validates the plan is
+   * still valid (not expired, digest matches, account available, environment
+   * unchanged), then queues only the selected uncovered files.
+   */
+  async startPlanned(request: DownloadPlanStartRequest): Promise<DownloadTask[]> {
+    const stored = this.plans.get(request.planId)
+    if (!stored) {
+      throw new Error('plan-not-found')
+    }
+    const { plan } = stored
+
+    // Check expiry.
+    if (new Date(plan.expiresAt) <= new Date()) {
+      this.plans.delete(request.planId)
+      clearTimeout(stored.timer)
+      throw new Error('plan-expired')
+    }
+
+    // Verify digest (tamper detection).
+    const planBase = {
+      repoId: plan.repoId,
+      kind: plan.kind,
+      revision: plan.revision,
+      resolvedCommit: plan.resolvedCommit,
+      endpoint: plan.endpoint,
+      proxy: plan.proxy,
+      accountId: plan.accountId,
+      accountLabel: plan.accountLabel,
+      files: plan.files,
+      totalBytes: plan.totalBytes,
+      totalFiles: plan.totalFiles
+    }
+    const expectedDigest = DownloadManager.computePlanDigest(planBase)
+    if (expectedDigest !== plan.digest) {
+      this.plans.delete(request.planId)
+      clearTimeout(stored.timer)
+      throw new Error('plan-digest-mismatch')
+    }
+
+    // Verify environment hasn't changed.
+    const settings = this.settings.get()
+    const currentEndpoint = this.currentEndpoint()
+    const currentCacheDir = resolve(settings.hfCacheDir ?? defaultCacheDir())
+    if (currentEndpoint !== plan.endpoint) {
+      throw new Error('environment-mismatch')
+    }
+    const currentProxy = resolveCreateProxySnapshot(undefined, settings.proxy)
+    if (currentProxy.mode !== plan.proxy.mode) {
+      throw new Error('environment-mismatch')
+    }
+    if (currentProxy.mode === 'manual' && 'url' in currentProxy && 'url' in plan.proxy && currentProxy.url !== plan.proxy.url) {
+      throw new Error('environment-mismatch')
+    }
+
+    // Verify account is still available.
+    const activeAccountId = this.accountDeps?.activeAccountId() ?? undefined
+    if (plan.accountId !== undefined && plan.accountId !== activeAccountId) {
+      throw new Error('account-unavailable')
+    }
+
+    // Validate selected paths are a subset of plan files.
+    const planPaths = new Set(plan.files.map((f) => f.path))
+    const selectedPaths = new Set(request.paths)
+    for (const path of request.paths) {
+      if (!planPaths.has(path)) {
+        throw new Error(`unsafe-selection: ${path} not in plan`)
+      }
+    }
+    if (selectedPaths.size === 0) {
+      throw new Error('empty-selection')
+    }
+
+    // Build the environment for the new task.
+    const environment: DownloadEnvironment = {
+      endpoint: plan.endpoint,
+      proxy: plan.proxy,
+      cacheDir: currentCacheDir,
+      version: DOWNLOAD_ENVIRONMENT_VERSION
+    }
+
+    // Check live-task overlap: only queue files not already covered by a
+    // queued/running task at the same commit/endpoint/cache.
+    const covered = new Set<string>()
+    for (const existing of this.tasks.values()) {
+      if (existing.repoId !== plan.repoId || existing.kind !== plan.kind) continue
+      if (existing.resolvedCommit !== plan.resolvedCommit) continue
+      if (existing.environment?.endpoint !== environment.endpoint) continue
+      if (existing.environment?.cacheDir !== environment.cacheDir) continue
+      if (existing.status !== 'queued' && existing.status !== 'running') continue
+      for (const f of existing.files) covered.add(f.path)
+    }
+
+    const revisionSequence = isResolvedCommit(plan.revision) ? undefined : ++this.revisionSequence
+
+    // Build file states for selected, uncovered files.
+    const newFiles: DownloadFileState[] = []
+    for (const path of request.paths) {
+      if (covered.has(path)) continue
+      const row = plan.files.find((f) => f.path === path)
+      if (!row) continue
+      newFiles.push({
+        path: row.path,
+        size: row.size,
+        receivedBytes: 0,
+        status: 'queued' as const,
+        sha256: row.sha256
+      })
+    }
+
+    if (newFiles.length === 0) return this.list()
+
+    const task: ManagedDownloadTask = {
+      id: randomUUID(),
+      repoId: plan.repoId,
+      kind: plan.kind,
+      ...(plan.accountId === undefined ? {} : { accountId: plan.accountId }),
+      ...(plan.accountLabel === undefined ? {} : { accountLabel: plan.accountLabel }),
+      revision: plan.revision,
+      resolvedCommit: plan.resolvedCommit,
+      proxy: plan.proxy,
+      status: 'queued',
+      totalBytes: newFiles.reduce((acc, f) => acc + f.size, 0),
+      receivedBytes: 0,
+      speedBps: 0,
+      files: newFiles,
+      resumable: true,
+      environment,
+      revisionSequence,
+      createdAt: new Date().toISOString()
+    }
+    this.tasks.set(task.id, task)
+    this.rememberRevisionTask(task)
+    try {
+      this.rememberTaskToken(task.id)
+    } catch {
+      this.tasks.delete(task.id)
+      throw new Error('account-unavailable')
+    }
+    if (task.accountId !== undefined && this.accountDeps?.references) {
+      this.accountReferenceReleases.set(
+        task.id,
+        this.accountDeps.references.register(task.accountId, 'download', task.id, () =>
+          this.markAccountUnavailable(task.id)
+        )
+      )
+    }
+    this.persist(task)
+    this.pump()
+    return this.list()
+  }
+
   async start(request: DownloadRequest): Promise<DownloadTask[]> {
+    const activeAccountId = this.accountDeps?.activeAccountId() ?? undefined
     const revision = request.revision ?? 'main'
     const revisionSequence = isResolvedCommit(revision) ? undefined : ++this.revisionSequence
     // Property access on createHubProxy returns a method bound to the current
@@ -601,6 +986,7 @@ export class DownloadManager {
       id: randomUUID(),
       repoId: request.repoId,
       kind: request.kind,
+      ...(activeAccountId === undefined ? {} : { accountId: activeAccountId }),
       revision,
       resolvedCommit,
       proxy: environment.proxy,
@@ -616,7 +1002,20 @@ export class DownloadManager {
     }
     this.tasks.set(task.id, task)
     this.rememberRevisionTask(task)
-    this.rememberTaskToken(task.id)
+    try {
+      this.rememberTaskToken(task.id)
+    } catch {
+      this.tasks.delete(task.id)
+      throw new Error('account-unavailable')
+    }
+    if (task.accountId !== undefined && this.accountDeps?.references) {
+      this.accountReferenceReleases.set(
+        task.id,
+        this.accountDeps.references.register(task.accountId, 'download', task.id, () =>
+          this.markAccountUnavailable(task.id)
+        )
+      )
+    }
     this.persist(task)
     this.pump()
     return this.list()
@@ -752,7 +1151,7 @@ export class DownloadManager {
     file: DownloadFileState,
     job: DownloadJob
   ): void {
-    const worker = new Worker(join(__dirname, 'download-worker.mjs'), { workerData: job })
+    const worker = new Worker(join(MAIN_DIR, 'download-worker.mjs'), { workerData: job })
     const key = this.workerKey(task.id, file.path)
     this.workers.set(key, worker)
     this.rebalanceSpeedLimit()
@@ -912,6 +1311,8 @@ export class DownloadManager {
         task.error = redactor.redactText(err instanceof Error ? err.message : String(err))
         task.resumable = false
         this.forgetTaskToken(task.id)
+        this.accountReferenceReleases.get(task.id)?.()
+        this.accountReferenceReleases.delete(task.id)
         this.speedWindow.delete(task.id)
         this.persist(task)
         this.scheduleBroadcast()
@@ -926,6 +1327,8 @@ export class DownloadManager {
       task.errorCode = undefined
       task.resumable = false
       this.forgetTaskToken(task.id)
+      this.accountReferenceReleases.get(task.id)?.()
+      this.accountReferenceReleases.delete(task.id)
       this.notifications.show(
         'notifications.downloadComplete',
         'notifications.downloadCompleteBody',
@@ -1094,7 +1497,12 @@ export class DownloadManager {
       task.resumable = true
       task.revisionSequence = ++this.revisionSequence
       this.rememberRevisionTask(task)
-      this.rememberTaskToken(task.id)
+      try {
+        this.rememberTaskToken(task.id)
+      } catch {
+        this.markAccountUnavailable(task.id)
+        return this.list()
+      }
       this.persist(task)
       this.pump()
     }
@@ -1114,6 +1522,8 @@ export class DownloadManager {
       task.resumable = false
       task.errorCode = undefined
       this.forgetTaskToken(task.id)
+      this.accountReferenceReleases.get(task.id)?.()
+      this.accountReferenceReleases.delete(task.id)
       // Canceled partials are never resumed — clean them once the workers exit.
       void stopped
         .then(() => this.deleteTaskPartials(task))
@@ -1136,6 +1546,8 @@ export class DownloadManager {
       }
       this.tasks.delete(id)
       this.forgetTaskToken(id)
+      this.accountReferenceReleases.get(id)?.()
+      this.accountReferenceReleases.delete(id)
       this.speedWindow.delete(id)
       this.dirtyTaskIds.delete(id)
       this.db.prepare('DELETE FROM downloads WHERE id = ?').run(id)
@@ -1204,7 +1616,11 @@ export class DownloadManager {
       if (task.status === 'running' || task.status === 'queued') idsToFlush.add(task.id)
     }
     this.persistTasks(idsToFlush)
-    for (const task of this.tasks.values()) this.forgetTaskToken(task.id)
+    for (const task of this.tasks.values()) {
+      this.forgetTaskToken(task.id)
+      this.accountReferenceReleases.get(task.id)?.()
+    }
+    this.accountReferenceReleases.clear()
     this.runtimeAuthTokens.clear()
     this.speedWindow.clear()
     this.latestRevisionTasks.clear()
@@ -1214,5 +1630,39 @@ export class DownloadManager {
     this.taskTransports.clear()
     this.pendingSpawns.clear()
     this.pendingSpawnCount = 0
+    // Clean up plan timers.
+    for (const stored of this.plans.values()) {
+      clearTimeout(stored.timer)
+    }
+    this.plans.clear()
+  }
+
+  accountUsage(accountId: string): number {
+    return [...this.tasks.values()].filter(
+      (task) =>
+        task.accountId === accountId && task.status !== 'completed' && task.status !== 'canceled'
+    ).length
+  }
+
+  private markAccountUnavailable(taskId: string): void {
+    const task = this.tasks.get(taskId)
+    if (
+      !task ||
+      task.accountId === undefined ||
+      task.status === 'completed' ||
+      task.status === 'canceled'
+    )
+      return
+    void this.abortTaskWorkers(task)
+    for (const file of task.files) {
+      if (file.status === 'running' || file.status === 'queued') file.status = 'paused'
+    }
+    task.status = 'error'
+    task.errorCode = 'account-unavailable'
+    task.error = 'The account for this download is unavailable.'
+    task.resumable = true
+    this.forgetTaskToken(taskId)
+    this.persist(task)
+    this.scheduleBroadcast()
   }
 }

@@ -162,6 +162,15 @@ describe('Redactor.redactValue — structure', () => {
     expect(cookies.token).toBe(REDACTED)
   })
 
+  it('preserves closed public Hub capability keys while redacting nearby secrets', () => {
+    const out = new Redactor().redactValue({
+      key: 'searchRepos',
+      token: SENTINEL
+    }) as Record<string, unknown>
+    expect(out.key).toBe('searchRepos')
+    expect(out.token).toBe(REDACTED)
+  })
+
   it('redacts any whole field literally named cookie', () => {
     const out = new Redactor().redactValue({
       cookie: `session=${SENTINEL}`,

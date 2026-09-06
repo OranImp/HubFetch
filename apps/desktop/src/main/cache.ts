@@ -1,15 +1,103 @@
 import { existsSync } from 'node:fs'
 import { lstat, readFile, readdir, readlink, realpath, rm, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import { defaultCacheDir, repoCachePaths } from '@hubfetch/hub-api'
-import { isValidRepoId, type CacheReport, type RepoKind } from '@hubfetch/shared'
+import {
+  isValidRepoId,
+  type CacheActionPlan,
+  type CacheActionPlanRequest,
+  type CacheActionResult,
+  type CacheApplyFailureReason,
+  type CacheActionKind,
+  type CachePruneEntry,
+  type CacheRepairEntry,
+  type CacheReport,
+  type CacheVerificationProgress,
+  type CacheVerificationReport,
+  type ProxySnapshot,
+  type RepoKind
+} from '@hubfetch/shared'
+import type { AccountCredentialLease } from './auth'
+import {
+  applyPrunePlan,
+  applyRepairPlan,
+  CacheActionPlanStore,
+  cleanupRepairStaging,
+  createDefaultRepairTransport,
+  PlanError,
+  scanPruneTargets,
+  scanRepairTargets,
+  type CacheRepairTransport,
+  type StoredPruneTarget,
+  type StoredRepairTarget
+} from './cache-plans'
+import { CacheVerifier } from './cache-verify'
 import type { SettingsStore } from './settings'
 
-const COMMIT_HASH = /^[0-9a-f]{40}$/
-const PARTIAL_MAX_AGE_MS = 10 * 60_000
+/**
+ * Main-process dependencies for cache action plans (plan Todo 15). Credentials
+ * are leased by account id (Todo 12) and released after apply; endpoint and
+ * proxy are frozen into repair plans for stale detection.
+ */
+export interface CachePlanDeps {
+  readonly activeAccountId: () => string | null
+  readonly leaseAccountCredential: (accountId: string) => AccountCredentialLease
+  readonly currentEndpoint: () => string
+  readonly currentProxy: () => ProxySnapshot
+  readonly createRepairTransport?: (proxy: ProxySnapshot) => CacheRepairTransport
+}
 
-interface SafeRepo {
+function validateRetainCommits(commits: readonly string[] | undefined): Set<string> {
+  const set = new Set<string>()
+  for (const commit of commits ?? []) {
+    if (!COMMIT_HASH.test(commit)) throw new Error('Invalid retained commit hash')
+    set.add(commit)
+  }
+  return set
+}
+
+/** Closed-snapshot equality: same mode, same Manual endpoint when applicable. */
+function proxySnapshotsEqual(a: ProxySnapshot, b: ProxySnapshot): boolean {
+  if (a.mode !== b.mode) return false
+  switch (a.mode) {
+    case 'manual':
+      return b.mode === 'manual' && a.url === b.url
+    case 'system':
+    case 'direct':
+      return true
+  }
+}
+
+function failResult(
+  action: CacheActionKind,
+  planId: string,
+  reason: CacheApplyFailureReason,
+  message: string
+): CacheActionResult {
+  return { ok: false, action, planId, bytes: 0, changed: 0, failure: { reason, message } }
+}
+
+/**
+ * Map an apply failure to a typed result. Unexpected errors get a generic,
+ * path-free message: error text from the OS can contain absolute paths and
+ * must never cross IPC.
+ */
+function failureFromError(
+  action: CacheActionKind,
+  planId: string,
+  error: unknown
+): CacheActionResult {
+  if (error instanceof PlanError) return failResult(action, planId, error.reason, error.message)
+  return failResult(action, planId, 'internal', 'Cache action failed; no changes were made')
+}
+
+export const COMMIT_HASH = /^[0-9a-f]{40}$/
+export const PARTIAL_MAX_AGE_MS = 10 * 60_000
+const MAIN_DIR = dirname(fileURLToPath(import.meta.url))
+
+export interface SafeRepo {
   repo: string
   blobsDir: string
   snapshotsDir: string
@@ -19,7 +107,7 @@ interface SafeRepo {
   refsExist: boolean
 }
 
-interface SnapshotDirectory {
+export interface SnapshotDirectory {
   name: string
   path: string
 }
@@ -48,8 +136,13 @@ export class CacheManager {
     private readonly protectedCommitHashes: (
       kind: RepoKind,
       repoId: string
-    ) => ReadonlySet<string> = () => new Set()
+    ) => ReadonlySet<string> = () => new Set(),
+    private readonly planDeps?: CachePlanDeps
   ) {}
+
+  /** Main-memory registry of active prune/repair plans and their temp files. */
+  private readonly planStore = new CacheActionPlanStore()
+  private readonly verifier = new CacheVerifier()
 
   cacheDir(): string {
     return this.settings.get().hfCacheDir ?? defaultCacheDir()
@@ -67,7 +160,7 @@ export class CacheManager {
       })
     }
     return new Promise((resolvePromise, reject) => {
-      const worker = new Worker(join(__dirname, 'cache-worker.mjs'), {
+      const worker = new Worker(join(MAIN_DIR, 'cache-worker.mjs'), {
         workerData: { cacheDir }
       })
       worker.once('message', (report: CacheReport) => {
@@ -119,6 +212,265 @@ export class CacheManager {
   async cleanPartials(kind: RepoKind, repoId: string): Promise<CacheReport> {
     await deleteRepoPartials(this.cacheDir(), kind, repoId, this.protectedTaskIds())
     return this.scan()
+  }
+
+  // --- prune/repair action plans (plan Todo 15) --------------------------------
+
+  /**
+   * One-time startup sweep: no-follow enumeration of the repair staging root,
+   * rejecting link/reparse entries and removing only UUID-named plan
+   * directories older than 24 hours (active in-memory plan ids exempt).
+   */
+  async startup(): Promise<void> {
+    await cleanupRepairStaging(this.cacheDir(), this.planStore.activePlanIds())
+  }
+
+  /** Abort in-flight applies/verification and remove every registered repair temp file. */
+  async shutdown(): Promise<void> {
+    this.verifier.cancel()
+    await this.planStore.shutdown()
+  }
+
+  /**
+   * Offline integrity verification. Progress is relative repo ids and counts
+   * only — never absolute paths. Cooperative cancel via `cancelVerify`.
+   */
+  verify(
+    onProgress: (progress: CacheVerificationProgress) => void
+  ): Promise<CacheVerificationReport> {
+    return this.verifier.run(this.cacheDir(), onProgress)
+  }
+
+  cancelVerify(): void {
+    this.verifier.cancel()
+  }
+
+  /**
+   * Build an expiring prune/repair plan from logical identity only. The
+   * returned plan is sanitized (relative display paths, byte estimates); the
+   * absolute targets, expected hashes, and frozen cache root stay in the
+   * main-memory registry, covered by the plan digest.
+   */
+  async planAction(request: CacheActionPlanRequest): Promise<CacheActionPlan> {
+    // Before accepting a plan: revalidate the repair staging root.
+    await this.startup()
+    const retainCommits = validateRetainCommits(request.retainCommits)
+    const cacheDir = this.cacheDir()
+    const protectedCommits = this.protectedCommitHashes(request.kind, request.repoId)
+    const protectedTaskIds = this.protectedTaskIds()
+
+    if (request.action === 'prune') {
+      const scan = await scanPruneTargets(cacheDir, request.kind, request.repoId, {
+        protectedCommits,
+        protectedTaskIds,
+        retainCommits
+      })
+      if (scan.targets.length === 0) throw new Error('no prune candidates found')
+      const entries: CachePruneEntry[] = scan.targets.map((target) => ({
+        kind: target.targetKind,
+        path: target.displayPath,
+        name: target.name,
+        estimatedBytes: target.sizeBytes
+      }))
+      return this.planStore.createPrune(
+        {
+          action: 'prune',
+          kind: request.kind,
+          repoId: request.repoId,
+          scannedAt: scan.scannedAt,
+          protectedCommits: [...protectedCommits].sort(),
+          protectedTaskIds: [...protectedTaskIds].sort(),
+          retainCommits: [...retainCommits].sort(),
+          entries,
+          estimatedBytes: entries.reduce((acc, entry) => acc + entry.estimatedBytes, 0)
+        },
+        scan.targets,
+        retainCommits,
+        resolve(cacheDir)
+      )
+    }
+
+    // Repair: needs the network environment (endpoint/proxy/account).
+    const deps = this.planDeps
+    if (!deps) throw new Error('Cache plan dependencies are unavailable')
+    const safeRepo = await resolveSafeRepo(cacheDir, request.kind, request.repoId)
+    if (!safeRepo) throw new Error('Repository cache does not exist')
+    const scan = await scanRepairTargets(cacheDir, request.kind, request.repoId, request.issueIds)
+    const accountId = deps.activeAccountId() ?? undefined
+    let accountLabel: string | undefined
+    if (accountId !== undefined) {
+      try {
+        const lease = deps.leaseAccountCredential(accountId)
+        accountLabel = lease.accountLabel
+        lease.release()
+      } catch {
+        // Account unavailable at plan time; the id is still captured so apply
+        // can reject with a clear typed error.
+      }
+    }
+    const entries: CacheRepairEntry[] = scan.targets.map((target) => ({
+      issue: target.issue,
+      path: target.displayPath,
+      repoPath: target.repoPath,
+      estimatedBytes: target.estimatedBytes
+    }))
+    return this.planStore.createRepair(
+      {
+        action: 'repair',
+        kind: request.kind,
+        repoId: request.repoId,
+        scannedAt: scan.scannedAt,
+        resolvedCommit: scan.resolvedCommit,
+        endpoint: deps.currentEndpoint(),
+        proxy: deps.currentProxy(),
+        ...(accountId !== undefined ? { accountId } : {}),
+        ...(accountLabel !== undefined ? { accountLabel } : {}),
+        protectedCommits: [...protectedCommits].sort(),
+        protectedTaskIds: [...protectedTaskIds].sort(),
+        entries,
+        estimatedBytes: entries.reduce((acc, entry) => acc + entry.estimatedBytes, 0)
+      },
+      scan.targets,
+      resolve(cacheDir)
+    )
+  }
+
+  /**
+   * Apply one plan by id (one-shot). Revalidates expiry, the canonical digest,
+   * the protected sets, the frozen environment, and the file identities from a
+   * fresh scan BEFORE the first mutation; every failure returns a typed result
+   * with zero changes and consumes the plan.
+   */
+  async applyAction(planId: string): Promise<CacheActionResult> {
+    const stored = this.planStore.get(planId)
+    if (!stored) {
+      return failResult('prune', planId, 'plan-not-found', 'Plan not found or already applied')
+    }
+    const action = stored.plan.action
+    if (new Date(stored.plan.expiresAt) <= new Date()) {
+      this.planStore.consume(planId)
+      return failResult(action, planId, 'plan-expired', 'Plan expired')
+    }
+    if (CacheActionPlanStore.computeDigest(stored.digestInput) !== stored.plan.digest) {
+      this.planStore.consume(planId)
+      return failResult(action, planId, 'plan-digest-mismatch', 'Plan digest mismatch')
+    }
+
+    if (action === 'prune') {
+      try {
+        const result = await applyPrunePlan({
+          cacheDir: this.cacheDir(),
+          kind: stored.plan.kind,
+          repoId: stored.plan.repoId,
+          targets: stored.targets as readonly StoredPruneTarget[],
+          protectedCommits: this.protectedCommitHashes(stored.plan.kind, stored.plan.repoId),
+          protectedTaskIds: this.protectedTaskIds(),
+          retainCommits: stored.retainCommits
+        })
+        this.planStore.consume(planId)
+        return { ok: true, action, planId, bytes: result.bytes, changed: result.changed }
+      } catch (error) {
+        this.planStore.consume(planId)
+        return failureFromError(action, planId, error)
+      }
+    }
+
+    // Repair: environment and account checks come before any filesystem work.
+    const plan = stored.plan
+    if (plan.action !== 'repair') {
+      return failResult('repair', planId, 'internal', 'Plan kind mismatch')
+    }
+    const deps = this.planDeps
+    if (!deps) {
+      this.planStore.consume(planId)
+      return failResult(
+        action,
+        planId,
+        'plan-stale-environment',
+        'Cache plan dependencies are unavailable'
+      )
+    }
+    if (deps.currentEndpoint() !== plan.endpoint) {
+      this.planStore.consume(planId)
+      return failResult(
+        action,
+        planId,
+        'plan-stale-environment',
+        'Hub endpoint changed since the plan'
+      )
+    }
+    if (!proxySnapshotsEqual(deps.currentProxy(), plan.proxy)) {
+      this.planStore.consume(planId)
+      return failResult(
+        action,
+        planId,
+        'plan-stale-environment',
+        'Proxy selection changed since the plan'
+      )
+    }
+    if (resolve(this.cacheDir()) !== stored.cacheDir) {
+      this.planStore.consume(planId)
+      return failResult(
+        action,
+        planId,
+        'plan-stale-environment',
+        'Cache directory changed since the plan'
+      )
+    }
+    let lease: AccountCredentialLease | undefined
+    if (plan.accountId !== undefined) {
+      if ((deps.activeAccountId() ?? undefined) !== plan.accountId) {
+        this.planStore.consume(planId)
+        return failResult(
+          action,
+          planId,
+          'plan-stale-account',
+          'Active account changed since the plan'
+        )
+      }
+      try {
+        lease = deps.leaseAccountCredential(plan.accountId)
+      } catch {
+        this.planStore.consume(planId)
+        return failResult(
+          action,
+          planId,
+          'account-unavailable',
+          'The account for this repair is unavailable'
+        )
+      }
+    }
+    const transport = deps.createRepairTransport
+      ? deps.createRepairTransport(plan.proxy)
+      : createDefaultRepairTransport(plan.proxy)
+    try {
+      const result = await applyRepairPlan(
+        {
+          cacheDir: this.cacheDir(),
+          kind: plan.kind,
+          repoId: plan.repoId,
+          plan,
+          targets: stored.targets as readonly StoredRepairTarget[],
+          authToken: lease?.accessToken,
+          transport,
+          protectedCommits: this.protectedCommitHashes(plan.kind, plan.repoId),
+          signal: this.planStore.signalFor(planId)
+        },
+        {
+          planId,
+          registerTemp: (id, path) => this.planStore.registerTemp(id, path),
+          releaseTemp: (id, path, succeeded) => this.planStore.releaseTemp(id, path, succeeded)
+        }
+      )
+      this.planStore.consume(planId)
+      return { ok: true, action, planId, bytes: result.bytes, changed: result.changed }
+    } catch (error) {
+      this.planStore.consume(planId)
+      return failureFromError(action, planId, error)
+    } finally {
+      await transport.close().catch(() => undefined)
+      lease?.release()
+    }
   }
 }
 
@@ -241,7 +593,7 @@ async function prepareRevisionDeletion(
   }
 }
 
-async function resolveSafeRepo(
+export async function resolveSafeRepo(
   cacheDir: string,
   kind: RepoKind,
   repoId: string
@@ -300,7 +652,7 @@ async function resolveStructuralDirectory(
   return { path: real, exists: true }
 }
 
-async function inspectSnapshotDirectories(safeRepo: SafeRepo): Promise<SnapshotDirectory[]> {
+export async function inspectSnapshotDirectories(safeRepo: SafeRepo): Promise<SnapshotDirectory[]> {
   if (!safeRepo.snapshotsExist) return []
   const snapshots: SnapshotDirectory[] = []
   for (const name of await readdir(safeRepo.snapshotsDir)) {
@@ -314,7 +666,7 @@ async function inspectSnapshotDirectories(safeRepo: SafeRepo): Promise<SnapshotD
   return snapshots
 }
 
-async function inspectBlobFiles(
+export async function inspectBlobFiles(
   safeRepo: SafeRepo
 ): Promise<Array<{ name: string; path: string }>> {
   if (!safeRepo.blobsExist) return []
@@ -330,7 +682,7 @@ async function inspectBlobFiles(
   return blobs
 }
 
-async function inspectRefFiles(safeRepo: SafeRepo): Promise<string[]> {
+export async function inspectRefFiles(safeRepo: SafeRepo): Promise<string[]> {
   if (!safeRepo.refsExist) return []
   return listRegularFilesRecursive(safeRepo.refsDir, safeRepo.refsDir, 'ref')
 }
@@ -361,7 +713,7 @@ async function listRegularFilesRecursive(
   return files
 }
 
-async function collectSnapshotReferences(
+export async function collectSnapshotReferences(
   directory: string,
   safeRepo: SafeRepo,
   out: Set<string>
@@ -401,7 +753,7 @@ async function validateExtraRepoEntries(safeRepo: SafeRepo): Promise<void> {
   }
 }
 
-async function validateNoLinks(path: string, boundary: string): Promise<void> {
+export async function validateNoLinks(path: string, boundary: string): Promise<void> {
   const entry = await lstat(path)
   if (entry.isSymbolicLink()) {
     throw new Error(`Unsafe cache path: ${relative(boundary, path)} is a symbolic link or junction`)
@@ -416,7 +768,7 @@ async function validateNoLinks(path: string, boundary: string): Promise<void> {
   assertContained(boundary, await realpath(path), `entry ${relative(boundary, path)}`)
 }
 
-function validateCommitHashes(commitHashes: string[]): string[] {
+export function validateCommitHashes(commitHashes: string[]): string[] {
   if (commitHashes.length < 1 || commitHashes.length > 100) {
     throw new Error('Expected between 1 and 100 commit hashes')
   }
@@ -425,21 +777,21 @@ function validateCommitHashes(commitHashes: string[]): string[] {
   return hashes
 }
 
-function assertDirectory(entry: Awaited<ReturnType<typeof lstat>>, label: string): void {
+export function assertDirectory(entry: Awaited<ReturnType<typeof lstat>>, label: string): void {
   if (entry.isSymbolicLink()) {
     throw new Error(`Unsafe cache path: ${label} is a symbolic link or junction`)
   }
   if (!entry.isDirectory()) throw new Error(`Unsafe cache path: ${label} is not a directory`)
 }
 
-function assertRegularFile(entry: Awaited<ReturnType<typeof lstat>>, label: string): void {
+export function assertRegularFile(entry: Awaited<ReturnType<typeof lstat>>, label: string): void {
   if (entry.isSymbolicLink()) {
     throw new Error(`Unsafe cache path: ${label} is a symbolic link or junction`)
   }
   if (!entry.isFile()) throw new Error(`Unsafe cache path: ${label} is not a regular file`)
 }
 
-function assertDirectChild(parent: string, child: string, label: string): void {
+export function assertDirectChild(parent: string, child: string, label: string): void {
   const rel = relative(parent, child)
   if (!isSinglePathSegment(rel)) {
     throw new Error(`Unsafe cache path: ${label} resolves outside its parent`)
@@ -463,7 +815,9 @@ function isSinglePathSegment(path: string): boolean {
   )
 }
 
-async function lstatIfExists(path: string): Promise<Awaited<ReturnType<typeof lstat>> | null> {
+export async function lstatIfExists(
+  path: string
+): Promise<Awaited<ReturnType<typeof lstat>> | null> {
   try {
     return await lstat(path)
   } catch (error) {

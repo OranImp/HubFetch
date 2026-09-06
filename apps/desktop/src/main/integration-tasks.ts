@@ -11,10 +11,14 @@ import type {
   UploadIntegrationTask,
   UploadSelection,
   UploadStartRequest,
+  UploadRetryRequest,
   UploadWarning,
-  UploadWarningCode
+  UploadWarningCode,
+  UploadTaskRecord
 } from '@hubfetch/shared'
 import type { NotificationService } from './notifications'
+import type { AccountCredentialLease } from './auth'
+import type { AccountReferenceCoordinator } from './account-references'
 import { redactor } from './security/log'
 import { runExport } from './integrations/export'
 import {
@@ -22,6 +26,12 @@ import {
   type UploadManifest,
   type UploadManifestFile
 } from './integrations/upload'
+import {
+  UploadTaskManager,
+  hashFile,
+  computeManifestFingerprint,
+  type FileHashResult
+} from './upload-task-manager'
 
 const SELECTION_TTL_MS = 15 * 60 * 1000
 const TERMINAL_TTL_MS = 10 * 60 * 1000
@@ -56,6 +66,11 @@ export interface IntegrationTaskDeps {
   revealPath?: (path: string) => void
   now?: () => number
   createId?: () => string
+  activeAccountId?: () => string | null
+  activeAccountLabel?: () => string | null
+  leaseAccountCredential?: (accountId: string) => AccountCredentialLease
+  references?: AccountReferenceCoordinator
+  uploadTaskManager?: UploadTaskManager
 }
 
 function isTerminal(task: IntegrationTask): boolean {
@@ -226,6 +241,8 @@ export class IntegrationTaskManager {
   private readonly controllers = new Map<string, AbortController>()
   private readonly outputPaths = new Map<string, string>()
   private readonly ownersWithSelectionCleanup = new Set<number>()
+  private readonly uploadLeases = new Map<string, AccountCredentialLease>()
+  private readonly uploadReferenceReleases = new Map<string, () => void>()
 
   constructor(private readonly deps: IntegrationTaskDeps) {}
 
@@ -311,11 +328,14 @@ export class IntegrationTaskManager {
       (warning) => warning.requiresAcknowledgement && !acknowledged.has(warning.code)
     )
     if (missing) throw new Error(`upload.warningNotAcknowledged:${missing.code}`)
-    this.selections.delete(request.selectionId)
-
     const id = this.createId()
     const now = this.timestamp()
     const username = this.deps.username()
+    const accountId = this.deps.activeAccountId?.() ?? null
+    const lease = accountId ? this.deps.leaseAccountCredential?.(accountId) : undefined
+    if (accountId && !lease) throw new Error('account-unavailable')
+    const accountLabel = this.deps.activeAccountLabel?.() ?? undefined
+    this.selections.delete(request.selectionId)
     const task: UploadIntegrationTask = {
       id,
       kind: 'upload',
@@ -325,12 +345,51 @@ export class IntegrationTaskManager {
       phase: 'preparing',
       progress: 0,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      ...(accountId === null ? {} : { accountId }),
+      ...(accountLabel === undefined ? {} : { accountLabel })
     }
     const controller = new AbortController()
     this.tasks.set(id, task)
+    if (lease) this.uploadLeases.set(id, lease)
+    if (accountId && this.deps.references) {
+      this.uploadReferenceReleases.set(
+        id,
+        this.deps.references.register(accountId, 'upload', id, () => {
+          this.controllers.get(id)?.abort()
+          this.releaseUploadReference(id)
+          this.updateTask(id, {
+            status: 'error',
+            phase: 'error',
+            messageKey: 'account-unavailable'
+          })
+        })
+      )
+    }
     this.controllers.set(id, controller)
     this.emit()
+
+    // Persist the task immediately
+    const uploadTaskManager = this.deps.uploadTaskManager
+    if (uploadTaskManager) {
+      uploadTaskManager.insert({
+        id,
+        accountId,
+        accountLabel: accountLabel ?? null,
+        repoKind: request.kind,
+        repoName: request.name,
+        repoVisibility: request.private ? 'private' : 'public',
+        rootPath: selected.manifest.rootRealPath,
+        manifestFingerprint: '', // filled after hashing
+        warningCodes: request.acknowledgedWarningCodes,
+        summaryFileCount: selected.manifest.files.length,
+        summaryTotalBytes: selected.manifest.files.reduce((s, f) => s + f.size, 0),
+        status: 'preparing',
+        phase: 'preparing',
+        progress: 0
+      })
+    }
+
     void this.executeUpload(task, request, selected.manifest, controller)
     return { id }
   }
@@ -361,6 +420,146 @@ export class IntegrationTaskManager {
     return { id }
   }
 
+  /**
+   * Retry a persisted upload task. Obtains the original account by ID, rescans
+   * the root, rehashes all selected files, requires identical manifest
+   * fingerprint and warning acknowledgments, then calls createRepoAndUpload.
+   * A 409 from the Hub (existing repo) is intentional continuation.
+   */
+  async retryUpload(request: UploadRetryRequest): Promise<{ id: string }> {
+    this.prune()
+    if (this.hasActive('upload')) throw new Error('upload.alreadyRunning')
+    const uploadTaskManager = this.deps.uploadTaskManager
+    if (!uploadTaskManager) throw new Error('upload.noPersistence')
+    const record = uploadTaskManager.get(request.taskId)
+    if (!record) throw new Error('upload.taskNotFound')
+    if (
+      record.status !== 'interrupted' &&
+      record.status !== 'error' &&
+      record.status !== 'account-unavailable'
+    ) {
+      throw new Error('upload.cannotRetry')
+    }
+
+    // Obtain account credential by original account ID
+    const accountId = record.accountId
+    const lease = accountId ? this.deps.leaseAccountCredential?.(accountId) : undefined
+    if (accountId && !lease) throw new Error('account-unavailable')
+    const accountLabel = record.accountLabel
+
+    // Rescan the root with existing ignore/symlink/special-file rules
+    const scanned = await scanUploadFolder(record.rootPath)
+    const newManifest = scanned.manifest
+
+    // Rehash all selected files
+    const controller = new AbortController()
+    const id = this.createId()
+    const now = this.timestamp()
+    const fileHashes: FileHashResult[] = []
+    const totalFiles = newManifest.files.length
+    for (let i = 0; i < totalFiles; i++) {
+      controller.signal.throwIfAborted()
+      const file = newManifest.files[i]!
+      const contentSha256 = await hashFile(file.absolutePath)
+      fileHashes.push({
+        relativePath: file.relativePath,
+        size: file.size,
+        contentSha256
+      })
+    }
+
+    // Require identical manifest fingerprint
+    const newFingerprint = computeManifestFingerprint(fileHashes)
+    if (newFingerprint !== record.manifestFingerprint) {
+      throw new Error('upload.selectionStale')
+    }
+
+    // Verify warning acknowledgments match
+    const acknowledged = new Set(record.warningCodes)
+    const missing = scanned.warnings.find(
+      (warning) => warning.requiresAcknowledgement && !acknowledged.has(warning.code)
+    )
+    if (missing) throw new Error(`upload.warningNotAcknowledged:${missing.code}`)
+
+    const username = this.deps.username()
+    const task: UploadIntegrationTask = {
+      id,
+      kind: 'upload',
+      repoKind: record.repoKind,
+      repoId: record.repoId ?? (username ? `${username}/${record.repoName}` : undefined),
+      status: 'preparing',
+      phase: 'hashing',
+      progress: 1, // hashing already done above
+      createdAt: now,
+      updatedAt: now,
+      ...(accountId === null ? {} : { accountId }),
+      ...(accountLabel == null ? {} : { accountLabel })
+    }
+    this.tasks.set(id, task)
+    if (lease) this.uploadLeases.set(id, lease)
+    if (accountId && this.deps.references) {
+      this.uploadReferenceReleases.set(
+        id,
+        this.deps.references.register(accountId, 'upload', id, () => {
+          this.controllers.get(id)?.abort()
+          this.releaseUploadReference(id)
+          this.updateTask(id, {
+            status: 'error',
+            phase: 'error',
+            messageKey: 'account-unavailable'
+          })
+        })
+      )
+    }
+    this.controllers.set(id, controller)
+    this.emit()
+
+    // Persist the retry task
+    uploadTaskManager.insert({
+      id,
+      accountId,
+      accountLabel,
+      repoKind: record.repoKind,
+      repoName: record.repoName,
+      repoVisibility: record.repoVisibility,
+      rootPath: record.rootPath,
+      manifestFingerprint: newFingerprint,
+      warningCodes: record.warningCodes,
+      summaryFileCount: newManifest.files.length,
+      summaryTotalBytes: newManifest.files.reduce((s, f) => s + f.size, 0),
+      status: 'running',
+      phase: 'uploading',
+      progress: 0.01
+    })
+
+    void this.executeUpload(task, {
+      selectionId: '',
+      kind: record.repoKind,
+      name: record.repoName,
+      private: record.repoVisibility === 'private',
+      acknowledgedWarningCodes: record.warningCodes
+    }, newManifest, controller)
+    return { id }
+  }
+
+  /**
+   * Remove a terminal persisted upload task. Only terminal states
+   * (done, error, canceled, interrupted, selection-stale, account-unavailable)
+   * can be removed.
+   */
+  removeUpload(id: string): boolean {
+    const uploadTaskManager = this.deps.uploadTaskManager
+    if (!uploadTaskManager) return false
+    return uploadTaskManager.remove(id)
+  }
+
+  /** List all persisted upload tasks. */
+  listPersistedUploads(): UploadTaskRecord[] {
+    const uploadTaskManager = this.deps.uploadTaskManager
+    if (!uploadTaskManager) return []
+    return uploadTaskManager.list()
+  }
+
   cancel(id: string, kind: 'upload' | 'export'): { canceled: boolean } {
     const task = this.tasks.get(id)
     if (task?.kind === kind && task.status === 'canceled') return { canceled: true }
@@ -368,6 +567,10 @@ export class IntegrationTaskManager {
     if (!task || task.kind !== kind || !controller || isTerminal(task)) return { canceled: false }
     controller.abort()
     this.updateTask(task.id, { status: 'canceled', phase: 'canceled' })
+    if (kind === 'upload') {
+      this.releaseUploadReference(id)
+      this.deps.uploadTaskManager?.update(id, { status: 'canceled', phase: 'canceled' })
+    }
     return { canceled: true }
   }
 
@@ -382,6 +585,10 @@ export class IntegrationTaskManager {
     for (const controller of this.controllers.values()) controller.abort()
     this.controllers.clear()
     this.selections.clear()
+    for (const lease of this.uploadLeases.values()) lease.release()
+    this.uploadLeases.clear()
+    for (const release of this.uploadReferenceReleases.values()) release()
+    this.uploadReferenceReleases.clear()
   }
 
   private async executeUpload(
@@ -390,12 +597,54 @@ export class IntegrationTaskManager {
     manifest: UploadManifest,
     controller: AbortController
   ): Promise<void> {
+    const uploadTaskManager = this.deps.uploadTaskManager
+    const useRealUpload = !this.deps.runUpload
     try {
+      // --- Hashing phase: compute SHA-256 for every selected file ---
+      // Only run when using the real upload pipeline (not test seams)
+      if (useRealUpload) {
+        this.updateTask(task.id, { status: 'preparing', phase: 'hashing', progress: 0 })
+        if (uploadTaskManager) {
+          uploadTaskManager.update(task.id, { status: 'preparing', phase: 'hashing', progress: 0 })
+        }
+        const fileHashes: FileHashResult[] = []
+        const totalFiles = manifest.files.length
+        for (let i = 0; i < totalFiles; i++) {
+          controller.signal.throwIfAborted()
+          const file = manifest.files[i]!
+          const contentSha256 = await hashFile(file.absolutePath)
+          fileHashes.push({
+            relativePath: file.relativePath,
+            size: file.size,
+            contentSha256
+          })
+          const progress = (i + 1) / totalFiles
+          this.updateTask(task.id, { phase: 'hashing', progress })
+          if (uploadTaskManager) {
+            uploadTaskManager.update(task.id, { phase: 'hashing', progress })
+          }
+          this.emit()
+        }
+
+        // Compute manifest fingerprint
+        const manifestFingerprint = computeManifestFingerprint(fileHashes)
+        if (uploadTaskManager) {
+          uploadTaskManager.update(task.id, { manifestFingerprint })
+        }
+
+        controller.signal.throwIfAborted()
+        this.updateTask(task.id, { status: 'running', phase: 'uploading', progress: 0.01 })
+        if (uploadTaskManager) {
+          uploadTaskManager.update(task.id, { status: 'running', phase: 'uploading', progress: 0.01 })
+        }
+        this.emit()
+      }
+
       const result = await (this.deps.runUpload ?? createRepoAndUpload)(
         { kind: request.kind, name: request.name, private: request.private, manifest },
         {
-          accessToken: this.deps.accessToken(),
-          username: this.deps.username(),
+          accessToken: this.uploadLeases.get(task.id)?.accessToken ?? this.deps.accessToken(),
+          username: task.repoId?.split('/')[0] ?? this.deps.username(),
           signal: controller.signal,
           onProgress: (progress) => {
             this.updateTask(task.id, {
@@ -404,6 +653,13 @@ export class IntegrationTaskManager {
               progress: progress.progress,
               path: progress.path
             })
+            if (uploadTaskManager) {
+              uploadTaskManager.update(task.id, {
+                status: progress.phase === 'preparing' ? 'preparing' : 'running',
+                phase: progress.phase,
+                progress: progress.progress
+              })
+            }
           }
         }
       )
@@ -416,6 +672,16 @@ export class IntegrationTaskManager {
           messageKey: result.messageKey,
           params: result.params
         })
+        if (uploadTaskManager) {
+          uploadTaskManager.update(task.id, {
+            status: 'error',
+            phase: 'error',
+            progress: result.progress,
+            messageKey: result.messageKey,
+            params: result.params
+          })
+        }
+        this.releaseUploadReference(task.id)
         return
       }
       const completed = this.updateTask(task.id, {
@@ -427,7 +693,19 @@ export class IntegrationTaskManager {
         messageKey: result.messageKey,
         params: result.params
       })
+      if (uploadTaskManager) {
+        uploadTaskManager.update(task.id, {
+          status: 'done',
+          phase: 'done',
+          progress: 1,
+          repoId: result.repoId,
+          repoUrl: result.repoUrl,
+          messageKey: result.messageKey,
+          params: result.params
+        })
+      }
       if (!completed) return
+      this.releaseUploadReference(task.id)
       this.deps.notifications.show(
         'notifications.uploadComplete',
         'notifications.uploadCompleteBody',
@@ -437,18 +715,36 @@ export class IntegrationTaskManager {
     } catch (err) {
       if (controller.signal.aborted) {
         this.updateTask(task.id, { status: 'canceled', phase: 'canceled' })
+        if (uploadTaskManager) {
+          uploadTaskManager.update(task.id, { status: 'canceled', phase: 'canceled' })
+        }
       } else {
+        const messageKey = err instanceof Error && err.message === 'selection-stale'
+          ? 'upload.selectionStale'
+          : 'upload.failed'
+        const status = err instanceof Error && err.message === 'selection-stale'
+          ? ('selection-stale' as const)
+          : ('error' as const)
         this.updateTask(task.id, {
-          status: 'error',
+          status,
           phase: 'error',
-          messageKey: 'upload.failed',
-          params: {
-            error: redactor
-              .redactText(err instanceof Error ? err.message : String(err))
-              .slice(0, 200)
-          }
+          messageKey,
+          params: messageKey === 'upload.failed'
+            ? { error: redactor.redactText(err instanceof Error ? err.message : String(err)).slice(0, 200) }
+            : undefined
         })
+        if (uploadTaskManager) {
+          uploadTaskManager.update(task.id, {
+            status,
+            phase: 'error',
+            messageKey,
+            params: messageKey === 'upload.failed'
+              ? { error: redactor.redactText(err instanceof Error ? err.message : String(err)).slice(0, 200) }
+              : undefined
+          })
+        }
       }
+      this.releaseUploadReference(task.id)
     } finally {
       this.controllers.delete(task.id)
     }
@@ -514,6 +810,7 @@ export class IntegrationTaskManager {
           }
         })
       }
+      this.releaseUploadReference(task.id)
     } finally {
       this.controllers.delete(task.id)
     }
@@ -531,6 +828,19 @@ export class IntegrationTaskManager {
     return true
   }
 
+  accountUsage(accountId: string): number {
+    return [...this.tasks.values()].filter(
+      (task) => task.kind === 'upload' && task.accountId === accountId && !isTerminal(task)
+    ).length
+  }
+
+  private releaseUploadReference(id: string): void {
+    this.uploadReferenceReleases.get(id)?.()
+    this.uploadReferenceReleases.delete(id)
+    this.uploadLeases.get(id)?.release()
+    this.uploadLeases.delete(id)
+  }
+
   private revokeSelections(ownerId: number): void {
     for (const [id, selection] of this.selections) {
       if (selection.ownerId === ownerId) this.selections.delete(id)
@@ -541,6 +851,7 @@ export class IntegrationTaskManager {
     const cutoff = this.now() - TERMINAL_TTL_MS
     for (const [id, task] of this.tasks) {
       if (isTerminal(task) && Date.parse(task.updatedAt) < cutoff) {
+        if (task.kind === 'upload') this.releaseUploadReference(id)
         this.tasks.delete(id)
         this.outputPaths.delete(id)
       }
@@ -549,6 +860,7 @@ export class IntegrationTaskManager {
       .filter(isTerminal)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     for (const task of terminal.slice(MAX_TERMINAL_TASKS)) {
+      if (task.kind === 'upload') this.releaseUploadReference(task.id)
       this.tasks.delete(task.id)
       this.outputPaths.delete(task.id)
     }

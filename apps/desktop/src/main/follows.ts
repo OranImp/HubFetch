@@ -27,8 +27,12 @@ export class FollowsPoller {
     private readonly library: Library,
     private readonly hub: HubClient,
     private readonly settings: SettingsStore,
-    private readonly broadcastInbox: (items: InboxItem[]) => void,
-    private readonly notifications: NotificationService
+    private readonly broadcastInbox: (payload: {
+      accountId: string | null
+      items: InboxItem[]
+    }) => void,
+    private readonly notifications: NotificationService,
+    private readonly getAccountId: () => string | null = () => null
   ) {}
 
   start(): void {
@@ -61,10 +65,11 @@ export class FollowsPoller {
     if (this.polling) return 0
     this.polling = true
     let added = 0
+    const accountId = this.getAccountId()
     try {
-      for (const follow of this.library.listFollows()) {
+      for (const follow of this.library.listFollows(accountId)) {
         try {
-          added += await this.pollOne(follow)
+          added += await this.pollOne(follow, accountId)
         } catch (err) {
           // One broken follow must not kill the whole poll cycle.
           logger.warn('follows', `poll failed for ${follow.type}:${follow.target}`, err)
@@ -74,16 +79,16 @@ export class FollowsPoller {
       this.polling = false
     }
     if (added > 0) {
-      const items = this.library.listInbox()
-      this.broadcastInbox(items)
+      const items = this.library.listInbox(accountId)
+      this.broadcastInbox({ accountId, items })
       this.notify(added, items)
     }
     return added
   }
 
-  private async pollOne(follow: Follow): Promise<number> {
+  private async pollOne(follow: Follow, accountId: string | null): Promise<number> {
     const now = new Date().toISOString()
-    const state = this.library.getFollowState(follow.id)
+    const state = this.library.getFollowState(follow.id, accountId)
     let added = 0
 
     if (follow.type === 'user' || follow.type === 'org') {
@@ -95,15 +100,18 @@ export class FollowsPoller {
           if (repo.updatedAt <= since) continue
           const isNew = repo.createdAt ? repo.createdAt > since : false
           if (
-            this.library.addInboxItem({
-              kind: isNew ? 'new-repo' : 'repo-update',
-              title: repo.id,
-              body: isNew
-                ? `New ${kind} by ${follow.target}`
-                : `${follow.target} updated this ${kind}`,
-              route: `${ROUTE_PREFIX[kind]}/${repo.id}`,
-              dedupeKey: `${follow.id}:${repo.id}:${repo.updatedAt}`
-            })
+            this.library.addInboxItem(
+              {
+                kind: isNew ? 'new-repo' : 'repo-update',
+                title: repo.id,
+                body: isNew
+                  ? `New ${kind} by ${follow.target}`
+                  : `${follow.target} updated this ${kind}`,
+                route: `${ROUTE_PREFIX[kind]}/${repo.id}`,
+                dedupeKey: `${follow.id}:${repo.id}:${repo.updatedAt}`
+              },
+              accountId
+            )
           ) {
             added++
           }
@@ -116,13 +124,16 @@ export class FollowsPoller {
         const last = state.lastModified as string | undefined
         if (detail.lastModified && last && detail.lastModified > last) {
           if (
-            this.library.addInboxItem({
-              kind: 'repo-update',
-              title: repoId,
-              body: `Repository updated`,
-              route: `${ROUTE_PREFIX[kind]}/${repoId}`,
-              dedupeKey: `${follow.id}:${detail.lastModified}`
-            })
+            this.library.addInboxItem(
+              {
+                kind: 'repo-update',
+                title: repoId,
+                body: `Repository updated`,
+                route: `${ROUTE_PREFIX[kind]}/${repoId}`,
+                dedupeKey: `${follow.id}:${detail.lastModified}`
+              },
+              accountId
+            )
           ) {
             added++
           }
@@ -138,13 +149,16 @@ export class FollowsPoller {
         seen.add(paper.id)
         if (isFirstRun) continue // Seed silently on the first poll.
         if (
-          this.library.addInboxItem({
-            kind: 'paper',
-            title: paper.title,
-            body: paper.summary.slice(0, 200),
-            route: `/papers/${paper.id}`,
-            dedupeKey: `paper:${paper.id}`
-          })
+          this.library.addInboxItem(
+            {
+              kind: 'paper',
+              title: paper.title,
+              body: paper.summary.slice(0, 200),
+              route: `/papers/${paper.id}`,
+              dedupeKey: `paper:${paper.id}`
+            },
+            accountId
+          )
         ) {
           added++
         }
@@ -152,7 +166,7 @@ export class FollowsPoller {
       state.seenIds = [...seen].slice(-500)
     }
 
-    this.library.setFollowState(follow.id, state, now)
+    this.library.setFollowState(follow.id, state, now, accountId)
     return added
   }
 

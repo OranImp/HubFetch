@@ -11,14 +11,26 @@ import type {
   RepoSummary
 } from '@hubfetch/shared'
 import type { AppDatabase } from './db'
+import { LEGACY_LOCAL_ORIGIN } from './db'
 
 const DEFAULT_HISTORY_LIMIT: HistoryLimit = 200
 
 export class Library {
   constructor(
     private readonly db: AppDatabase,
-    private readonly getHistoryLimit: () => number = () => DEFAULT_HISTORY_LIMIT
+    private readonly getHistoryLimit: () => number = () => DEFAULT_HISTORY_LIMIT,
+    private readonly getAccountId: () => string | null = () => null
   ) {}
+
+  private accountScope(accountId = this.getAccountId()): string | null {
+    return accountId
+  }
+
+  private legacyScopeWhere(accountId: string | null): { sql: string; value?: string } {
+    return accountId === null
+      ? { sql: 'account_id IS NULL AND legacy_origin = ?', value: LEGACY_LOCAL_ORIGIN }
+      : { sql: 'account_id = ?', value: accountId }
+  }
 
   listFavorites(): FavoriteItem[] {
     const rows = this.db.prepare('SELECT * FROM favorites ORDER BY added_at DESC').all() as Array<{
@@ -93,9 +105,14 @@ export class Library {
     this.db.prepare('DELETE FROM history').run()
   }
 
-  listFollows(): Follow[] {
-    const rows = this.db.prepare('SELECT * FROM follows ORDER BY created_at').all() as Array<{
+  listFollows(accountId = this.accountScope()): Follow[] {
+    const scope = this.legacyScopeWhere(accountId)
+    const rows = this.db
+      .prepare(`SELECT * FROM follows WHERE ${scope.sql} ORDER BY created_at`)
+      .all(...(scope.value === undefined ? [] : [scope.value])) as Array<{
       id: string
+      account_id: string | null
+      legacy_origin: string | null
       type: string
       target: string
       created_at: string
@@ -106,27 +123,48 @@ export class Library {
       type: r.type as FollowTargetType,
       target: r.target,
       createdAt: r.created_at,
-      lastCheckedAt: r.last_checked_at ?? undefined
+      lastCheckedAt: r.last_checked_at ?? undefined,
+      ...(r.account_id === null ? {} : { accountId: r.account_id }),
+      ...(r.legacy_origin === null
+        ? {}
+        : { legacyOrigin: r.legacy_origin as Follow['legacyOrigin'] })
     }))
   }
 
-  addFollow(type: FollowTargetType, target: string): Follow[] {
+  addFollow(type: FollowTargetType, target: string, accountId = this.accountScope()): Follow[] {
+    const existing = this.listFollows(accountId).find(
+      (follow) => follow.type === type && follow.target === target
+    )
+    if (!existing) {
+      this.db
+        .prepare(
+          `INSERT INTO follows (id, account_id, legacy_origin, type, target, created_at) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          randomUUID(),
+          accountId,
+          accountId === null ? LEGACY_LOCAL_ORIGIN : null,
+          type,
+          target,
+          new Date().toISOString()
+        )
+    }
+    return this.listFollows(accountId)
+  }
+
+  removeFollow(id: string, accountId = this.accountScope()): Follow[] {
+    const scope = this.legacyScopeWhere(accountId)
     this.db
-      .prepare(
-        `INSERT INTO follows (id, type, target, created_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT(type, target) DO NOTHING`
-      )
-      .run(randomUUID(), type, target, new Date().toISOString())
-    return this.listFollows()
+      .prepare(`DELETE FROM follows WHERE id = ? AND ${scope.sql}`)
+      .run(id, ...(scope.value === undefined ? [] : [scope.value]))
+    return this.listFollows(accountId)
   }
 
-  removeFollow(id: string): Follow[] {
-    this.db.prepare('DELETE FROM follows WHERE id = ?').run(id)
-    return this.listFollows()
-  }
-
-  getFollowState(id: string): Record<string, unknown> {
-    const row = this.db.prepare('SELECT state_json FROM follows WHERE id = ?').get(id) as
+  getFollowState(id: string, accountId = this.accountScope()): Record<string, unknown> {
+    const scope = this.legacyScopeWhere(accountId)
+    const row = this.db
+      .prepare(`SELECT state_json FROM follows WHERE id = ? AND ${scope.sql}`)
+      .get(id, ...(scope.value === undefined ? [] : [scope.value])) as
       { state_json: string | null } | undefined
     if (!row?.state_json) return {}
     try {
@@ -136,17 +174,33 @@ export class Library {
     }
   }
 
-  setFollowState(id: string, state: Record<string, unknown>, checkedAt: string): void {
+  setFollowState(
+    id: string,
+    state: Record<string, unknown>,
+    checkedAt: string,
+    accountId = this.accountScope()
+  ): void {
+    const scope = this.legacyScopeWhere(accountId)
     this.db
-      .prepare('UPDATE follows SET state_json = ?, last_checked_at = ? WHERE id = ?')
-      .run(JSON.stringify(state), checkedAt, id)
+      .prepare(
+        `UPDATE follows SET state_json = ?, last_checked_at = ? WHERE id = ? AND ${scope.sql}`
+      )
+      .run(
+        JSON.stringify(state),
+        checkedAt,
+        id,
+        ...(scope.value === undefined ? [] : [scope.value])
+      )
   }
 
-  listInbox(): InboxItem[] {
+  listInbox(accountId = this.accountScope()): InboxItem[] {
+    const scope = this.legacyScopeWhere(accountId)
     const rows = this.db
-      .prepare('SELECT * FROM inbox ORDER BY created_at DESC LIMIT 500')
-      .all() as Array<{
+      .prepare(`SELECT * FROM inbox WHERE ${scope.sql} ORDER BY created_at DESC LIMIT 500`)
+      .all(...(scope.value === undefined ? [] : [scope.value])) as Array<{
       id: string
+      account_id: string | null
+      legacy_origin: string | null
       kind: string
       title: string
       body: string
@@ -161,33 +215,56 @@ export class Library {
       body: r.body,
       route: r.route,
       createdAt: r.created_at,
-      readAt: r.read_at ?? undefined
+      readAt: r.read_at ?? undefined,
+      ...(r.account_id === null ? {} : { accountId: r.account_id }),
+      ...(r.legacy_origin === null
+        ? {}
+        : { legacyOrigin: r.legacy_origin as InboxItem['legacyOrigin'] })
     }))
   }
 
-  addInboxItem(item: Omit<InboxItem, 'id' | 'createdAt'> & { dedupeKey: string }): boolean {
-    const id = `inbox:${item.dedupeKey}`
+  addInboxItem(
+    item: Omit<InboxItem, 'id' | 'createdAt'> & { dedupeKey: string },
+    accountId = this.accountScope()
+  ): boolean {
+    const scope = accountId ?? LEGACY_LOCAL_ORIGIN
+    const id = `inbox:${scope}:${item.dedupeKey}`
     const result = this.db
       .prepare(
-        `INSERT INTO inbox (id, kind, title, body, route, created_at) VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO inbox (id, account_id, legacy_origin, kind, title, body, route, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO NOTHING`
       )
-      .run(id, item.kind, item.title, item.body, item.route, new Date().toISOString())
+      .run(
+        id,
+        accountId,
+        accountId === null ? LEGACY_LOCAL_ORIGIN : null,
+        item.kind,
+        item.title,
+        item.body,
+        item.route,
+        new Date().toISOString()
+      )
     return result.changes > 0
   }
 
-  markInboxRead(ids: string[]): InboxItem[] {
-    const stmt = this.db.prepare('UPDATE inbox SET read_at = ? WHERE id = ?')
+  markInboxRead(ids: string[], accountId = this.accountScope()): InboxItem[] {
+    const scope = this.legacyScopeWhere(accountId)
+    const stmt = this.db.prepare(`UPDATE inbox SET read_at = ? WHERE id = ? AND ${scope.sql}`)
     const now = new Date().toISOString()
     const tx = this.db.transaction((list: string[]) => {
-      for (const id of list) stmt.run(now, id)
+      for (const id of list) {
+        stmt.run(now, id, ...(scope.value === undefined ? [] : [scope.value]))
+      }
     })
     tx(ids)
-    return this.listInbox()
+    return this.listInbox(accountId)
   }
 
-  clearInbox(): InboxItem[] {
-    this.db.prepare('DELETE FROM inbox').run()
-    return this.listInbox()
+  clearInbox(accountId = this.accountScope()): InboxItem[] {
+    const scope = this.legacyScopeWhere(accountId)
+    this.db
+      .prepare(`DELETE FROM inbox WHERE ${scope.sql}`)
+      .run(...(scope.value === undefined ? [] : [scope.value]))
+    return this.listInbox(accountId)
   }
 }

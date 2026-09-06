@@ -81,6 +81,8 @@ function sourcesFixture(): BundleSources {
         id: 'task-1',
         repoId: 'openai-community/gpt2',
         kind: 'model' as const,
+        accountId: '11111111-1111-4111-8111-111111111111',
+        accountLabel: 'account-a',
         revision: 'main',
         resumable: true,
         status: 'running' as const,
@@ -247,6 +249,10 @@ describe('SupportBundleBuilder happy path', () => {
     const tasks = JSON.parse(readZipMember(buffer, 'tasks-summary.json').toString('utf8'))
     expect(tasks.count).toBe(1)
     expect(tasks.tasks[0].repoId).toBe('openai-community/gpt2')
+    expect(tasks.tasks[0].accountId).toBe('11111111-1111-4111-8111-111111111111')
+    expect(tasks.tasks[0].accountLabel).toBe('account-a')
+    expect(JSON.stringify(tasks)).not.toContain('token-a')
+    expect(JSON.stringify(tasks)).not.toContain('accessToken')
   })
 
   it('caps each log member at 1 MiB with the truncation marker', async () => {

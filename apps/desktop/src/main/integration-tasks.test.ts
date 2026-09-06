@@ -13,6 +13,7 @@ import {
   type IntegrationTaskDeps
 } from './integration-tasks'
 import { validateUploadManifest } from './integrations/upload'
+import { AccountReferenceCoordinator } from './account-references'
 
 vi.mock('electron', () => ({
   app: { getVersion: () => '0.0.0-test' },
@@ -270,6 +271,46 @@ describe('IntegrationTaskManager upload grants', () => {
 })
 
 describe('IntegrationTaskManager cancellation', () => {
+  it('pins an upload token and active reference to its creation account', async () => {
+    const root = await tempRoot()
+    await writeFile(join(root, 'README.md'), '# model\n')
+    const references = new AccountReferenceCoordinator()
+    const lease = vi.fn((accountId: string) => ({
+      accountId,
+      accountLabel: accountId === 'account-a' ? 'A' : 'B',
+      accessToken: accountId === 'account-a' ? 'token-a' : 'token-b',
+      release: vi.fn()
+    }))
+    const runUpload = vi.fn(async (_request, deps) => {
+      expect(deps.accessToken).toBe('token-a')
+      return {
+        ok: true as const,
+        repoId: 'tester/safe-repo',
+        repoUrl: 'https://hub.example/tester/safe-repo',
+        messageKey: 'upload.done',
+        params: { repo: 'tester/safe-repo' }
+      }
+    })
+    const { manager } = makeManager({
+      selectUploadDirectory: async () => root,
+      runUpload,
+      activeAccountId: () => 'account-a',
+      activeAccountLabel: () => 'A',
+      leaseAccountCredential: lease,
+      references
+    })
+    const selection = await manager.selectUploadFolder(owner(10))
+    const { id } = manager.startUpload(uploadRequest(selection!.selectionId), 10)
+    await flushTasks()
+
+    expect(manager.list().find((task) => task.id === id)).toMatchObject({
+      accountId: 'account-a',
+      accountLabel: 'A'
+    })
+    expect(lease).toHaveBeenCalledWith('account-a')
+    expect(references.usage('account-a').uploads).toBe(0)
+  })
+
   it('makes cancellation idempotent and prevents late progress or success from reviving the task', async () => {
     const root = await tempRoot()
     await writeFile(join(root, 'README.md'), '# model\n')
