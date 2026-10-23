@@ -161,6 +161,14 @@ export function assertSafeCacheKey(value: string): string {
   return normalized
 }
 
+/**
+ * Windows reserved device names (case-insensitive) cannot materialize as
+ * files on NTFS, and trailing dots/spaces are stripped by Win32; a malicious
+ * repo carrying such names would fail mid-snapshot, so reject them up front.
+ * Kept in sync with isSafeRepoFilePath in main/downloads.ts.
+ */
+const WINDOWS_RESERVED_SEGMENT = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+
 export function assertSafeRepoFilePath(path: string): void {
   const segments = path.split('/')
   if (
@@ -171,7 +179,9 @@ export function assertSafeRepoFilePath(path: string): void {
         segment === '.' ||
         segment === '..' ||
         segment.includes('\\') ||
-        segment.includes('\0')
+        segment.includes('\0') ||
+        WINDOWS_RESERVED_SEGMENT.test(segment) ||
+        /[. ]$/.test(segment)
     )
   ) {
     throw new Error('unsafe-file-path')

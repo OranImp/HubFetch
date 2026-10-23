@@ -191,6 +191,7 @@
     "configured": "Configurado",
     "notConfigured": "Sin configurar",
     "baseUrl": "URL base",
+    "baseUrlHint": "Las peticiones se envían a este punto de conexión con su clave de API; use solo puntos de conexión de confianza.",
     "model": "Modelo",
     "apiKey": "Clave de API",
     "apiKeyHint": "Déjelo en blanco para conservar la clave guardada. Un valor nuevo la reemplaza.",

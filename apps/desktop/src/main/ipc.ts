@@ -670,9 +670,14 @@ export function registerIpcHandlers(ctx: AppContext, origins: TrustedOrigins): v
   // stay in the main-memory registry. Apply is one-shot and typed.
   handle('cache:planAction', ({ request }) => ctx.cache.planAction(request))
   handle('cache:applyAction', ({ request }) => ctx.cache.applyAction(request.planId))
-  handle('cache:verify', () =>
-    ctx.cache.verify((progress) => ctx.broadcast('evt:cacheVerification', progress))
-  )
+  handle('cache:verify', () => {
+    // Verifying while a download is mid-copy hashes half-written snapshot
+    // files and reports false mismatches; refuse instead of racing.
+    if (ctx.downloads.hasActiveDownloads()) {
+      throw new Error('cache verification unavailable while downloads are active')
+    }
+    return ctx.cache.verify((progress) => ctx.broadcast('evt:cacheVerification', progress))
+  })
   handle('cache:verifyCancel', () => {
     ctx.cache.cancelVerify()
   })

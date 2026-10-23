@@ -191,6 +191,7 @@
     "configured": "Configuré",
     "notConfigured": "Non configuré",
     "baseUrl": "URL de base",
+    "baseUrlHint": "Les requêtes sont envoyées vers ce point de terminaison avec votre clé API ; n’utilisez que des points de terminaison de confiance.",
     "model": "Modèle",
     "apiKey": "Clé API",
     "apiKeyHint": "Laissez vide pour conserver la clé enregistrée. Une nouvelle valeur la remplace.",

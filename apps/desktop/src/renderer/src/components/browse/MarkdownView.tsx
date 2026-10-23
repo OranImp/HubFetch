@@ -134,7 +134,6 @@ export function MarkdownView({
       <Markdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-        urlTransform={(url) => url}
         components={{
           a: ({ href, children }) => (
             <a

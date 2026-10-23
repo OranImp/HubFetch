@@ -191,6 +191,7 @@
     "configured": "Konfiguriert",
     "notConfigured": "Nicht konfiguriert",
     "baseUrl": "Basis-URL",
+    "baseUrlHint": "Anfragen werden mit Ihrem API-Schlüssel an diesen Endpunkt gesendet; verwenden Sie nur Endpunkte, denen Sie vertrauen.",
     "model": "Modell",
     "apiKey": "API-Schlüssel",
     "apiKeyHint": "Leer lassen, um den gespeicherten Schlüssel zu behalten. Ein neuer Wert ersetzt ihn.",

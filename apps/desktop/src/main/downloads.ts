@@ -209,6 +209,13 @@ export function buildFrozenResolveUrl(
   return `${endpoint.replace(/\/+$/, '')}/${RESOLVE_PREFIX[kind]}${repoId}/resolve/${commit}/${encodedPath}`
 }
 
+/**
+ * Windows reserved device names (case-insensitive) cannot materialize as
+ * files on NTFS, and trailing dots/spaces are stripped by Win32; a malicious
+ * repo carrying such names would fail mid-snapshot, so reject them up front.
+ */
+const WINDOWS_RESERVED_SEGMENT = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+
 export function isSafeRepoFilePath(path: string): boolean {
   const segments = path.split('/')
   return (
@@ -219,7 +226,9 @@ export function isSafeRepoFilePath(path: string): boolean {
         segment !== '.' &&
         segment !== '..' &&
         !segment.includes('\\') &&
-        !segment.includes('\0')
+        !segment.includes('\0') &&
+        !WINDOWS_RESERVED_SEGMENT.test(segment) &&
+        !/[. ]$/.test(segment)
     )
   )
 }
@@ -1023,6 +1032,11 @@ export class DownloadManager {
 
   private runningCount(): number {
     return this.workers.size + this.pendingSpawnCount
+  }
+
+  /** True while any download worker is running or spawning. */
+  hasActiveDownloads(): boolean {
+    return this.runningCount() > 0
   }
 
   private pump(): void {

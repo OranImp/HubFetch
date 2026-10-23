@@ -191,6 +191,7 @@
     "configured": "구성됨",
     "notConfigured": "구성되지 않음",
     "baseUrl": "기본 URL",
+    "baseUrlHint": "요청은 API 키와 함께 이 엔드포인트로 전송됩니다. 신뢰할 수 있는 엔드포인트만 사용하세요.",
     "model": "모델",
     "apiKey": "API 키",
     "apiKeyHint": "비워 두면 저장된 키를 유지합니다. 새 값을 입력하면 교체됩니다.",

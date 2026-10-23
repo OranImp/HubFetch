@@ -191,6 +191,7 @@
     "configured": "已設定",
     "notConfigured": "未設定",
     "baseUrl": "介面位址",
+    "baseUrlHint": "請求會攜帶你的 API 金鑰發往該端點；請僅使用你信任的端點。",
     "model": "模型",
     "apiKey": "API 金鑰",
     "apiKeyHint": "留空則保留已儲存的金鑰。填寫新值會取代它。",

@@ -47,6 +47,7 @@ export function TranslationProviderForm(props: TranslationProviderFormProps): Re
           </span>
         ) : null}
       </label>
+      <p className="text-[12px] text-ink-faint">{t('settings:translation.baseUrlHint')}</p>
 
       <label htmlFor={`${ids}-model`} className="flex flex-col gap-1.5">
         <span className="text-[12.5px] font-medium text-ink-strong">

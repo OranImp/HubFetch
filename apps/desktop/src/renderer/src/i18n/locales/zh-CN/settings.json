@@ -261,6 +261,7 @@
     "apiKeyHint": "留空则保留已保存的密钥。填写新值会替换它。",
     "apply": "应用",
     "baseUrl": "接口地址",
+    "baseUrlHint": "请求会携带你的 API 密钥发往该端点；请仅使用你信任的端点。",
     "configured": "已配置",
     "deleteBody": "仅删除当前所选提供商已保存的密钥，其他提供商不受影响。",
     "deleteConfirm": "删除密钥",

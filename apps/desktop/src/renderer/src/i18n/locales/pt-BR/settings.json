@@ -191,6 +191,7 @@
     "configured": "Configurado",
     "notConfigured": "Não configurado",
     "baseUrl": "URL base",
+    "baseUrlHint": "As requisições são enviadas para este endpoint com sua chave de API; use apenas endpoints confiáveis.",
     "model": "Modelo",
     "apiKey": "Chave de API",
     "apiKeyHint": "Deixe em branco para manter a chave salva. Um novo valor a substitui.",

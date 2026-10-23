@@ -567,6 +567,10 @@ export class CloneHost {
     onMessageSeen?: (message: CloneEvent) => void
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
+      const onTimeout = (): void => {
+        cleanup()
+        reject(new Error(`timed out waiting for ${label} (${timeoutMs}ms)`))
+      }
       const onMessage = (message: CloneEvent): void => {
         if (!isMessage(message)) return
         if (predicate(message)) {
@@ -574,6 +578,10 @@ export class CloneHost {
           resolve(message)
           return
         }
+        // Any protocol traffic proves the utility is alive; slide the
+        // deadline instead of failing a healthy long clone on a fixed
+        // total budget.
+        resetTimer()
         onMessageSeen?.(message)
       }
       const onExit = (code: number): void => {
@@ -589,10 +597,11 @@ export class CloneHost {
         cleanup()
         reject(new Error(`clone settled while waiting for ${label}`))
       }
-      const timer = setTimeout(() => {
-        cleanup()
-        reject(new Error(`timed out waiting for ${label} (${timeoutMs}ms)`))
-      }, timeoutMs)
+      let timer = setTimeout(onTimeout, timeoutMs)
+      const resetTimer = (): void => {
+        clearTimeout(timer)
+        timer = setTimeout(onTimeout, timeoutMs)
+      }
       const cleanup = (): void => {
         clearTimeout(timer)
         signal?.removeEventListener('abort', onAbort)

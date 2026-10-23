@@ -49,6 +49,14 @@ describe('cache path inputs', () => {
     expect(() => assertSafeRepoFilePath('nested\\outside')).toThrow('unsafe-file-path')
   })
 
+  it('rejects Windows reserved device names and trailing dots or spaces', () => {
+    expect(() => assertSafeRepoFilePath('nested/con')).toThrow('unsafe-file-path')
+    expect(() => assertSafeRepoFilePath('COM1/input.bin')).toThrow('unsafe-file-path')
+    expect(() => assertSafeRepoFilePath('nested/file.bin.')).toThrow('unsafe-file-path')
+    expect(() => assertSafeRepoFilePath('nested/file.bin ')).toThrow('unsafe-file-path') // trailing space
+    expect(() => assertSafeRepoFilePath('nested/console.json')).not.toThrow()
+  })
+
   it('creates only direct, validated cache directories', () => {
     const cacheDir = mkdtempSync(join(tmpdir(), 'omh-worker-cache-'))
     roots.push(cacheDir)

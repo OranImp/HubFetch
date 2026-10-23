@@ -262,6 +262,7 @@
     "apiKeyHint": "Leave blank to keep the saved key. A new value replaces it.",
     "apply": "Apply",
     "baseUrl": "Base URL",
+    "baseUrlHint": "Requests go to this endpoint with your API key; only use endpoints you trust.",
     "configured": "Configured",
     "deleteBody": "Removes the saved key for the selected provider only. Other providers are unchanged.",
     "deleteConfirm": "Delete key",

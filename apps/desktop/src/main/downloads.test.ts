@@ -131,6 +131,16 @@ describe('download environment helpers', () => {
     expect(isSafeRepoFilePath('../outside')).toBe(false)
     expect(isSafeRepoFilePath('src\\outside')).toBe(false)
   })
+
+  it('rejects Windows reserved device names and trailing dots or spaces', () => {
+    expect(isSafeRepoFilePath('models/con')).toBe(false)
+    expect(isSafeRepoFilePath('models/COM1')).toBe(false)
+    expect(isSafeRepoFilePath('lpt9/weights.bin')).toBe(false)
+    expect(isSafeRepoFilePath('models/weights.bin.')).toBe(false)
+    expect(isSafeRepoFilePath('models/weights.bin ')).toBe(false) // trailing space
+    expect(isSafeRepoFilePath('models/console.json')).toBe(true)
+    expect(isSafeRepoFilePath('models/consensus.txt')).toBe(true)
+  })
 })
 
 describe('DownloadManager frozen environment', () => {
