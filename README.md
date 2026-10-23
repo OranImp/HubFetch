@@ -4,8 +4,6 @@
 
 [中文说明](#中文说明) ｜ [English](#english)
 
-![Three-pane browse view](docs/screenshots/browse.png)
-
 ---
 
 ## 中文说明
